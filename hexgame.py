@@ -2,21 +2,21 @@ import torch
 
 
 class HexGame():
-    def __init__(self, board, model):
+    def __init__(self, board, model, device):
         self.board = board
-        self.model = model
+        self.model = model.to(device)
         self.moves_tensor = torch.Tensor()
         self.position_tensor = torch.LongTensor()
         self.moves_count = 0
         self.player = 0
+        self.device = device
 
     def __repr__(self):
         return(str(self.board))
 
     def play_moves(self):
         while True:
-
-            board_tensor = self.board.board_tensor.unsqueeze(0)
+            board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
 
             with torch.no_grad():
                 output_values = self.model(board_tensor)
@@ -32,7 +32,6 @@ class HexGame():
             self.player = 1-self.player
 
             if self.board.winner:
-
                 if self.player == 1:
                     self.target = torch.tensor([1]+[0,1]*int(self.moves_count/2))
                     
