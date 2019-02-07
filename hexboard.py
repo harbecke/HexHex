@@ -60,8 +60,9 @@ def update_connected_sets_check_win(connected_sets, player, position, size):
 
 class Board():
     '''
-    Board is in quadratic shape. This means diagonal neighbours are upper right and lower left, but not the other two
-    First player has to connect left to right, second player top to bottom. 
+    Board is in quadratic shape. This means diagonal neighbours are upper right and lower left, but not the other two.
+    First player has to connect top to bottom, second player left to right.
+    If the second player decides to switch, a stone is set in the second layer that is only information and not connected. The second player now plays the first layer and vice-versa.
     '''
     def __init__(self, size):
         self.size = size
@@ -69,6 +70,7 @@ class Board():
         self.legal_moves = set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
         self.illegal_moves = set()
         self.connected_sets = [[], []]
+        self.switch = False
         self.winner = False
 
     def __repr__(self):
@@ -79,15 +81,15 @@ class Board():
         +'\nConnected sets\n'+str(self.connected_sets))
 
     def set_stone(self, player, position):
-        try:
+        if position not in self.illegal_moves:
             self.legal_moves.remove(position)
             self.illegal_moves.update([position])
             self.board_tensor[player][position] = 1
             self.connected_sets[player], self.winner = update_connected_sets_check_win(self.connected_sets[player], player, position, self.size)
-        except:
-            print('Illegal move')
-            print(self.__repr__())
-        
-        
-            
-        
+            self.switch = False
+        elif self.switch==False and set([position])==self.illegal_moves:
+            self.switch = True
+            self.board_tensor[1][position] = 1
+        else:
+            print('Illegal Move!')
+            print(self)

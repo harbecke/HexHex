@@ -36,13 +36,13 @@ class SkipLayerAlpha(nn.Module):
 
 class Model(nn.Module):
 
-    def __init__(self, board_size, layers, input_channels, noise, noise_level, intermediate_channels=256, policy_channels=2, value_channels=1, value_intermediate_size=256, reach=1):
+    def __init__(self, board_size, layers, noise, noise_level, intermediate_channels=256, policy_channels=2, value_channels=1, value_intermediate_size=256, reach=1):
         #noise not yet implemented
         super(Model, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
         self.value_channels = value_channels
-        self.conv = nn.Conv2d(input_channels, intermediate_channels, kernel_size=reach*2+1, padding=reach)
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach*2+1, padding=reach)
         self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, reach) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
         self.policybn = nn.BatchNorm2d(policy_channels)
@@ -67,13 +67,13 @@ class Model(nn.Module):
 
 class NoMCTSModel(nn.Module):
 
-    def __init__(self, board_size, layers, input_channels, noise, noise_level, intermediate_channels=256, policy_channels=2, reach=1):
+    def __init__(self, board_size, layers, noise, noise_level=1, intermediate_channels=256, policy_channels=2, reach=1, switch=True):
         super(NoMCTSModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
         self.noise = noise
         self.noise_level = noise_level
-        self.conv = nn.Conv2d(input_channels, intermediate_channels, kernel_size=reach*2+1, padding=reach)
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach*2+1, padding=reach)
         self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, reach) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
         self.policybn = nn.BatchNorm2d(policy_channels)
@@ -82,12 +82,14 @@ class NoMCTSModel(nn.Module):
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play - problem with noise?
         illegal = x.sum(dim=1).view(1,-1)*10**10
+        if x.sum()<2:
+            illegal *= 0
         x = self.conv(x)
         for skiplayer in self.skiplayers:
             x = skiplayer(x)
         p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
         if self.noise_level > 0:
-            p = (1-self.noise_level)*torch.sigmoid(self.policylin(p)-illegal) + self.noise_level*self.noise
+            p = torch.sigmoid(self.policylin(p) + self.noise_level*self.noise.sample() - illegal) 
         else:
             p = torch.sigmoid(self.policylin(p)-illegal)
         return p.view(-1, self.board_size, self.board_size)

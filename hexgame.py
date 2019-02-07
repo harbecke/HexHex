@@ -29,13 +29,10 @@ class HexGame():
             self.moves_count += 1
             
             self.board.set_stone(self.player, position2d)
-            self.player = 1-self.player
+            if self.board.switch==False:
+                self.player = 1-self.player
 
             if self.board.winner:
-                if self.player == 1:
-                    self.target = torch.tensor([1]+[0,1]*int(self.moves_count/2))
-                    
-                else:
-                    self.target = torch.tensor([0,1]*int(self.moves_count/2))
+                self.target = torch.tensor([1]*(self.moves_count%2)+[0,1]*int(self.moves_count/2))
                 
                 return self.moves_tensor, self.position_tensor, self.target
