@@ -15,8 +15,7 @@ class SkipLayer(nn.Module):
         self.bn = nn.BatchNorm2d(channels)
 
     def forward(self, x):
-        x += self.bn(self.conv(x))
-        return swish(x)
+        return swish(x + self.bn(self.conv(x)))
 
 
 class SkipLayerAlpha(nn.Module):
@@ -30,14 +29,14 @@ class SkipLayerAlpha(nn.Module):
 
     def forward(self, x):
         y = F.relu(self.bn1(self.conv1(x)))
-        x += self.bn2(self.conv2(y))
+        x = x + self.bn2(self.conv2(y))
         return F.relu(x)
 
 
 class Model(nn.Module):
 
     def __init__(self, board_size, layers, noise, noise_level, intermediate_channels=256, policy_channels=2, value_channels=1, value_intermediate_size=256, reach=1):
-        #noise not yet implemented
+        #noise and switch rule not yet implemented
         super(Model, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
@@ -67,12 +66,10 @@ class Model(nn.Module):
 
 class NoMCTSModel(nn.Module):
 
-    def __init__(self, board_size, layers, noise, noise_level=1, intermediate_channels=256, policy_channels=2, reach=1, switch=True):
+    def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach=1, switch=True):
         super(NoMCTSModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
-        self.noise = noise
-        self.noise_level = noise_level
         self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach*2+1, padding=reach)
         self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, reach) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
@@ -81,15 +78,11 @@ class NoMCTSModel(nn.Module):
 
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play - problem with noise?
-        illegal = x.sum(dim=1).view(1,-1)*10**10
-        if x.sum()<2:
-            illegal *= 0
+        self.device=x.device
+        x_sum = x.sum(dim=1).view(-1,self.board_size**2)
+        illegal = x_sum * torch.exp(torch.tanh(x_sum.sum(dim=1)-1)*10).unsqueeze(1).expand_as(x_sum)- x_sum
         x = self.conv(x)
         for skiplayer in self.skiplayers:
             x = skiplayer(x)
         p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
-        if self.noise_level > 0:
-            p = torch.sigmoid(self.policylin(p) + self.noise_level*self.noise.sample() - illegal) 
-        else:
-            p = torch.sigmoid(self.policylin(p)-illegal)
-        return p.view(-1, self.board_size, self.board_size)
+        return torch.sigmoid(self.policylin(p) - illegal)
