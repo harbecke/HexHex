@@ -1,0 +1,4 @@
+*.ipynb
+data/
+images/
+models/

@@ -70,7 +70,7 @@ class NoMCTSModel(nn.Module):
         super(NoMCTSModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
-        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach*2+1, padding=reach)
+        self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach*2+1, padding=reach)
         self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, reach) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
         self.policybn = nn.BatchNorm2d(policy_channels)
@@ -78,9 +78,8 @@ class NoMCTSModel(nn.Module):
 
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play - problem with noise?
-        self.device=x.device
-        x_sum = x.sum(dim=1).view(-1,self.board_size**2)
-        illegal = x_sum * torch.exp(torch.tanh(x_sum.sum(dim=1)-1)*10).unsqueeze(1).expand_as(x_sum)- x_sum
+        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        illegal = x_sum * torch.exp(torch.tanh(x_sum.sum(dim=1)-1)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         x = self.conv(x)
         for skiplayer in self.skiplayers:
             x = skiplayer(x)

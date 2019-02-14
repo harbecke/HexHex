@@ -28,7 +28,7 @@ positionloader = torch.utils.data.DataLoader(PositionDataset, batch_size=args.ba
 
 model = torch.load('models/{}.pt'.format(args.load_model))
 model.to(device)
-criterion = nn.BCELoss(reduction='sum')
+criterion = nn.MSELoss(reduction='sum')
 optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
 
 for epoch in range(args.epochs):  # loop over the dataset multiple times
@@ -45,16 +45,17 @@ for epoch in range(args.epochs):  # loop over the dataset multiple times
         outputs = model(board_states)
         output_values = torch.gather(outputs, 1, moves)
 
-        loss = criterion(output_values, labels)
-        print(loss)
-
+        loss = criterion(output_values.view(-1), labels)
+        
         loss.backward()
         optimizer.step()
 
         # print statistics
         running_loss += loss.item()
-
-    print('[%d] loss: %.3f' %(epoch + 1, running_loss))
+    
+    l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
+    print('[%d] pred_loss: %.3f l2_param_loss: %.3f' %(epoch + 1, running_loss, l2loss))
+    torch.save(model, 'models/{}_{}.pt'.format(args.save_model, epoch))
 
 print('Finished Training')
 

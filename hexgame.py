@@ -22,8 +22,7 @@ def model_evaluates_with_noise_temperature(board_tensor, model, noise, noise_lev
 
 class HexGame():
     '''
-    self-play
-    returns a tensor of positions, moves made and winning or losing
+    change naming of board & moves_tensor to fit with rest of code
     '''
     def __init__(self, board, model, device, noise, noise_level=0, temperature=1):
         self.board = board
@@ -42,17 +41,21 @@ class HexGame():
 
     def play_moves(self):
         while True:
-            board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
+            board_tensor = self.board.board_tensor
+            if self.player == 0:
+                board_tensor = torch.cat((board_tensor, torch.zeros_like(board_tensor[0]).unsqueeze(0)))
+            else:
+                board_tensor = torch.cat((board_tensor, torch.ones_like(board_tensor[0]).unsqueeze(0)))
+            board_tensor = board_tensor.unsqueeze(0).to(self.device)
 
             position1d = model_evaluates_with_noise_temperature(board_tensor, self.model, self.noise, self.noise_level, self.temperature)
-            position2d = (int(position1d/self.board.size), int(position1d%self.board.size))
 
             self.position_tensor = torch.cat((self.position_tensor, position1d.unsqueeze(0)))
             board_tensor = board_tensor.detach().cpu()
             self.moves_tensor = torch.cat((self.moves_tensor, board_tensor))
             self.moves_count += 1
             
-            self.board.set_stone(self.player, position2d)
+            self.board.set_stone(self.player, (int(position1d/self.board.size), int(position1d%self.board.size)))
             if self.board.switch==False:
                 self.player = 1-self.player
 
@@ -63,15 +66,9 @@ class HexGame():
 
 
 class HexGameTwoModels():
-    '''
-    gives evaluation of two models
-    '''
-    def __init__(self, board, model1, model2, device, noise, noise_level=0, temperature=1):
+    def __init__(self, board, model1, model2, device):
         self.board = board
         self.models = (model1.to(device), model2.to(device))
-        self.noise = noise
-        self.noise_level = noise_level
-        self.temperature = temperature
         #self.moves_tensor = torch.Tensor(device='cpu')
         #self.position_tensor = torch.LongTensor(device='cpu')
         #self.moves_count = 0
@@ -86,7 +83,11 @@ class HexGameTwoModels():
             for idx in range(2):
                 board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
 
-                position1d = model_evaluates_with_noise_temperature(board_tensor, self.models[idx], self.noise, self.noise_level, self.temperature)
+                with torch.no_grad():
+                    output_values = self.models[idx](board_tensor)
+                    output_values = output_values.detach().cpu()
+
+                position1d = output_values.argmax()
                 position2d = (int(position1d/self.board.size), int(position1d%self.board.size))
 
                 #self.position_tensor = torch.cat((self.position_tensor, torch.tensor(position2d).unsqueeze(0)))

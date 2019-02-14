@@ -23,14 +23,15 @@ def generate_data_one_file(number_of_samples, model, device, run_name, noise, no
     while position_idx < number_of_samples:
         board = Board(size=board_size)
         hexgame = HexGame(board, model, device, noise, noise_level, temperature)
-        print('played_game')
         board_states, moves, targets = hexgame.play_moves()
+        print('played_game')
         position_idx += len(board_states)
         all_board_states = torch.cat((all_board_states,board_states))
         all_moves = torch.cat((all_moves,moves))
         all_targets = torch.cat((all_targets,targets))
         print('created_game_data')
-    torch.save((all_board_states, all_moves, all_targets),'data/{}.pt'.format(run_name))
+        print(position_idx)
+    torch.save((all_board_states, all_moves, all_targets),f'data/{run_name}.pt')
 
 
 config = ConfigParser()

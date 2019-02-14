@@ -31,7 +31,7 @@ def update_connected_sets_check_win(connected_sets, player, position, size):
     '''
     save a set of tuple of sets:
     the first set is a connected component of stones
-    the second set is the indices of these stones in the direction of the player
+    the second set is the indices of these stones in the direction of the player > change to intervall [,]
     thus the winning condition is having 0 and (size-1) in one of the second sets
     '''
     new_connected_sets = []
@@ -61,7 +61,7 @@ def update_connected_sets_check_win(connected_sets, player, position, size):
 class Board():
     '''
     Board is in quadratic shape. This means diagonal neighbours are upper right and lower left, but not the other two.
-    First player has to connect top to bottom, second player left to right.
+    First player has to connect on the first dimension, second player on the second dimension.
     If the second player decides to switch, a stone is set in the second layer that is only information and not connected. The second player now plays the first layer and vice-versa.
     '''
     def __init__(self, size):
