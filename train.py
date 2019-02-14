@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from torch.utils.data.dataset import TensorDataset
+from torch.utils.data.dataset import TensorDataset, ConcatDataset
 
 import os
 import argparse
@@ -15,6 +15,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--load_model', type=str, default=config.get('TRAIN', 'load_model'))
 parser.add_argument('--save_model', type=str, default=config.get('TRAIN', 'save_model'))
 parser.add_argument('--data', type=str, default=config.get('TRAIN', 'data'))
+parser.add_argument('--data_range_min', type=int, default=config.get('TRAIN', 'data_range_min'))
+parser.add_argument('--data_range_max', type=int, default=config.get('TRAIN', 'data_range_max'))
 parser.add_argument('--weight_decay', type=float, default=config.get('TRAIN', 'weight_decay'))
 parser.add_argument('--batch_size', type=int, default=config.get('TRAIN', 'batch_size'))
 parser.add_argument('--epochs', type=int, default=config.get('TRAIN', 'epochs'))
@@ -22,9 +24,13 @@ parser.add_argument('--epochs', type=int, default=config.get('TRAIN', 'epochs'))
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-board_states, moves, targets = torch.load('data/{}.pt'.format(args.data))
-PositionDataset = TensorDataset(board_states, moves, targets)
-positionloader = torch.utils.data.DataLoader(PositionDataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+
+dataset_list = []
+for idx in range(args.data_range_min, args.data_range_max):
+    board_states, moves, targets = torch.load('data/{}_{}.pt'.format(args.data, idx))
+    dataset_list.append(TensorDataset(board_states, moves, targets))
+concat_dataset = ConcatDataset(dataset_list)
+positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
 model = torch.load('models/{}.pt'.format(args.load_model))
 model.to(device)
