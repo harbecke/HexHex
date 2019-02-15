@@ -30,32 +30,39 @@ def generate_data_files(number_of_files, samples_per_file, model, device, run_na
         
         file_name = f'data/{run_name}_{file_counter}.pt'
         torch.save((all_board_states[:samples_per_file], all_moves[:samples_per_file], all_targets[:samples_per_file]), file_name)
-        print(f'written_{file_name}')
+        print(f'wrote {file_name}')
         file_counter += 1
         
         all_board_states = all_board_states[samples_per_file:]
         all_moves = all_moves[samples_per_file:]
         all_targets = all_targets[samples_per_file:]
+    print("")
 
+def get_args(config_file):
+    config = ConfigParser()
+    config.read(config_file)
+    parser = argparse.ArgumentParser()
 
-config = ConfigParser()
-config.read('config.ini')
-parser = argparse.ArgumentParser()
+    parser.add_argument('--number_of_files', type=int, default=config.get('CREATE DATA', 'number_of_files'))
+    parser.add_argument('--samples_per_file', type=int, default=config.get('CREATE DATA', 'samples_per_file'))
+    parser.add_argument('--model', type=str, default=config.get('CREATE DATA', 'model'))
+    parser.add_argument('--run_name', type=str, default=config.get('CREATE DATA', 'run_name'))
+    parser.add_argument('--noise_alpha', type=float, default=config.get('CREATE DATA', 'noise_alpha'))
+    parser.add_argument('--noise_level', type=float, default=config.get('CREATE DATA', 'noise_level'))
+    parser.add_argument('--temperature', type=float, default=config.get('CREATE DATA', 'temperature'))
+    parser.add_argument('--board_size', type=int, default=config.get('CREATE DATA', 'board_size'))
 
-parser.add_argument('--number_of_files', type=int, default=config.get('CREATE DATA', 'number_of_files'))
-parser.add_argument('--samples_per_file', type=int, default=config.get('CREATE DATA', 'samples_per_file'))
-parser.add_argument('--model', type=str, default=config.get('CREATE DATA', 'model'))
-parser.add_argument('--run_name', type=str, default=config.get('CREATE DATA', 'run_name'))
-parser.add_argument('--noise_alpha', type=float, default=config.get('CREATE DATA', 'noise_alpha'))
-parser.add_argument('--noise_level', type=float, default=config.get('CREATE DATA', 'noise_level'))
-parser.add_argument('--temperature', type=float, default=config.get('CREATE DATA', 'temperature'))
-parser.add_argument('--board_size', type=int, default=config.get('CREATE DATA', 'board_size'))
+    return parser.parse_args()
 
+def main(config_file = 'config.ini'):
+    print("=== creating data from self play ===")
+    args = get_args(config_file)
 
-args = parser.parse_args()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = torch.load('models/{}.pt'.format(args.model), map_location=device)
+    noise = Dirichlet(torch.full((args.board_size**2,), args.noise_alpha))
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = torch.load('models/{}.pt'.format(args.model), map_location=device)
-noise = Dirichlet(torch.full((args.board_size**2,), args.noise_alpha))
+    generate_data_files(args.number_of_files, args.samples_per_file, model, device, args.run_name, noise, args.noise_level, args.temperature, args.board_size)
 
-generate_data_files(args.number_of_files, args.samples_per_file, model, device, args.run_name, noise, args.noise_level, args.temperature, args.board_size)
+if __name__ == '__main__':
+    main()
