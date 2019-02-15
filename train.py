@@ -9,15 +9,7 @@ import argparse
 from configparser import ConfigParser
 
 
-def validation(validation_data, model, criterion, device):
-    board_tensor, moves_tensor, target_tensor = torch.load(f'data/{validation_data}.pt')
-    board_tensor, moves_tensor, target_tensor = board_tensor.to(device), moves_tensor.to(device), target_tensor.to(device)
-
-
-    return loss
-
-
-def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, save_frequency='epoch', print_loss_frequency=100, validation_triple=False):
+def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, save_every_epoch=False, print_loss_frequency=100, validation_triple=False):
 
     for epoch in range(epochs):  # loop over the dataset multiple times
 
@@ -52,11 +44,11 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
         l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
         print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f' %(epoch + 1, running_loss, l2loss))
-        if save_frequency == 'epoch':
+        if save_every_epoch == True:
             torch.save(model, 'models/{}_{}.pt'.format(save_model_path, epoch))
 
     print('Finished Training')
-    if save_frequency == 'once':
+    if save_every_epoch == False:
         torch.save(model, 'models/{}.pt'.format(save_model_path))
 
 def main():
@@ -72,9 +64,9 @@ def main():
     parser.add_argument('--weight_decay', type=float, default=config.get('TRAIN', 'weight_decay'))
     parser.add_argument('--batch_size', type=int, default=config.get('TRAIN', 'batch_size'))
     parser.add_argument('--epochs', type=int, default=config.get('TRAIN', 'epochs'))
-    parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
     parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
-    parser.add_argument('--save_frequency', type=str, default=config.get('TRAIN', 'save_frequency'))
+    parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
+    parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
     parser.add_argument('--print_loss_frequency', type=int, default=config.get('TRAIN', 'print_loss_frequency'))
 
     args = parser.parse_args()

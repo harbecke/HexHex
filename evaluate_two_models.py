@@ -12,8 +12,8 @@ import time
 def play_games(model1, model2, number_of_games, device, temperature, board_size, draw_game):
     result = [0, 0]
 
-    for _ in range(number_of_games // 2):
-        for game_idx in range(2):
+    for game_idx in range(2):
+        for _ in range(number_of_games // 2):
             first_model = model1 if game_idx == 0 else model2
             second_model = model2 if game_idx == 0 else model1
             board = Board(size=board_size)
