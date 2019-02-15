@@ -1,6 +1,8 @@
 import torch
 from torch.distributions.categorical import Categorical
 
+from visualization.image import draw_board_image
+import time
 
 def model_evaluates_with_noise_temperature(board_tensor, model, noise, noise_level=0, temperature=1):
     '''
@@ -66,12 +68,13 @@ class HexGame():
 
 
 class HexGameTwoModels():
-    def __init__(self, board, model1, model2, device):
+    def __init__(self, board, model1, model2, device, temperature):
         self.board = board
         self.models = (model1.to(device), model2.to(device))
         #self.moves_tensor = torch.Tensor(device='cpu')
         #self.position_tensor = torch.LongTensor(device='cpu')
         #self.moves_count = 0
+        self.temperature = temperature
         self.player = 0
         self.device = device
 
@@ -81,13 +84,16 @@ class HexGameTwoModels():
     def play_moves(self):
         while True:
             for idx in range(2):
-                board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
+                board_tensor = self.board.board_tensor
+                if self.player == 0:
+                    board_tensor = torch.cat((board_tensor, torch.zeros_like(board_tensor[0]).unsqueeze(0)))
+                else:
+                    board_tensor = torch.cat((board_tensor, torch.ones_like(board_tensor[0]).unsqueeze(0)))
+                board_tensor = board_tensor.unsqueeze(0).to(self.device)
 
                 with torch.no_grad():
-                    output_values = self.models[idx](board_tensor)
-                    output_values = output_values.detach().cpu()
+                    position1d = model_evaluates_with_noise_temperature(board_tensor, self.models[idx], False, 0, self.temperature)
 
-                position1d = output_values.argmax()
                 position2d = (int(position1d/self.board.size), int(position1d%self.board.size))
 
                 #self.position_tensor = torch.cat((self.position_tensor, torch.tensor(position2d).unsqueeze(0)))
@@ -100,4 +106,5 @@ class HexGameTwoModels():
                     self.player = 1-self.player
 
                 if self.board.winner:
+                    draw_board_image(self.board.board_tensor, f'images/{time.time()}.png')
                     return idx

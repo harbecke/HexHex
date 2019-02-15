@@ -8,6 +8,17 @@ import os
 import argparse
 from configparser import ConfigParser
 
+def validation(validation_data, model, criterion, device):
+    board_tensor, moves_tensor, target_tensor = torch.load(f'data/{validation_data}.pt')
+    board_tensor, moves_tensor, target_tensor = board_tensor.to(device), moves_tensor.to(device), target_tensor.to(device)
+
+    with torch.no_grad():
+        full_pred_tensor = model(board_tensor)
+        local_predictions = torch.gather(full_pred_tensor, 1, moves_tensor)
+        loss = criterion(local_predictions.view(-1), target_tensor)
+        return loss
+
+
 config = ConfigParser()
 config.read('config.ini')
 parser = argparse.ArgumentParser()
@@ -20,6 +31,8 @@ parser.add_argument('--data_range_max', type=int, default=config.get('TRAIN', 'd
 parser.add_argument('--weight_decay', type=float, default=config.get('TRAIN', 'weight_decay'))
 parser.add_argument('--batch_size', type=int, default=config.get('TRAIN', 'batch_size'))
 parser.add_argument('--epochs', type=int, default=config.get('TRAIN', 'epochs'))
+parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
+parser.add_argument('--validation_bool', type=bool, default=config.get('TRAIN', 'validation_bool'))
 
 args = parser.parse_args()
 
@@ -58,7 +71,12 @@ for epoch in range(args.epochs):  # loop over the dataset multiple times
 
         # print statistics
         running_loss += loss.item()
-    
+        
+        if i%100==0 and args.validation_bool:
+            l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
+            print('val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f'%(validation(args.validation_data, model, criterion, device), loss.item(), l2loss))
+
+
     l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
     print('[%d] pred_loss: %.3f l2_param_loss: %.3f' %(epoch + 1, running_loss, l2loss))
     torch.save(model, 'models/{}_{}.pt'.format(args.save_model, epoch))
