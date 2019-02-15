@@ -1,3 +1,4 @@
 *.ipynb
 images/
 __pycache__/
+.idea/
