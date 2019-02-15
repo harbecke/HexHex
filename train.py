@@ -22,6 +22,8 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
     for epoch in range(epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
+        observed_states = 0
+
         for i, (board_states, moves, labels) in enumerate(dataloader, 0):
             # get the inputs
             board_states, moves, labels = board_states.to(device), moves.to(device), labels.to(device)
@@ -36,7 +38,10 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
             loss = criterion(output_values.view(-1), labels)
             loss.backward()
             optimizer.step()
+
+            batch_size = board_states.shape[0]
             running_loss += loss.item()
+            observed_states += batch_size
 
             if i % print_loss_frequency == 0:
                 l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
@@ -45,23 +50,30 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
                         val_pred_tensor = model(validation_triple[0])
                         val_values = torch.gather(val_pred_tensor, 1, validation_triple[1])
                         val_loss = criterion(val_values.view(-1), validation_triple[2])
-                    print('val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f'%(val_loss, loss.item(), l2loss))
+                    print('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f'
+                          %(i + 1, len(dataloader), val_loss, loss.item() / batch_size, l2loss))
                 else:
-                    print('pred_loss: %.3f  l2_param_loss: %.3f'%(loss.item(), l2loss))
+                    print('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f'
+                          %(i + 1, len(dataloader), loss.item() / batch_size, l2loss))
 
 
         l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
-        print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f' %(epoch + 1, running_loss, l2loss))
+        print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f' %(epoch + 1, running_loss / observed_states, l2loss))
         if save_frequency == 'epoch':
-            torch.save(model, 'models/{}_{}.pt'.format(save_model_path, epoch))
+            file_name = 'models/{}_{}.pt'.format(save_model_path, epoch)
+            torch.save(model, file_name)
+            print(f'wrote {file_name}')
 
-    print('Finished Training')
+    print('Finished Training\n')
     if save_frequency == 'once':
-        torch.save(model, 'models/{}.pt'.format(save_model_path))
+        file_name = 'models/{}.pt'.format(save_model_path)
+        torch.save(model, file_name)
+        print(f'wrote {file_name}')
 
-def main():
+def main(config_file = 'config.ini'):
+    print("=== training model ===")
     config = ConfigParser()
-    config.read('config.ini')
+    config.read(config_file)
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--load_model', type=str, default=config.get('TRAIN', 'load_model'))

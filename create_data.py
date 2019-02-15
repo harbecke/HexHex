@@ -30,16 +30,17 @@ def generate_data_files(number_of_files, samples_per_file, model, device, run_na
         
         file_name = f'data/{run_name}_{file_counter}.pt'
         torch.save((all_board_states[:samples_per_file], all_moves[:samples_per_file], all_targets[:samples_per_file]), file_name)
-        print(f'written_{file_name}')
+        print(f'wrote {file_name}')
         file_counter += 1
         
         all_board_states = all_board_states[samples_per_file:]
         all_moves = all_moves[samples_per_file:]
         all_targets = all_targets[samples_per_file:]
+    print("")
 
-def get_args():
+def get_args(config_file):
     config = ConfigParser()
-    config.read('config.ini')
+    config.read(config_file)
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--number_of_files', type=int, default=config.get('CREATE DATA', 'number_of_files'))
@@ -51,10 +52,11 @@ def get_args():
     parser.add_argument('--temperature', type=float, default=config.get('CREATE DATA', 'temperature'))
     parser.add_argument('--board_size', type=int, default=config.get('CREATE DATA', 'board_size'))
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
-def _main():
-    args = get_args()
+def main(config_file = 'config.ini'):
+    print("=== creating data from self play ===")
+    args = get_args(config_file)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load('models/{}.pt'.format(args.model), map_location=device)
@@ -63,4 +65,4 @@ def _main():
     generate_data_files(args.number_of_files, args.samples_per_file, model, device, args.run_name, noise, args.noise_level, args.temperature, args.board_size)
 
 if __name__ == '__main__':
-    _main()
+    main()
