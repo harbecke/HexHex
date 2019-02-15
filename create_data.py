@@ -55,7 +55,7 @@ parser.add_argument('--board_size', type=int, default=config.get('CREATE DATA', 
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = torch.load('models/{}.pt'.format(args.model))
+model = torch.load('models/{}.pt'.format(args.model), map_location=device)
 noise = Dirichlet(torch.full((args.board_size**2,), args.noise_alpha))
 
 generate_data_files(args.number_of_files, args.samples_per_file, model, device, args.run_name, noise, args.noise_level, args.temperature, args.board_size)

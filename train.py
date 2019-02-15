@@ -45,7 +45,7 @@ for idx in range(args.data_range_min, args.data_range_max):
 concat_dataset = ConcatDataset(dataset_list)
 positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
-model = torch.load('models/{}.pt'.format(args.load_model))
+model = torch.load('models/{}.pt'.format(args.load_model), map_location=device)
 model.to(device)
 criterion = nn.MSELoss(reduction='sum')
 optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
