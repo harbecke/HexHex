@@ -1,9 +1,6 @@
 import torch
 from torch.distributions.categorical import Categorical
 
-from visualization.image import draw_board_image
-import time
-
 def model_evaluates_with_noise_temperature(board_tensor, model, noise, noise_level=0, temperature=1):
     """
     have to switch temperature with noise
@@ -120,5 +117,4 @@ class HexGameTwoModels():
                     self.player = 1-self.player
 
                 if self.board.winner:
-                    draw_board_image(self.board.board_tensor, f'images/{time.time()}.png')
                     return idx
