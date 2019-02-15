@@ -7,12 +7,12 @@ import argparse
 from configparser import ConfigParser
 
 from visualization.image import draw_board_image
-import time
+from time import gmtime, strftime
 
 def play_games(model1, model2, number_of_games, device, temperature, board_size, plot_board):
     result = [0, 0]
 
-    for _ in range(number_of_games // 2):
+    for game_number in range(number_of_games // 2):
         for game_idx in range(2):
             first_model = model1 if game_idx == 0 else model2
             second_model = model2 if game_idx == 0 else model1
@@ -20,7 +20,8 @@ def play_games(model1, model2, number_of_games, device, temperature, board_size,
             game = HexGameTwoModels(board, first_model, second_model, device, temperature)
             winner = game.play_moves()
             if plot_board:
-                draw_board_image(board.board_tensor, f'images/{time.time()}.png')
+                draw_board_image(board.board_tensor,
+                                 f'images/{strftime("%Y-%m-%d_%H-%M-%S", gmtime())}_{game_number:04d}_{game_idx}.png')
             winning_model = winner if game_idx == 0 else 1 - winner
             result[winning_model] += 1
         print(f'{result[0]} : {result[1]}')
