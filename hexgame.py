@@ -26,7 +26,7 @@ class HexGame():
     '''
     change naming of board & moves_tensor to fit with rest of code
     '''
-    def __init__(self, board, model, device, noise, noise_level=0, temperature=1):
+    def __init__(self, board, model, device, noise=None, noise_level=0, temperature=1):
         self.board = board
         self.model = model.to(device)
         self.noise = noise
@@ -43,28 +43,38 @@ class HexGame():
 
     def play_moves(self):
         while True:
-            board_tensor = self.board.board_tensor
-            if self.player == 0:
-                board_tensor = torch.cat((board_tensor, torch.zeros_like(board_tensor[0]).unsqueeze(0)))
-            else:
-                board_tensor = torch.cat((board_tensor, torch.ones_like(board_tensor[0]).unsqueeze(0)))
-            board_tensor = board_tensor.unsqueeze(0).to(self.device)
+            result = self.play_single_move()
+            if result:
+                return result
 
-            position1d = model_evaluates_with_noise_temperature(board_tensor, self.model, self.noise, self.noise_level, self.temperature)
+    def set_stone(self, pos):
+        self.board.set_stone(self.player, pos)
+        if not self.board.switch:
+            self.player = 1 - self.player
 
-            self.position_tensor = torch.cat((self.position_tensor, position1d.unsqueeze(0)))
-            board_tensor = board_tensor.detach().cpu()
-            self.moves_tensor = torch.cat((self.moves_tensor, board_tensor))
-            self.moves_count += 1
-            
-            self.board.set_stone(self.player, (int(position1d/self.board.size), int(position1d%self.board.size)))
-            if self.board.switch==False:
-                self.player = 1-self.player
+    def play_single_move(self):
+        board_tensor = self.board.board_tensor
+        if self.player == 0:
+            board_tensor = torch.cat((board_tensor, torch.zeros_like(board_tensor[0]).unsqueeze(0)))
+        else:
+            board_tensor = torch.cat((board_tensor, torch.ones_like(board_tensor[0]).unsqueeze(0)))
+        board_tensor = board_tensor.unsqueeze(0).to(self.device)
 
-            if self.board.winner:
-                self.target = torch.tensor([1.]*(self.moves_count%2)+[0.,1.]*int(self.moves_count/2))
-                
-                return self.moves_tensor, self.position_tensor, self.target
+        position1d = model_evaluates_with_noise_temperature(board_tensor, self.model, self.noise, self.noise_level,
+                                                            self.temperature)
+
+        self.position_tensor = torch.cat((self.position_tensor, position1d.unsqueeze(0)))
+        board_tensor = board_tensor.detach().cpu()
+        self.moves_tensor = torch.cat((self.moves_tensor, board_tensor))
+        self.moves_count += 1
+
+        self.set_stone((int(position1d / self.board.size), int(position1d % self.board.size)))
+
+        if self.board.winner:
+            self.target = torch.tensor([1.] * (self.moves_count % 2) + [0., 1.] * int(self.moves_count / 2))
+            return self.moves_tensor, self.position_tensor, self.target
+
+        return None
 
 
 class HexGameTwoModels():
@@ -100,7 +110,7 @@ class HexGameTwoModels():
                 #board_tensor = board_tensor.detach().cpu()
                 #self.moves_tensor = torch.cat((self.moves_tensor, board_tensor))
                 #self.moves_count += 1
-                
+
                 self.board.set_stone(self.player, position2d)
                 if self.board.switch==False:
                     self.player = 1-self.player
