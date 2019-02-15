@@ -24,6 +24,8 @@ class Gui:
         self.r = 35 # distance of neighboring hexagons
         self.board = board
         self.update_board(board)
+        pygame.font.init()
+        self.font = pygame.font.SysFont(pygame.font.get_default_font(), 25)
 
     def quit(self):
         # Be IDLE friendly
@@ -42,7 +44,7 @@ class Gui:
         y = pos[1]
         return [self.r + x * self.r / 2 + y * self.r, self.r + math.sqrt(3) / 2 * x * self.r]
 
-    def update_board(self, board):
+    def update_board(self, board, move_ratings=None):
         self.board = board
 
         # Clear the screen and set the screen background
@@ -60,6 +62,11 @@ class Gui:
                 elif board.board_tensor[1][x][y] == 1:
                     pygame.draw.polygon(self.screen, PLAYER_2, points,0)
                 pygame.draw.polygon(self.screen, BLACK, points,3)
+
+                if move_ratings is not None:
+                    rating = move_ratings[0][x * board.size + y]
+                    textsurface = self.font.render(f'{int(100*rating)}', True, (0, 0, 0))
+                    self.screen.blit(textsurface, (center[0]-self.r/6, center[1] - self.r/6))
 
         # Go ahead and update the screen with what we've drawn.
         # This MUST happen after all the other drawing commands.

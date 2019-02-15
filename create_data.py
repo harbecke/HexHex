@@ -22,7 +22,7 @@ def generate_data_files(number_of_files, samples_per_file, model, device, run_na
             
             board = Board(size=board_size)
             hexgame = HexGame(board, model, device, noise, noise_level, temperature)
-            board_states, moves, targets = hexgame.play_moves()
+            board_states, moves, targets, _ = hexgame.play_moves()
 
             all_board_states = torch.cat((all_board_states,board_states))
             all_moves = torch.cat((all_moves,moves))

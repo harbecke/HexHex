@@ -37,9 +37,9 @@ class InteractiveGame:
             self.wait_for_gui_exit()
 
     def play_ai_move(self):
-        result = self.game.play_single_move()
-        self.gui.update_board(self.board)
-        if result:
+        _, _, _, move_ratings = self.game.play_single_move()
+        self.gui.update_board(self.board, move_ratings=move_ratings)
+        if self.game.board.winner:
             print("agent has won!")
             self.wait_for_gui_exit()
 
