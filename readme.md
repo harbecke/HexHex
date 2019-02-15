@@ -6,21 +6,32 @@ See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 
 
 ## Getting Started
+```
+# install pipenv to manage dependencies
+pip install pipenv 
 
-* install prerequisites rename sample_config.ini to config.ini
+# install dependencies
+# use --skip-lock due to a recent regression in pipenv: https://github.com/pypa/pipenv/issues/2284
+pipenv install --skip-lock
 
+# activate virtual environment
+pipenv shell 
+
+# create model, training data, train model, and evaluate
+./run_example.py
+```
+
+* copy sample_config as initial configuration file `cp sample_config.ini config.ini`
 * change parameters in config.ini
-
-* run scripts in following order:
-  * create_model.py
-  * create_data.py
-  * train.py
-  * evaluate_two_models.py
+* run scripts
+    - `./create_model.py`
+    - `./create_data.py`
+    - `./train.py`
+    - `./evaluate_two_models.py`
 
 ### Prerequisites
 
-* Python 3
-
+* Python >= 3.6
 * Pytorch (see [here](https://pytorch.org/get-started/locally/) for installation info)
 
 
@@ -45,6 +56,7 @@ See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 
 * little documentation
 
+* playable gui `interactive.py`
 
 ## To-dos (somewhat chronological)
 
@@ -52,6 +64,5 @@ See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 
 * more documentation
 
-* make gui playable
 
 * implement Monte Carlo tree search
