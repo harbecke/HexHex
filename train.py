@@ -32,7 +32,7 @@ parser.add_argument('--weight_decay', type=float, default=config.get('TRAIN', 'w
 parser.add_argument('--batch_size', type=int, default=config.get('TRAIN', 'batch_size'))
 parser.add_argument('--epochs', type=int, default=config.get('TRAIN', 'epochs'))
 parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
-parser.add_argument('--validation_bool', type=bool, default=config.get('TRAIN', 'validation_bool'))
+parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
 
 args = parser.parse_args()
 
@@ -71,7 +71,7 @@ for epoch in range(args.epochs):  # loop over the dataset multiple times
 
         # print statistics
         running_loss += loss.item()
-        
+
         if i%100==0 and args.validation_bool:
             l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
             print('val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f'%(validation(args.validation_data, model, criterion, device), loss.item(), l2loss))
