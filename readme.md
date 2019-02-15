@@ -1,25 +1,27 @@
 # HexHex v0.4
 
-AlphaGo Zero adaptation of Hex. Image of intend: [Image of intend:](https://user-images.githubusercontent.com/33026629/32346749-47b65b36-c049-11e7-9bac-08bc42cf9dae.png)
+AlphaGo Zero adaptation of Hex. Image of intend: [Image of intend](https://user-images.githubusercontent.com/33026629/32346749-47b65b36-c049-11e7-9bac-08bc42cf9dae.png)
 
 See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 
 
 ## Getting Started
 
-Install prerequisites and run "play.ipynb" notebook for an iteration of self-play.
+* install prerequisites rename sample_config.ini to config.ini
+
+* change parameters in config.ini
+
+* run scripts in following order:
+  * create_model.py
+  * create_data.py
+  * train.py
+  * evaluate_two_models.py
 
 ### Prerequisites
 
 * Python 3
 
 * Pytorch (see [here](https://pytorch.org/get-started/locally/) for installation info)
-
-* Jupyter Notebook
-
-* for GUI pygame
-
-* for images pillow
 
 
 ## Features
@@ -43,9 +45,10 @@ Install prerequisites and run "play.ipynb" notebook for an iteration of self-pla
 
 * little documentation
 
+
 ## To-dos (somewhat chronological)
 
-* batch-wise self play
+* batch-wise self-play
 
 * more documentation
 
