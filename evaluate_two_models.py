@@ -37,7 +37,7 @@ args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model1 = torch.load('models/{}.pt'.format(args.model1))
-model2 = torch.load('models/{}.pt'.format(args.model2))
+model1 = torch.load('models/{}.pt'.format(args.model1), map_location=device)
+model2 = torch.load('models/{}.pt'.format(args.model2), map_location=device)
 
 play_games(model1, model2, args.number_of_games, device, args.temperature, args.board_size)
