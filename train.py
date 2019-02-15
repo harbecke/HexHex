@@ -9,7 +9,7 @@ import argparse
 from configparser import ConfigParser
 
 
-def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, save_every_epoch=False, print_loss_frequency=100, validation_triple=False):
+def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, save_every_epoch=False, print_loss_frequency=100, validation_triple=None):
 
     for epoch in range(epochs):  # loop over the dataset multiple times
 
@@ -37,7 +37,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
             if i % print_loss_frequency == 0:
                 l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
-                if validation_triple:
+                if validation_triple is not None:
                     with torch.no_grad():
                         val_pred_tensor = model(validation_triple[0])
                         val_values = torch.gather(val_pred_tensor, 1, validation_triple[1])
@@ -51,16 +51,17 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
         l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
         print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f' %(epoch + 1, running_loss / observed_states, l2loss))
-        if save_every_epoch == True:
+        if save_every_epoch:
             file_name = 'models/{}_{}.pt'.format(save_model_path, epoch)
             torch.save(model, file_name)
             print(f'wrote {file_name}')
 
-    print('Finished Training')
-    if save_every_epoch == False:
+    if not save_every_epoch:
         file_name = 'models/{}.pt'.format(save_model_path)
         torch.save(model, file_name)
         print(f'wrote {file_name}')
+
+    print('Finished Training\n')
 
 def main(config_file = 'config.ini'):
     print("=== training model ===")
@@ -98,12 +99,12 @@ def main(config_file = 'config.ini'):
     criterion = nn.MSELoss(reduction='sum')
     optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
 
+    val_triple = None
     if args.validation_bool:
         val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{args.validation_data}.pt')
         val_triple = (val_board_tensor.to(device), val_moves_tensor.to(device), val_target_tensor.to(device))
-        train_model(model, args.save_model, positionloader, criterion, optimizer, args.epochs, device, 'epoch', args.print_loss_frequency, val_triple)
-    else:
-        train_model(model, args.save_model, positionloader, criterion, optimizer, args.epochs, device, 'epoch', args.print_loss_frequency)
+    train_model(model, args.save_model, positionloader, criterion, optimizer, args.epochs, device,
+                args.save_every_epoch, args.print_loss_frequency, val_triple)
 
 if __name__ == "__main__":
     main()
