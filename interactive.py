@@ -50,7 +50,7 @@ class InteractiveGame:
     def get_move(self):
         while True:
             move = self.gui.get_cell()
-            if move in self.game.board.legal_moves:
+            if move in self.game.board.legal_moves_including_switch():
                 return move
 
 def _main():

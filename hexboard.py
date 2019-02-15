@@ -83,6 +83,13 @@ class Board():
         +'\nWinner\n'+str(self.winner)
         +'\nConnected sets\n'+str(self.connected_sets))
 
+    def legal_moves_including_switch(self):
+        if not self.switch and len(self.illegal_moves) == 1:
+            # all moves legal
+            return set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
+        return self.legal_moves
+
+
     def set_stone(self, player, position):
         if position not in self.illegal_moves:
             self.legal_moves.remove(position)
