@@ -1,6 +1,6 @@
 # HexHex v0.4
 
-AlphaGo Zero adaptation of Hex. Image of intend: [Image of intend](https://user-images.githubusercontent.com/33026629/32346749-47b65b36-c049-11e7-9bac-08bc42cf9dae.png)
+AlphaGo Zero adaptation of Hex. [Image of intend](https://user-images.githubusercontent.com/33026629/32346749-47b65b36-c049-11e7-9bac-08bc42cf9dae.png)
 
 See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 

@@ -43,13 +43,8 @@ class HexGame():
 
     def play_moves(self):
         while True:
-            board_tensor = self.board.board_tensor
-            if self.player == 0:
-                board_tensor = torch.cat((board_tensor, torch.zeros_like(board_tensor[0]).unsqueeze(0)))
-            else:
-                board_tensor = torch.cat((board_tensor, torch.ones_like(board_tensor[0]).unsqueeze(0)))
-            board_tensor = board_tensor.unsqueeze(0).to(self.device)
-
+            board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
+            
             position1d = model_evaluates_with_noise_temperature(board_tensor, self.model, self.noise, self.noise_level, self.temperature)
 
             self.position_tensor = torch.cat((self.position_tensor, position1d.unsqueeze(0)))
@@ -84,12 +79,7 @@ class HexGameTwoModels():
     def play_moves(self):
         while True:
             for idx in range(2):
-                board_tensor = self.board.board_tensor
-                if self.player == 0:
-                    board_tensor = torch.cat((board_tensor, torch.zeros_like(board_tensor[0]).unsqueeze(0)))
-                else:
-                    board_tensor = torch.cat((board_tensor, torch.ones_like(board_tensor[0]).unsqueeze(0)))
-                board_tensor = board_tensor.unsqueeze(0).to(self.device)
+                board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
 
                 with torch.no_grad():
                     position1d = model_evaluates_with_noise_temperature(board_tensor, self.models[idx], False, 0, self.temperature)

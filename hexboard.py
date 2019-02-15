@@ -61,17 +61,20 @@ def update_connected_sets_check_win(connected_sets, player, position, size):
 class Board():
     '''
     Board is in quadratic shape. This means diagonal neighbours are upper right and lower left, but not the other two.
-    First player has to connect on the first dimension, second player on the second dimension.
-    If the second player decides to switch, a stone is set in the second layer that is only information and not connected. The second player now plays the first layer and vice-versa.
+    There are three layers: The first layer is for stones of the first player, second layer for second player and the third layer stores indicates whose turn it is.
+    First player has to connect his stones on the first dimension (displayed top to bottom), second player on the second dimension (displayed left to right).
+    If the second player decides to switch, a stone is set in the second layer that is only information.
+    The second player becomes the first player and now plays the first layer and vice-versa.
     '''
     def __init__(self, size):
         self.size = size
-        self.board_tensor = torch.zeros([2, self.size, self.size])
+        self.board_tensor = torch.zeros([3, self.size, self.size])
         self.legal_moves = set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
         self.illegal_moves = set()
         self.connected_sets = [[], []]
         self.switch = False
         self.winner = False
+        self.player_tensor = (torch.ones([self.size, self.size]), torch.zeros([self.size, self.size]))
 
     def __repr__(self):
         return ('Board\n'+str((self.board_tensor[0]-self.board_tensor[1]).numpy())
@@ -86,6 +89,7 @@ class Board():
             self.illegal_moves.update([position])
             self.board_tensor[player][position] = 1
             self.connected_sets[player], self.winner = update_connected_sets_check_win(self.connected_sets[player], player, position, self.size)
+            self.board_tensor[2] = self.player_tensor[player]
             self.switch = False
         elif self.switch==False and set([position])==self.illegal_moves:
             self.switch = True
