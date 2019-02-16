@@ -11,7 +11,7 @@ from hexgame import HexGame
 from hexconvolution import NoMCTSModel
 
 
-def generate_data_files(number_of_files, samples_per_file, model, device, run_name, noise, noise_level=0, temperature=1, board_size=11):
+def generate_data_files(number_of_files, samples_per_file, model, device, run_name, noise_level=0, noise_alpha=0.03, temperature=1, board_size=11):
     all_board_states = torch.Tensor()
     all_moves = torch.LongTensor()
     all_targets = torch.Tensor()
@@ -21,8 +21,8 @@ def generate_data_files(number_of_files, samples_per_file, model, device, run_na
         while all_board_states.shape[0] < samples_per_file:
             
             board = Board(size=board_size)
-            hexgame = HexGame(board, model, device, noise, noise_level, temperature)
-            board_states, moves, targets, _ = hexgame.play_moves()
+            hexgame = HexGame(board, model, device, noise_level, noise_alpha, temperature)
+            board_states, moves, targets = hexgame.play_moves()
 
             all_board_states = torch.cat((all_board_states,board_states))
             all_moves = torch.cat((all_moves,moves))
@@ -47,8 +47,8 @@ def get_args(config_file):
     parser.add_argument('--samples_per_file', type=int, default=config.get('CREATE DATA', 'samples_per_file'))
     parser.add_argument('--model', type=str, default=config.get('CREATE DATA', 'model'))
     parser.add_argument('--run_name', type=str, default=config.get('CREATE DATA', 'run_name'))
-    parser.add_argument('--noise_alpha', type=float, default=config.get('CREATE DATA', 'noise_alpha'))
     parser.add_argument('--noise_level', type=float, default=config.get('CREATE DATA', 'noise_level'))
+    parser.add_argument('--noise_alpha', type=float, default=config.get('CREATE DATA', 'noise_alpha'))
     parser.add_argument('--temperature', type=float, default=config.get('CREATE DATA', 'temperature'))
     parser.add_argument('--board_size', type=int, default=config.get('CREATE DATA', 'board_size'))
 
@@ -60,9 +60,8 @@ def main(config_file = 'config.ini'):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load('models/{}.pt'.format(args.model), map_location=device)
-    noise = Dirichlet(torch.full((args.board_size**2,), args.noise_alpha))
 
-    generate_data_files(args.number_of_files, args.samples_per_file, model, device, args.run_name, noise, args.noise_level, args.temperature, args.board_size)
+    generate_data_files(args.number_of_files, args.samples_per_file, model, device, args.run_name, args.noise_level, args.noise_alpha, args.temperature, args.board_size)
 
 if __name__ == '__main__':
     main()

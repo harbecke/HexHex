@@ -24,7 +24,7 @@ class InteractiveGame:
         self.model = torch.load('models/{}.pt'.format(args.model), map_location=self.device)
 
         self.board = Board(size=self.model.board_size)
-        self.game = HexGame(self.board, self.model, self.device, noise=0, temperature=args.temperature)
+        self.game = HexGame(self.board, self.model, self.device, temperature=args.temperature)
         self.gui = Gui(self.board)
 
     def play_human_move(self):
@@ -37,7 +37,7 @@ class InteractiveGame:
             self.wait_for_gui_exit()
 
     def play_ai_move(self):
-        _, _, _, move_ratings = self.game.play_single_move()
+        move_ratings = self.game.play_single_move()
         self.gui.update_board(self.board, move_ratings=move_ratings)
         if self.game.board.winner:
             print("agent has won!")
@@ -50,7 +50,7 @@ class InteractiveGame:
     def get_move(self):
         while True:
             move = self.gui.get_cell()
-            if move in self.game.board.legal_moves_including_switch():
+            if move in self.game.board.legal_moves:
                 return move
 
 def _main():

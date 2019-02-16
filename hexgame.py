@@ -1,36 +1,32 @@
 import torch
 from torch.distributions.categorical import Categorical
+from torch.distributions.dirichlet import Dirichlet
 
-def model_evaluates_with_noise_temperature(board_tensor, model, noise, noise_level=0, temperature=1):
-    """
-    have to switch temperature with noise
 
-    :return (chosen move, original move ratings)
-    """
-    with torch.no_grad():
-        output_values = model(board_tensor)
-        output_values = output_values.detach().cpu()
+def dirichlet_onto_output(output_tensor, dirichlet_level=0.25, dirichlet_alpha=0.03):
+    noise = Dirichlet(torch.full_like(output_tensor, dirichlet_alpha)).sample()
+    return output_tensor * torch.exp(dirichlet_level*noise)
 
-    noisy_output_value = output_values
-    if noise_level > 0:
-        noisy_output_value = noisy_output_value * torch.exp(noise_level*noise.sample())
 
+def tempered_moves_selection(output_tensor, temperature=0.1):
+    #needs batch dimension to work
     if temperature == 0:
-        return noisy_output_value.argmax(), output_values
+        return output_tensor.argmax(1)
     else:
-        temperature_output = torch.expm1(noisy_output_value)**(1/temperature)
-        return Categorical(temperature_output).sample(), output_values
+        normalized_output_tensor = output_tensor/output_tensor.max(1)[0].unsqueeze(1)
+        temperature_output = normalized_output_tensor**(1/temperature)
+        return Categorical(temperature_output).sample()
 
 
 class HexGame():
     '''
     change naming of board & moves_tensor to fit with rest of code
     '''
-    def __init__(self, board, model, device, noise=None, noise_level=0, temperature=1):
+    def __init__(self, board, model, device, noise_level=0, noise_alpha=0.03, temperature=1):
         self.board = board
         self.model = model.to(device)
-        self.noise = noise
         self.noise_level = noise_level
+        self.noise_alpha = noise_alpha
         self.temperature = temperature
         self.moves_tensor = torch.Tensor(device='cpu')
         self.position_tensor = torch.LongTensor(device='cpu')
@@ -44,9 +40,9 @@ class HexGame():
 
     def play_moves(self):
         while True:
-            result = self.play_single_move()
+            self.play_single_move()
             if self.board.winner:
-                return result
+                return self.moves_tensor, self.position_tensor, self.target
 
     def set_stone(self, pos):
         self.board.set_stone(self.player, pos)
@@ -56,9 +52,12 @@ class HexGame():
     def play_single_move(self):
         board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
 
-        position1d, move_ratings = model_evaluates_with_noise_temperature(board_tensor, self.model, self.noise,
-                                                                          self.noise_level,
-                                                                          self.temperature)
+        with torch.no_grad():
+            output_tensor = self.model(board_tensor).detach()
+
+        dirichlet_output = dirichlet_onto_output(output_tensor, self.noise_level, self.noise_alpha)
+
+        position1d = tempered_moves_selection(dirichlet_output, self.temperature)
 
         self.position_tensor = torch.cat((self.position_tensor, position1d.unsqueeze(0)))
         board_tensor = board_tensor.detach().cpu()
@@ -69,7 +68,7 @@ class HexGame():
 
         if self.board.winner:
             self.target = torch.tensor([1.] * (self.moves_count % 2) + [0., 1.] * int(self.moves_count / 2))
-        return self.moves_tensor, self.position_tensor, self.target, move_ratings
+        return output_tensor
 
 
 class HexGameTwoModels():
@@ -92,8 +91,9 @@ class HexGameTwoModels():
                 board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
 
                 with torch.no_grad():
-                    position1d, _ = model_evaluates_with_noise_temperature(board_tensor, self.models[idx],
-                                                                                     False, 0, self.temperature)
+                    output_tensor = self.models[idx](board_tensor).detach()
+
+                position1d = tempered_moves_selection(output_tensor, self.temperature)
 
                 position2d = (int(position1d/self.board.size), int(position1d%self.board.size))
 

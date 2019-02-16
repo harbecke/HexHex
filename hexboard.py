@@ -69,36 +69,29 @@ class Board():
     def __init__(self, size):
         self.size = size
         self.board_tensor = torch.zeros([3, self.size, self.size])
+        self.player_tensor = (torch.ones([self.size, self.size]), torch.zeros([self.size, self.size]))
+        self.made_moves = set()
         self.legal_moves = set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
-        self.illegal_moves = set()
         self.connected_sets = [[], []]
         self.switch = False
         self.winner = False
-        self.player_tensor = (torch.ones([self.size, self.size]), torch.zeros([self.size, self.size]))
 
     def __repr__(self):
         return ('Board\n'+str((self.board_tensor[0]-self.board_tensor[1]).numpy())
         +'\nLegal moves\n'+str(self.legal_moves)
-        +'\nIllegal moves\n'+str(self.illegal_moves)
         +'\nWinner\n'+str(self.winner)
         +'\nConnected sets\n'+str(self.connected_sets))
 
-    def legal_moves_including_switch(self):
-        if not self.switch and len(self.illegal_moves) == 1:
-            # all moves legal
-            return set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
-        return self.legal_moves
-
-
     def set_stone(self, player, position):
-        if position not in self.illegal_moves:
-            self.legal_moves.remove(position)
-            self.illegal_moves.update([position])
+        if position in self.legal_moves:
+            self.made_moves.update([position])
+            if self.switch or len(self.made_moves) > 1:
+                self.legal_moves.remove(position)
             self.board_tensor[player][position] = 1
             self.connected_sets[player], self.winner = update_connected_sets_check_win(self.connected_sets[player], player, position, self.size)
             self.board_tensor[2] = self.player_tensor[player]
             self.switch = False
-        elif self.switch==False and set([position])==self.illegal_moves:
+        elif self.switch==False and set([position])==self.made_moves:
             self.switch = True
             self.board_tensor[1][position] = 1
         else:
