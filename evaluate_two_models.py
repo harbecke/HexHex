@@ -8,11 +8,12 @@ from configparser import ConfigParser
 
 from visualization.image import draw_board_image
 from time import gmtime, strftime
+import progressbar
 
 def play_games(model1, model2, number_of_games, device, temperature, board_size, plot_board):
     result = [0, 0]
 
-    for game_number in range(number_of_games // 2):
+    for game_number in progressbar.progressbar(range(number_of_games // 2)):
         for game_idx in range(2):
             first_model = model1 if game_idx == 0 else model2
             second_model = model2 if game_idx == 0 else model1
@@ -24,7 +25,7 @@ def play_games(model1, model2, number_of_games, device, temperature, board_size,
                                  f'images/{strftime("%Y-%m-%d_%H-%M-%S", gmtime())}_{game_number:04d}_{game_idx}.png')
             winning_model = winner if game_idx == 0 else 1 - winner
             result[winning_model] += 1
-        print(f'{result[0]} : {result[1]}')
+    print(f'{result[0]} : {result[1]}')
     return result
 
 
