@@ -15,6 +15,7 @@ def get_args():
     parser.add_argument('--model', type=str, default=config.get('INTERACTIVE', 'model'))
     parser.add_argument('--temperature', type=float, default=config.get('INTERACTIVE', 'temperature'))
     parser.add_argument('--first_move_ai', type=bool, default=config.getboolean('INTERACTIVE', 'first_move_ai'))
+    parser.add_argument('--gui_radius', type=int, default=config.get('INTERACTIVE', 'gui_radius'))
 
     return parser.parse_args()
 
@@ -25,7 +26,7 @@ class InteractiveGame:
 
         self.board = Board(size=self.model.board_size)
         self.game = HexGame(self.board, self.model, self.device, temperature=args.temperature)
-        self.gui = Gui(self.board)
+        self.gui = Gui(self.board, args.gui_radius)
 
     def play_human_move(self):
         move = self.get_move()

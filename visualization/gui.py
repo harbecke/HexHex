@@ -11,8 +11,9 @@ PLAYER_1 = RED  # (123, 52, 123)
 PLAYER_2 = BLUE  # (255, 255, 128)
 
 class Gui:
-    def __init__(self, board):
-        self.size = [600, 370]
+    def __init__(self, board, radius):
+        self.r = radius
+        self.size = [int(self.r*(3/2*board.size+1)), int(self.r*(3**(1/2)/2*board.size+1))]
 
         pygame.init()
 
@@ -21,7 +22,7 @@ class Gui:
         pygame.display.set_caption("HexHex")
 
         self.clock = pygame.time.Clock()
-        self.r = 35 # distance of neighboring hexagons
+         # distance of neighboring hexagons
         self.board = board
         self.update_board(board)
         pygame.font.init()
