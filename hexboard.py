@@ -78,22 +78,38 @@ class Board():
 
     def __repr__(self):
         return ('Board\n'+str((self.board_tensor[0]-self.board_tensor[1]).numpy())
-        +'\nLegal moves\n'+str(self.legal_moves)
-        +'\nWinner\n'+str(self.winner)
-        +'\nConnected sets\n'+str(self.connected_sets))
+            +'\nMade moves\n'+str(self.made_moves)
+            +'\nLegal moves\n'+str(self.legal_moves)
+            +'\nWinner\n'+str(self.winner)
+            +'\nConnected sets\n'+str(self.connected_sets))
 
     def set_stone(self, player, position):
-        if position in self.legal_moves:
-            self.made_moves.update([position])
-            if self.switch or len(self.made_moves) > 1:
+        if len(self.made_moves)==0:
+            self.made_moves.update([position])     
+            self.board_tensor[player][position] = 1
+            self.connected_sets[player], self.winner = update_connected_sets_check_win(self.connected_sets[player], player, position, self.size)
+            self.board_tensor[2] = self.player_tensor[player]
+
+        elif len(self.made_moves)==1:
+            if set([position]) == self.made_moves:
+                self.switch = True
+                self.board_tensor[1][position] = 1
                 self.legal_moves.remove(position)
+            else:
+                self.made_moves.update([position])
+                self.legal_moves -= self.made_moves
+                self.board_tensor[player][position] = 1
+                self.connected_sets[player], self.winner = update_connected_sets_check_win(self.connected_sets[player], player, position, self.size)
+                self.board_tensor[2] = self.player_tensor[player]
+
+        elif position in self.legal_moves:
+            self.made_moves.update([position])            
+            self.legal_moves.remove(position)
             self.board_tensor[player][position] = 1
             self.connected_sets[player], self.winner = update_connected_sets_check_win(self.connected_sets[player], player, position, self.size)
             self.board_tensor[2] = self.player_tensor[player]
             self.switch = False
-        elif self.switch==False and set([position])==self.made_moves:
-            self.switch = True
-            self.board_tensor[1][position] = 1
+
         else:
             print('Illegal Move!')
             print(self)
