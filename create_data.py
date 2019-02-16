@@ -1,17 +1,14 @@
 import torch
-from torch.utils.data.dataset import Dataset
-from torch.distributions.dirichlet import Dirichlet
 
-import os
 import argparse
 from configparser import ConfigParser
 
 from hexboard import Board
 from hexgame import HexGame
-from hexconvolution import NoMCTSModel
 
 
 def generate_data_files(number_of_files, samples_per_file, model, device, run_name, noise_level=0, noise_alpha=0.03, temperature=1, board_size=11):
+    print("=== creating data from self play ===")
     all_board_states = torch.Tensor()
     all_moves = torch.LongTensor()
     all_targets = torch.Tensor()
@@ -55,7 +52,6 @@ def get_args(config_file):
     return parser.parse_args()
 
 def main(config_file = 'config.ini'):
-    print("=== creating data from self play ===")
     args = get_args(config_file)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
