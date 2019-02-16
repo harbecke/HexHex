@@ -101,6 +101,7 @@ class Board():
                 self.board_tensor[player][position] = 1
                 self.connected_sets[player], self.winner = update_connected_sets_check_win(self.connected_sets[player], player, position, self.size)
                 self.board_tensor[2] = self.player_tensor[player]
+                self.switch = False
 
         elif position in self.legal_moves:
             self.made_moves.update([position])            
