@@ -26,11 +26,9 @@ def repeated_self_training(config_file):
     for model_id in range(100):
         champion = torch.load(f'models/{champion_filename}.pt', map_location=device)
 
-        samples_per_file = 100 * champion_iter
-
         create_data.generate_data_files(
                 number_of_files=config.getint('CREATE DATA', 'number_of_files'),
-                samples_per_file=samples_per_file,
+                samples_per_file=config.getint('CREATE DATA', 'samples_per_file'),
                 model=champion,
                 device=device,
                 run_name=champion_filename,
@@ -41,7 +39,7 @@ def repeated_self_training(config_file):
         )
 
         train_args = train.get_args(config_file)
-        train_args.load_model = champion_filename
+        train_args.load_model = champion_filename if champion_iter == 1 else f'5_gen{model_id}'
         train_args.save_model = f'5_gen{model_id}'
         train_args.data = champion_filename
         train.train(train_args)
@@ -65,4 +63,4 @@ def repeated_self_training(config_file):
 
 
 if __name__ == '__main__':
-    repeated_self_training(config_file='flow.ini')
+    repeated_self_training(config_file='repeated_self_training.ini')
