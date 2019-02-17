@@ -104,7 +104,6 @@ class Board():
                     self.board_tensor[self.player][position] = 1
                     self.connected_sets[self.player], self.winner = update_connected_sets_check_win(self.connected_sets[self.player], self.player, position, self.size)
                     self.board_tensor[2] = self.player_tensor[self.player]
-                    self.switch = False
                     self.player = 1-self.player
 
             else:
@@ -113,9 +112,10 @@ class Board():
                 self.board_tensor[self.player][position] = 1
                 self.connected_sets[self.player], self.winner = update_connected_sets_check_win(self.connected_sets[self.player], self.player, position, self.size)
                 if self.winner:
+                    if self.switch:
+                        self.winner = [[1], [0]][self.winner[0]]
                     self.legal_moves = set()
                 self.board_tensor[2] = self.player_tensor[self.player]
-                self.switch = False
                 self.player = 1-self.player
 
         else:
