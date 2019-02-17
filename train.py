@@ -54,7 +54,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
             running_loss += loss.item()
             observed_states += batch_size
 
-            if i % print_loss_frequency == print_loss_frequency - 1:
+            if i % print_loss_frequency == 0:
                 l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
                 if validation_triple is not None:
                     with torch.no_grad():
