@@ -36,7 +36,7 @@ class MultiHexGame():
         self.positions_tensor = torch.LongTensor(device='cpu')
         self.targets_tensor = None
         self.targets_list = [[] for idx in range(self.batch_size)]
-        self.moves_count = 0
+        self.reverse_winner = 1
         self.device = device
 
     def __repr__(self):
@@ -50,7 +50,7 @@ class MultiHexGame():
                     self.positions_tensor = self.positions_tensor.view(-1, 1)
                     self.targets_tensor = torch.tensor(zip_list_of_lists_first_dim_reversed(*self.targets_list), dtype=torch.float, device=torch.device('cpu'))
                     return self.output_boards_tensor, self.positions_tensor, self.targets_tensor
-                self.moves_count += 1
+                self.reverse_winner = 1 - self.reverse_winner
 
 
     def batched_single_move(self, model):        
@@ -77,5 +77,5 @@ class MultiHexGame():
 
         for idx in range(len(self.current_boards)):
             self.boards[self.current_boards[idx]].set_stone((int(positions1d[idx] / self.board_size), int(positions1d[idx] % self.board_size)))
-            self.targets_list[self.current_boards[idx]].append(1-self.moves_count%2)
+            self.targets_list[self.current_boards[idx]].append(self.reverse_winner)
         return outputs_tensor
