@@ -1,4 +1,4 @@
-# HexHex v0.4
+# HexHex v0.5
 
 AlphaGo Zero adaptation of Hex. [Image of intend](https://user-images.githubusercontent.com/33026629/32346749-47b65b36-c049-11e7-9bac-08bc42cf9dae.png)
 
@@ -46,7 +46,7 @@ pipenv shell
 
 * scripts for
   * creating models with hyperparameters
-  * self-play to generate datasets
+  * batch-wise self-play to generate datasets
   * training and validating models
   * evaluating models against each other
 
@@ -60,9 +60,6 @@ pipenv shell
 
 ## To-dos (somewhat chronological)
 
-* batch-wise self-play
-
 * more documentation
-
 
 * implement Monte Carlo tree search

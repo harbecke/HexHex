@@ -4,7 +4,7 @@ from configparser import ConfigParser
 import argparse
 import torch
 from hexboard import Board
-from hexgame import HexGame
+from hexgame import MultiHexGame
 from visualization.gui import Gui
 
 def get_args():
@@ -25,12 +25,12 @@ class InteractiveGame:
         self.model = torch.load('models/{}.pt'.format(args.model), map_location=self.device)
 
         self.board = Board(size=self.model.board_size)
-        self.game = HexGame(self.board, self.model, self.device, temperature=args.temperature)
+        self.game = MultiHexGame((self.board,), (self.model,), self.device, temperature=args.temperature)
         self.gui = Gui(self.board, args.gui_radius)
 
     def play_human_move(self):
         move = self.get_move()
-        self.game.set_stone(move)
+        self.board.set_stone(move)
         self.gui.update_board(self.board)
 
         if self.board.winner:
@@ -38,9 +38,9 @@ class InteractiveGame:
             self.wait_for_gui_exit()
 
     def play_ai_move(self):
-        move_ratings = self.game.play_single_move()
+        move_ratings = self.game.batched_single_move(self.model)
         self.gui.update_board(self.board, move_ratings=move_ratings)
-        if self.game.board.winner:
+        if self.board.winner:
             print("agent has won!")
             self.wait_for_gui_exit()
 
@@ -51,7 +51,7 @@ class InteractiveGame:
     def get_move(self):
         while True:
             move = self.gui.get_cell()
-            if move in self.game.board.legal_moves:
+            if move in self.board.legal_moves:
                 return move
 
 def _main():

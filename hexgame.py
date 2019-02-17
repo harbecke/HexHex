@@ -1,6 +1,7 @@
 import torch
 from torch.distributions.categorical import Categorical
 from torch.distributions.dirichlet import Dirichlet
+from utils import zip_list_of_lists_first_dim_reversed
 
 
 def dirichlet_onto_output(output_tensor, dirichlet_level=0.25, dirichlet_alpha=0.03):
@@ -18,93 +19,59 @@ def tempered_moves_selection(output_tensor, temperature=0.1):
         return Categorical(temperature_output).sample()
 
 
-class HexGame():
-    '''
-    change naming of board & moves_tensor to fit with rest of code
-    '''
-    def __init__(self, board, model, device, noise_level=0, noise_alpha=0.03, temperature=1):
-        self.board = board
-        self.model = model.to(device)
+class MultiHexGame():
+    def __init__(self, boards, models, device, noise_level=0, noise_alpha=0.03, temperature=1):
+        self.boards = boards
+        self.board_size = self.boards[0].size
+        self.batch_size = len(boards)
+        self.models = [model.to(device) for model in models]
         self.noise_level = noise_level
         self.noise_alpha = noise_alpha
         self.temperature = temperature
-        self.moves_tensor = torch.Tensor(device='cpu')
-        self.position_tensor = torch.LongTensor(device='cpu')
+        self.output_boards_tensor = torch.Tensor(device='cpu')
+        self.positions_tensor = torch.LongTensor(device='cpu')
+        self.targets_tensor = None
+        self.targets_list = [[] for idx in range(self.batch_size)]
         self.moves_count = 0
-        self.player = 0
         self.device = device
-        self.target = None
 
     def __repr__(self):
-        return(str(self.board))
+        return ''.join([str(board) for board in self.boards])
 
     def play_moves(self):
         while True:
-            self.play_single_move()
-            if self.board.winner:
-                return self.moves_tensor, self.position_tensor, self.target
+            for model in self.models:
+                self.batched_single_move(model)
+                if self.current_boards == []:
+                    self.positions_tensor = self.positions_tensor.view(-1, 1)
+                    self.targets_tensor = torch.tensor(zip_list_of_lists_first_dim_reversed(*self.targets_list), dtype=torch.float, device=torch.device('cpu'))
+                    return self.output_boards_tensor, self.positions_tensor, self.targets_tensor
+                self.moves_count += 1
 
-    def set_stone(self, pos):
-        self.board.set_stone(self.player, pos)
-        if not self.board.switch:
-            self.player = 1 - self.player
 
-    def play_single_move(self):
-        board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
+    def batched_single_move(self, model):        
+        self.current_boards = []
+        self.current_boards_tensor = torch.Tensor()
+        for board_idx in range(self.batch_size):
+            if self.boards[board_idx].winner == False:
+                self.current_boards.append(board_idx)
+                self.current_boards_tensor = torch.cat((self.current_boards_tensor, self.boards[board_idx].board_tensor.unsqueeze(0)))
+
+        if self.current_boards == []:
+            return
+        
+        self.current_boards_tensor = self.current_boards_tensor.to(self.device)
 
         with torch.no_grad():
-            output_tensor = self.model(board_tensor).detach()
+            outputs_tensor = model(self.current_boards_tensor).detach()
 
-        dirichlet_output = dirichlet_onto_output(output_tensor, self.noise_level, self.noise_alpha)
+        outputs_with_dirichlet = dirichlet_onto_output(outputs_tensor, self.noise_level, self.noise_alpha)
+        positions1d = tempered_moves_selection(outputs_with_dirichlet, self.temperature)
 
-        position1d = tempered_moves_selection(dirichlet_output, self.temperature)
+        self.output_boards_tensor = torch.cat((self.output_boards_tensor, self.current_boards_tensor.detach().cpu()))
+        self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
 
-        self.position_tensor = torch.cat((self.position_tensor, position1d.unsqueeze(0)))
-        board_tensor = board_tensor.detach().cpu()
-        self.moves_tensor = torch.cat((self.moves_tensor, board_tensor))
-        self.moves_count += 1
-
-        self.set_stone((int(position1d / self.board.size), int(position1d % self.board.size)))
-
-        if self.board.winner:
-            self.target = torch.tensor([1.] * (self.moves_count % 2) + [0., 1.] * int(self.moves_count / 2))
-        return output_tensor
-
-
-class HexGameTwoModels():
-    def __init__(self, board, model1, model2, device, temperature):
-        self.board = board
-        self.models = (model1.to(device), model2.to(device))
-        #self.moves_tensor = torch.Tensor(device='cpu')
-        #self.position_tensor = torch.LongTensor(device='cpu')
-        #self.moves_count = 0
-        self.temperature = temperature
-        self.player = 0
-        self.device = device
-
-    def __repr__(self):
-        return(str(self.board))
-
-    def play_moves(self):
-        while True:
-            for idx in range(2):
-                board_tensor = self.board.board_tensor.unsqueeze(0).to(self.device)
-
-                with torch.no_grad():
-                    output_tensor = self.models[idx](board_tensor).detach()
-
-                position1d = tempered_moves_selection(output_tensor, self.temperature)
-
-                position2d = (int(position1d/self.board.size), int(position1d%self.board.size))
-
-                #self.position_tensor = torch.cat((self.position_tensor, torch.tensor(position2d).unsqueeze(0)))
-                #board_tensor = board_tensor.detach().cpu()
-                #self.moves_tensor = torch.cat((self.moves_tensor, board_tensor))
-                #self.moves_count += 1
-
-                self.board.set_stone(self.player, position2d)
-                if self.board.switch==False:
-                    self.player = 1-self.player
-
-                if self.board.winner:
-                    return idx
+        for idx in range(len(self.current_boards)):
+            self.boards[self.current_boards[idx]].set_stone((int(positions1d[idx] / self.board_size), int(positions1d[idx] % self.board_size)))
+            self.targets_list[self.current_boards[idx]].append(1-self.moves_count%2)
+        return outputs_tensor
