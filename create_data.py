@@ -23,12 +23,20 @@ def generate_data_files(file_counter_start, file_counter_end, samples_per_file, 
             all_board_states = torch.cat((all_board_states,board_states))
             all_moves = torch.cat((all_moves,moves))
             all_targets = torch.cat((all_targets,targets))
-        
+
         file_name = f'data/{run_name}_{file_counter}.pt'
-        torch.save((all_board_states[:samples_per_file], all_moves[:samples_per_file], all_targets[:samples_per_file]), file_name)
+        torch.save(
+                (
+                    # clone to avoid large files for large batch sizes
+                    # https://stackoverflow.com/questions/46227756/resized-copy-of-pytorch-tensor-dataset
+                    all_board_states[:samples_per_file].clone(),
+                    all_moves[:samples_per_file].clone(),
+                    all_targets[:samples_per_file].clone()
+                ),
+                file_name)
         print(f'wrote {file_name}')
         file_counter += 1
-        
+
         all_board_states = all_board_states[samples_per_file:]
         all_moves = all_moves[samples_per_file:]
         all_targets = all_targets[samples_per_file:]
