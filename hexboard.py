@@ -96,7 +96,7 @@ class Board():
             if len(self.made_moves)==1:
                 if set([position]) == self.made_moves:
                     self.switch = True
-                    self.board_tensor[1][position] = 1
+                    self.board_tensor[1][position] = 0.001
                     self.legal_moves.remove(position)
                 else:
                     self.made_moves.update([position])
