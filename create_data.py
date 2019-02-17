@@ -7,14 +7,14 @@ from hexboard import Board
 from hexgame import MultiHexGame
 
 
-def generate_data_files(number_of_files, samples_per_file, model, device, batch_size, run_name, noise_level=0, noise_alpha=0.03, temperature=1, board_size=11):
+def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name, noise_level=0, noise_alpha=0.03, temperature=1, board_size=11):
     print("=== creating data from self play ===")
     all_board_states = torch.Tensor()
     all_moves = torch.LongTensor()
     all_targets = torch.Tensor()
 
-    file_counter = 0
-    while file_counter < number_of_files:
+    file_counter = file_counter_start
+    while file_counter < file_counter_end:
         while all_board_states.shape[0] < samples_per_file:
             boards = [Board(size=board_size) for idx in range(batch_size)]
             multihexgame = MultiHexGame(boards, (model,), device, noise_level, noise_alpha, temperature)
@@ -39,7 +39,8 @@ def get_args(config_file):
     config.read(config_file)
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--number_of_files', type=int, default=config.get('CREATE DATA', 'number_of_files'))
+    parser.add_argument('--data_range_min', type=int, default=config.get('CREATE DATA', 'data_range_min'))
+    parser.add_argument('--data_range_max', type=int, default=config.get('CREATE DATA', 'data_range_max'))
     parser.add_argument('--samples_per_file', type=int, default=config.get('CREATE DATA', 'samples_per_file'))
     parser.add_argument('--model', type=str, default=config.get('CREATE DATA', 'model'))
     parser.add_argument('--batch_size', type=int, default=config.get('CREATE DATA', 'batch_size'))
@@ -57,7 +58,7 @@ def main(config_file = 'config.ini'):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load('models/{}.pt'.format(args.model), map_location=device)
 
-    generate_data_files(args.number_of_files, args.samples_per_file, model, device, args.batch_size, args.run_name, args.noise_level, args.noise_alpha, args.temperature, args.board_size)
+    generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device, args.batch_size, args.run_name, args.noise_level, args.noise_alpha, args.temperature, args.board_size)
 
 if __name__ == '__main__':
     main()
