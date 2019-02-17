@@ -10,6 +10,7 @@ from visualization.image import draw_board_image
 from time import gmtime, strftime
 
 def play_games(models, number_of_games, device, batch_size, temperature, board_size, plot_board):
+    time = strftime("%Y-%m-%d_%H-%M-%S", gmtime())
     result = [0, 0]
     for model_idx in range(2):
         game_number = 0
@@ -23,7 +24,7 @@ def play_games(models, number_of_games, device, batch_size, temperature, board_s
                 result[winning_model] += 1
                 if plot_board:
                     draw_board_image(board.board_tensor,
-                        f'images/{strftime("%Y-%m-%d_%H-%M-%S", gmtime())}_{model_idx}_{game_number:04d}.png')
+                        f'images/{time}_{model_idx}_{game_number:04d}.png')
                 game_number += 1
         print(f'{result[0]} : {result[1]}')
     return result
