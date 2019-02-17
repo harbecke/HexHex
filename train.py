@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from torch.utils.data.dataset import TensorDataset, ConcatDataset
+from torch.utils.data.sampler import SubsetRandomSampler
 
 import os
 import argparse
@@ -19,6 +20,7 @@ def get_args(config_file):
     parser.add_argument('--data_range_max', type=int, default=config.get('TRAIN', 'data_range_max'))
     parser.add_argument('--weight_decay', type=float, default=config.get('TRAIN', 'weight_decay'))
     parser.add_argument('--batch_size', type=int, default=config.get('TRAIN', 'batch_size'))
+    parser.add_argument('--split', type=float, default=config.get('TRAIN', 'split'))
     parser.add_argument('--epochs', type=int, default=config.get('TRAIN', 'epochs'))
     parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
     parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
@@ -89,7 +91,12 @@ def train(args):
         board_states, moves, targets = torch.load('data/{}_{}.pt'.format(args.data, idx))
         dataset_list.append(TensorDataset(board_states, moves, targets))
     concat_dataset = ConcatDataset(dataset_list)
-    positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    if args.split < 1:
+        concat_len = concat_dataset.__len__()
+        sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len*args.split)])
+        positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=0)
+    else:
+        positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     model = torch.load('models/{}.pt'.format(args.load_model), map_location=device)
     model.to(device)
