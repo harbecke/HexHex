@@ -7,9 +7,9 @@ import train
 
 
 def _main(config_file = 'sample_config.ini'):
-    create_model.create_model(config_file)
+    create_model.create_model_from_config_file(config_file)
     create_data.main(config_file)
-    train.main(config_file)
+    train.train_by_config_file(config_file)
     evaluate_two_models.evaluate(config_file)
 
 

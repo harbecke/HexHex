@@ -8,6 +8,23 @@ import os
 import argparse
 from configparser import ConfigParser
 
+def get_args(config_file):
+    config = ConfigParser()
+    config.read(config_file)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--load_model', type=str, default=config.get('TRAIN', 'load_model'))
+    parser.add_argument('--save_model', type=str, default=config.get('TRAIN', 'save_model'))
+    parser.add_argument('--data', type=str, default=config.get('TRAIN', 'data'))
+    parser.add_argument('--data_range_min', type=int, default=config.get('TRAIN', 'data_range_min'))
+    parser.add_argument('--data_range_max', type=int, default=config.get('TRAIN', 'data_range_max'))
+    parser.add_argument('--weight_decay', type=float, default=config.get('TRAIN', 'weight_decay'))
+    parser.add_argument('--batch_size', type=int, default=config.get('TRAIN', 'batch_size'))
+    parser.add_argument('--epochs', type=int, default=config.get('TRAIN', 'epochs'))
+    parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
+    parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
+    parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
+    parser.add_argument('--print_loss_frequency', type=int, default=config.get('TRAIN', 'print_loss_frequency'))
+    return parser.parse_args()
 
 def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, save_every_epoch=False, print_loss_frequency=100, validation_triple=None):
 
@@ -35,7 +52,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
             running_loss += loss.item()
             observed_states += batch_size
 
-            if i % print_loss_frequency == 0:
+            if i % print_loss_frequency == print_loss_frequency - 1:
                 l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
                 if validation_triple is not None:
                     with torch.no_grad():
@@ -63,27 +80,8 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
     print('Finished Training\n')
 
-def main(config_file = 'config.ini'):
+def train(args):
     print("=== training model ===")
-    config = ConfigParser()
-    config.read(config_file)
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--load_model', type=str, default=config.get('TRAIN', 'load_model'))
-    parser.add_argument('--save_model', type=str, default=config.get('TRAIN', 'save_model'))
-    parser.add_argument('--data', type=str, default=config.get('TRAIN', 'data'))
-    parser.add_argument('--data_range_min', type=int, default=config.get('TRAIN', 'data_range_min'))
-    parser.add_argument('--data_range_max', type=int, default=config.get('TRAIN', 'data_range_max'))
-    parser.add_argument('--weight_decay', type=float, default=config.get('TRAIN', 'weight_decay'))
-    parser.add_argument('--batch_size', type=int, default=config.get('TRAIN', 'batch_size'))
-    parser.add_argument('--epochs', type=int, default=config.get('TRAIN', 'epochs'))
-    parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
-    parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
-    parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
-    parser.add_argument('--print_loss_frequency', type=int, default=config.get('TRAIN', 'print_loss_frequency'))
-
-    args = parser.parse_args()
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dataset_list = []
@@ -106,5 +104,10 @@ def main(config_file = 'config.ini'):
     train_model(model, args.save_model, positionloader, criterion, optimizer, args.epochs, device,
                 args.save_every_epoch, args.print_loss_frequency, val_triple)
 
+
+def train_by_config_file(config_file):
+    args = get_args(config_file)
+    train(args)
+
 if __name__ == "__main__":
-    main()
+    train_by_config_file('config.ini')
