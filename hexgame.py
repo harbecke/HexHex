@@ -10,7 +10,6 @@ def dirichlet_onto_output(output_tensor, dirichlet_level=0.25, dirichlet_alpha=0
 
 
 def tempered_moves_selection(output_tensor, temperature=0.1):
-    #needs batch dimension to work
     if temperature == 0:
         return output_tensor.argmax(1)
     else:
@@ -20,6 +19,11 @@ def tempered_moves_selection(output_tensor, temperature=0.1):
 
 
 class MultiHexGame():
+    '''
+    takes a list of HexBoards as input and playes them either with one or two models
+    play_moves controls batched_single_move and returns the tensor triple if there is no game left to play
+    batched_single_move makes one move in each of the playable games and returns the evaluation of the games or nothing if there is no game to play
+    '''
     def __init__(self, boards, models, device, noise_level=0, noise_alpha=0.03, temperature=1):
         self.boards = boards
         self.board_size = self.boards[0].size
