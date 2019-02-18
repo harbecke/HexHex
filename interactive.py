@@ -13,9 +13,9 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--model', type=str, default=config.get('INTERACTIVE', 'model'))
-    parser.add_argument('--temperature', type=float, default=config.get('INTERACTIVE', 'temperature'))
+    parser.add_argument('--temperature', type=float, default=config.getfloat('INTERACTIVE', 'temperature'))
     parser.add_argument('--first_move_ai', type=bool, default=config.getboolean('INTERACTIVE', 'first_move_ai'))
-    parser.add_argument('--gui_radius', type=int, default=config.get('INTERACTIVE', 'gui_radius'))
+    parser.add_argument('--gui_radius', type=int, default=config.getint('INTERACTIVE', 'gui_radius'))
 
     return parser.parse_args()
 

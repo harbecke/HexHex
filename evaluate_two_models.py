@@ -37,10 +37,10 @@ def get_args(config_file):
 
     parser.add_argument('--model1', type=str, default=config.get('EVALUATE MODELS', 'model1'))
     parser.add_argument('--model2', type=str, default=config.get('EVALUATE MODELS', 'model2'))
-    parser.add_argument('--number_of_games', type=int, default=config.get('EVALUATE MODELS', 'number_of_games'))
-    parser.add_argument('--batch_size', type=int, default=config.get('EVALUATE MODELS', 'batch_size'))
-    parser.add_argument('--board_size', type=int, default=config.get('EVALUATE MODELS', 'board_size'))
-    parser.add_argument('--temperature', type=float, default=config.get('EVALUATE MODELS', 'temperature'))
+    parser.add_argument('--number_of_games', type=int, default=config.getint('EVALUATE MODELS', 'number_of_games'))
+    parser.add_argument('--batch_size', type=int, default=config.getint('EVALUATE MODELS', 'batch_size'))
+    parser.add_argument('--board_size', type=int, default=config.getint('EVALUATE MODELS', 'board_size'))
+    parser.add_argument('--temperature', type=float, default=config.getfloat('EVALUATE MODELS', 'temperature'))
     parser.add_argument('--plot_board', type=bool, default=config.getboolean('EVALUATE MODELS', 'plot_board'))
 
     return parser.parse_args()
