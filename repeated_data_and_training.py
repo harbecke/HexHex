@@ -3,7 +3,6 @@ import torch
 from configparser import ConfigParser
 
 import create_data
-import create_model
 import evaluate_two_models
 import train
 
@@ -17,8 +16,6 @@ def repeated_self_training(config_file, data_step, runs, win_rate):
     config.read(config_file)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    create_model.create_model_from_config_file(config_file)
 
     champion_iter = 1
     champion_filename = config.get('CREATE DATA', 'model')
@@ -45,7 +42,7 @@ def repeated_self_training(config_file, data_step, runs, win_rate):
         if new_data_range_max > data_range_max:
             data_range=[data_range_min, data_range_min+data_step]
         else:
-            data_range=[data_range[0]+data_step, data_range[1]+data_step,]
+            data_range=[data_range[0]+data_step, data_range[1]+data_step]
 
         train_args = train.get_args(config_file)
         train_args.load_model = champion_filename
