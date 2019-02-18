@@ -20,9 +20,11 @@ def tempered_moves_selection(output_tensor, temperature):
 
 class MultiHexGame():
     '''
-    takes a list of HexBoards as input and playes them either with one or two models
+    takes a list of HexBoards as input and playes them with a list of either one or two models
     play_moves controls batched_single_move and returns the tensor triple if there is no game left to play
     batched_single_move makes one move in each of the playable games and returns the evaluation of the games or nothing if there is no game to play
+    noise_level controls the intensity of the noise, whereas noise_alpha controls the spread of the noise
+    temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
     '''
     def __init__(self, boards, models, device, noise_level=0, noise_alpha=0.03, temperature=1):
         self.boards = boards
