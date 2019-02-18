@@ -4,12 +4,12 @@ from torch.distributions.dirichlet import Dirichlet
 from utils import zip_list_of_lists_first_dim_reversed
 
 
-def dirichlet_onto_output(output_tensor, dirichlet_level=0.25, dirichlet_alpha=0.03):
+def dirichlet_onto_output(output_tensor, dirichlet_level, dirichlet_alpha):
     noise = Dirichlet(torch.full_like(output_tensor, dirichlet_alpha)).sample()
     return output_tensor * torch.exp(dirichlet_level*noise)
 
 
-def tempered_moves_selection(output_tensor, temperature=0.1):
+def tempered_moves_selection(output_tensor, temperature):
     if temperature == 0:
         return output_tensor.argmax(1)
     else:
