@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import torch
+
+import sys
 from configparser import ConfigParser
 
 import create_data
@@ -47,12 +49,14 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
             data_range=[data_range[0]+1, data_range[1]+1]
 
         train_args = train.get_args(config_file)
+        new_model_name = f'{config.get("SELF TRAINING", "champion_names")}{champion_iter}'
+
         train_args.load_model = champion_filename
-        train_args.save_model = f'5_gen{champion_iter}'
+        train_args.save_model = new_model_name
         train.train(train_args)
 
         _, signed_chi_squared = evaluate_two_models.play_games(
-                models=(torch.load(f'models/5_gen{champion_iter}.pt'), champion),
+                models=(torch.load('models/'+new_model_name+'.pt'), champion),
                 number_of_games=config.getint('EVALUATE MODELS', 'number_of_games'),
                 batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
                 device=device,
@@ -61,7 +65,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
                 plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'))
         if signed_chi_squared > chi_squared_test_statistic:
             champion_unbeaten_run = 1
-            champion_filename = f'5_gen{champion_iter}'
+            champion_filename = new_model_name
             champion_iter = (champion_iter+1)%10
             print(f'Accept {champion_filename} as new champion!')
         else:
@@ -73,7 +77,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
             print(f'The champion remains in place, unbeaten for {champion_unbeaten_run} iterations. Iteration: {run+1}')
 
 def _main():
-    config_file='repeated_data_and_training.ini'
+    config_file=sys.argv[1]
     config = ConfigParser()
     config.read(config_file)
 

@@ -26,7 +26,7 @@ def get_args(config_file):
     parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
     parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
     parser.add_argument('--print_loss_frequency', type=int, default=config.getint('TRAIN', 'print_loss_frequency'))
-    return parser.parse_args()
+    return parser.parse_args(args=[])
 
 def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, weight_decay,
                 save_every_epoch=False, print_loss_frequency=100, validation_triple=None):
