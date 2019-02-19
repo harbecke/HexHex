@@ -9,9 +9,9 @@ def get_args(config_file):
     config.read(config_file)
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--board_size', type=int, default=config.get('CREATE MODEL', 'board_size'))
-    parser.add_argument('--layers', type=int, default=config.get('CREATE MODEL', 'layers'))
-    parser.add_argument('--intermediate_channels', type=int, default=config.get('CREATE MODEL', 'intermediate_channels'))
+    parser.add_argument('--board_size', type=int, default=config.getint('CREATE MODEL', 'board_size'))
+    parser.add_argument('--layers', type=int, default=config.getint('CREATE MODEL', 'layers'))
+    parser.add_argument('--intermediate_channels', type=int, default=config.getint('CREATE MODEL', 'intermediate_channels'))
     parser.add_argument('--model_name', type=str, default=config.get('CREATE MODEL', 'model_name'))
 
     return parser.parse_args()
