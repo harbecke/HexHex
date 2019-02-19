@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import torch
 
 from hexboard import Board
