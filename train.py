@@ -106,7 +106,7 @@ def train(args):
     model = torch.load('models/{}.pt'.format(args.load_model), map_location=device)
     model.to(device)
 
-    criterion = nn.MSELoss(reduction='sum')
+    criterion = nn.BCELoss(reduction='sum')
     optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
 
     val_triple = None

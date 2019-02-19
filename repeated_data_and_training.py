@@ -3,12 +3,11 @@ import torch
 from configparser import ConfigParser
 
 import create_data
-import create_model
 import evaluate_two_models
 import train
 
 
-def repeated_self_training(config_file, data_step, runs, win_rate):
+def repeated_self_training(config_file, champions, runs, chi_squared_test_statistic):
     """
     Runs a self training loop.
     Each iteration produces a new model which is then trained on self-play data
@@ -18,13 +17,11 @@ def repeated_self_training(config_file, data_step, runs, win_rate):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    create_model.create_model_from_config_file(config_file)
-
-    champion_iter = 1
+    champion_iter = 0
     champion_filename = config.get('CREATE DATA', 'model')
     data_range_min=config.getint('CREATE DATA', 'data_range_min')
     data_range_max=config.getint('CREATE DATA', 'data_range_max')
-    data_range=[data_range_min, data_range_min+data_step]
+    data_range=[data_range_min, data_range_min+1]
     for run in range(runs):
         champion = torch.load(f'models/{champion_filename}.pt', map_location=device)
 
@@ -41,29 +38,28 @@ def repeated_self_training(config_file, data_step, runs, win_rate):
                 temperature=config.getfloat('CREATE DATA', 'temperature'),
                 board_size=config.getint('CREATE DATA', 'board_size')
         )
-        new_data_range_max = data_range[1]+data_step
-        if new_data_range_max > data_range_max:
-            data_range=[data_range_min, data_range_min+data_step]
+        new_data_range_max = data_range[1]+1
+        if data_range[1]+1 > data_range_max:
+            data_range=[data_range_min, data_range_min+1]
         else:
-            data_range=[data_range[0]+data_step, data_range[1]+data_step,]
+            data_range=[data_range[0]+1, data_range[1]+1]
 
         train_args = train.get_args(config_file)
         train_args.load_model = champion_filename
         train_args.save_model = f'5_gen{champion_iter}'
         train.train(train_args)
 
-        result = evaluate_two_models.play_games(
+        _, signed_chi_squared = evaluate_two_models.play_games(
                 models=(torch.load(f'models/5_gen{champion_iter}.pt'), champion),
                 number_of_games=config.getint('EVALUATE MODELS', 'number_of_games'),
                 batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
                 device=device,
                 temperature=config.getfloat('EVALUATE MODELS', 'temperature'),
                 board_size=config.getint('EVALUATE MODELS', 'board_size'),
-                plot_board=config.getboolean('EVALUATE MODELS', 'plot_board')
-        )
-        if result[0] / sum(result) > win_rate:
+                plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'))
+        if signed_chi_squared > chi_squared_test_statistic:
             champion_filename = f'5_gen{champion_iter}'
-            champion_iter += 1
+            champion_iter = (champion_iter+1)%10
             print(f'Accept {champion_filename} as new champion!')
         else:
             print(f'The champion remains in place. Iteration: {run}')
@@ -73,7 +69,7 @@ def _main():
     config = ConfigParser()
     config.read(config_file)
 
-    repeated_self_training(config_file, config.getint('SELF TRAINING', 'data_step'), config.getint('SELF TRAINING', 'runs'), config.getfloat('SELF TRAINING', 'win_rate'))
+    repeated_self_training(config_file, config.getint('SELF TRAINING', 'champions'), config.getint('SELF TRAINING', 'runs'), config.getfloat('SELF TRAINING', 'chi_squared_test_statistic'))
 
 if __name__ == '__main__':
     _main()

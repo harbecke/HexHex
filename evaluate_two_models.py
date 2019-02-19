@@ -11,23 +11,26 @@ from time import gmtime, strftime
 
 def play_games(models, number_of_games, device, batch_size, temperature, board_size, plot_board):
     time = strftime("%Y-%m-%d_%H-%M-%S", gmtime())
-    result = [0, 0]
-    for model_idx in range(2):
+    result = [[0, 0], [0, 0]]
+    for model_idx in range(2):        
         game_number = 0
         for batch_number in range(number_of_games // (2*batch_size)):
             ordered_models = models if model_idx == 0 else models[::-1]
             boards = [Board(size=board_size) for idx in range(batch_size)]
-            multihexgame = MultiHexGame(boards, ordered_models, device, temperature)
+            multihexgame = MultiHexGame(boards, ordered_models, device=device, temperature=temperature)
             multihexgame.play_moves()
             for board in multihexgame.boards:
-                winning_model = board.winner[0] if model_idx == 0 else 1 - board.winner[0]
-                result[winning_model] += 1
+                winning_model = board.winner[0]
+                result[model_idx][winning_model] += 1
                 if plot_board:
                     draw_board_image(board.board_tensor,
                         f'images/{time}_{model_idx}_{game_number:04d}.png')
                 game_number += 1
-        print(f'{result[0]} : {result[1]}')
-    return result
+        print(f'{result[model_idx][0+1*model_idx]} : {result[model_idx][1-1*model_idx]}')
+    adbc = (result[0][0]*result[1][1] - result[0][1]*result[1][0])
+    signed_chi_squared = 4*adbc*abs(adbc)/(number_of_games*(result[0][0]+result[1][0])*(result[0][1]+result[1][1])+1)
+    print(f'signed_chi_squared = {signed_chi_squared}')
+    return result, signed_chi_squared
 
 
 def get_args(config_file):
