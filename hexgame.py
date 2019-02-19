@@ -1,4 +1,6 @@
 import torch
+import torch.nn as nn
+
 from torch.distributions.categorical import Categorical
 from torch.distributions.dirichlet import Dirichlet
 from utils import zip_list_of_lists_first_dim_reversed
@@ -30,7 +32,7 @@ class MultiHexGame():
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
-        self.models = [model.to(device) for model in models]
+        self.models = [nn.DataParallel(model).to(device) for model in models]
         self.noise_level = noise_level
         self.noise_alpha = noise_alpha
         self.temperature = temperature

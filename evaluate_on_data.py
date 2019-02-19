@@ -16,7 +16,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 criterion = nn.MSELoss(reduction='sum')
 
 model = torch.load('models/{}.pt'.format(args.model), map_location=device)
-model = model.to(device)
+model = nn.DataParallel(model).to(device)
 
 board_tensor, moves_tensor, target_tensor = torch.load('data/{}.pt'.format(data))
 board_tensor, moves_tensor, target_tensor = board_tensor.to(device), moves_tensor.to(device), target_tensor.to(device)

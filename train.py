@@ -104,7 +104,7 @@ def train(args):
         positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     model = torch.load('models/{}.pt'.format(args.load_model), map_location=device)
-    model.to(device)
+    nn.DataParallel(model).to(device)
 
     criterion = nn.BCELoss(reduction='sum')
     optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
