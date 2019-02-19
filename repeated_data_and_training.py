@@ -18,6 +18,8 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     champion_iter = 0
+    champion_unbeaten_run = 0
+    temperature_decay_factor = 1
     champion_filename = config.get('CREATE DATA', 'model')
     data_range_min=config.getint('CREATE DATA', 'data_range_min')
     data_range_max=config.getint('CREATE DATA', 'data_range_max')
@@ -35,7 +37,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
                 run_name=config.get('CREATE DATA', 'run_name'),
                 noise_level=config.getfloat('CREATE DATA', 'noise_level'),
                 noise_alpha=config.getfloat('CREATE DATA', 'noise_alpha'),
-                temperature=config.getfloat('CREATE DATA', 'temperature'),
+                temperature=config.getfloat('CREATE DATA', 'temperature')/temperature_decay_factor,
                 board_size=config.getint('CREATE DATA', 'board_size')
         )
         new_data_range_max = data_range[1]+1
@@ -54,15 +56,21 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
                 number_of_games=config.getint('EVALUATE MODELS', 'number_of_games'),
                 batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
                 device=device,
-                temperature=config.getfloat('EVALUATE MODELS', 'temperature'),
+                temperature=config.getfloat('EVALUATE MODELS', 'temperature')/temperature_decay_factor,
                 board_size=config.getint('EVALUATE MODELS', 'board_size'),
                 plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'))
         if signed_chi_squared > chi_squared_test_statistic:
+            champion_unbeaten_run = 1
             champion_filename = f'5_gen{champion_iter}'
             champion_iter = (champion_iter+1)%10
             print(f'Accept {champion_filename} as new champion!')
         else:
-            print(f'The champion remains in place. Iteration: {run}')
+            if champion_unbeaten_run >= data_range_max-data_range_min:
+                champion_unbeaten_run = 1
+                temperature_decay_factor *= 2
+            else:
+                champion_unbeaten_run += 1
+            print(f'The champion remains in place, unbeaten for {champion_unbeaten_run} iterations. Iteration: {run+1}')
 
 def _main():
     config_file='repeated_data_and_training.ini'
