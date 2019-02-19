@@ -37,7 +37,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
                 run_name=config.get('CREATE DATA', 'run_name'),
                 noise_level=config.getfloat('CREATE DATA', 'noise_level'),
                 noise_alpha=config.getfloat('CREATE DATA', 'noise_alpha'),
-                temperature=config.getfloat('CREATE DATA', 'temperature')/temperature_decay_factor,
+                temperature=config.getfloat('CREATE DATA', 'temperature')*temperature_decay_factor,
                 board_size=config.getint('CREATE DATA', 'board_size')
         )
         new_data_range_max = data_range[1]+1
@@ -56,7 +56,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
                 number_of_games=config.getint('EVALUATE MODELS', 'number_of_games'),
                 batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
                 device=device,
-                temperature=config.getfloat('EVALUATE MODELS', 'temperature')/temperature_decay_factor,
+                temperature=config.getfloat('EVALUATE MODELS', 'temperature')*temperature_decay_factor,
                 board_size=config.getint('EVALUATE MODELS', 'board_size'),
                 plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'))
         if signed_chi_squared > chi_squared_test_statistic:
@@ -67,7 +67,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
         else:
             if champion_unbeaten_run >= data_range_max-data_range_min:
                 champion_unbeaten_run = 1
-                temperature_decay_factor *= 2
+                temperature_decay_factor /= 2
             else:
                 champion_unbeaten_run += 1
             print(f'The champion remains in place, unbeaten for {champion_unbeaten_run} iterations. Iteration: {run+1}')
