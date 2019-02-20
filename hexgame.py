@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from torch.distributions.categorical import Categorical
-from torch.distributions.dirichlet import Dirichlet
+from noise import singh_maddala_onto_output
 from utils import zip_list_of_lists_first_dim_reversed
 
 
@@ -20,15 +20,16 @@ class MultiHexGame():
     takes a list of HexBoards as input and playes them with a list of either one or two models
     play_moves controls batched_single_move and returns the tensor triple if there is no game left to play
     batched_single_move makes one move in each of the playable games and returns the evaluation of the games or nothing if there is no game to play
-    noise_alpha controls the spread of the noise
+    noise_parameters controls the spread of the noise
     temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
     '''
-    def __init__(self, boards, models, device, noise_alpha=0.03, temperature=1):
+    def __init__(self, boards, models, device, noise, noise_parameters, temperature):
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
         self.models = [nn.DataParallel(model).to(device) for model in models]
-        self.noise_alpha = noise_alpha
+        self.noise = noise
+        self.noise_parameters = noise_parameters
         self.temperature = temperature
         self.output_boards_tensor = torch.Tensor(device='cpu')
         self.positions_tensor = torch.LongTensor(device='cpu')
@@ -66,6 +67,10 @@ class MultiHexGame():
 
         with torch.no_grad():
             outputs_tensor = model(self.current_boards_tensor).detach()
+
+        if self.noise == 'singh':
+            noise_alpha, noise_beta, noise_lambda = self.noise_parameters
+            outputs_tensor = singh_maddala_onto_output(outputs_tensor, noise_alpha, noise_beta, noise_lambda)
 
         positions1d = tempered_moves_selection(outputs_tensor, self.temperature)
 

@@ -18,7 +18,7 @@ def play_games(models, number_of_games, device, batch_size, temperature, board_s
         for batch_number in range(number_of_games // (2*batch_size)):
             ordered_models = models if model_idx == 0 else models[::-1]
             boards = [Board(size=board_size) for idx in range(batch_size)]
-            multihexgame = MultiHexGame(boards, ordered_models, device=device, temperature=temperature)
+            multihexgame = MultiHexGame(boards=boards, models=ordered_models, device=device, noise=None, noise_parameters=None, temperature=temperature)
             multihexgame.play_moves()
             for board in multihexgame.boards:
                 winning_model = board.winner[0]

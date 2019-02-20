@@ -25,7 +25,7 @@ class InteractiveGame:
         self.model = torch.load('models/{}.pt'.format(args.model), map_location=self.device)
 
         self.board = Board(size=self.model.board_size)
-        self.game = MultiHexGame((self.board,), (self.model,), self.device, temperature=args.temperature)
+        self.game = MultiHexGame(boards=(self.board,), models=(self.model,), device=self.device, noise=None, noise_parameters=None, temperature=args.temperature)
         self.gui = Gui(self.board, args.gui_radius)
 
     def play_human_move(self):
