@@ -6,11 +6,6 @@ from torch.distributions.dirichlet import Dirichlet
 from utils import zip_list_of_lists_first_dim_reversed
 
 
-def dirichlet_onto_output(output_tensor, dirichlet_level, dirichlet_alpha):
-    noise = Dirichlet(torch.full_like(output_tensor, dirichlet_alpha)).sample()
-    return output_tensor * torch.exp(dirichlet_level*noise)
-
-
 def tempered_moves_selection(output_tensor, temperature):
     if temperature == 0:
         return output_tensor.argmax(1)
@@ -25,15 +20,14 @@ class MultiHexGame():
     takes a list of HexBoards as input and playes them with a list of either one or two models
     play_moves controls batched_single_move and returns the tensor triple if there is no game left to play
     batched_single_move makes one move in each of the playable games and returns the evaluation of the games or nothing if there is no game to play
-    noise_level controls the intensity of the noise, whereas noise_alpha controls the spread of the noise
+    noise_alpha controls the spread of the noise
     temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
     '''
-    def __init__(self, boards, models, device, noise_level=0, noise_alpha=0.03, temperature=1):
+    def __init__(self, boards, models, device, noise_alpha=0.03, temperature=1):
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
         self.models = [nn.DataParallel(model).to(device) for model in models]
-        self.noise_level = noise_level
         self.noise_alpha = noise_alpha
         self.temperature = temperature
         self.output_boards_tensor = torch.Tensor(device='cpu')
@@ -73,8 +67,7 @@ class MultiHexGame():
         with torch.no_grad():
             outputs_tensor = model(self.current_boards_tensor).detach()
 
-        outputs_with_dirichlet = dirichlet_onto_output(outputs_tensor, self.noise_level, self.noise_alpha)
-        positions1d = tempered_moves_selection(outputs_with_dirichlet, self.temperature)
+        positions1d = tempered_moves_selection(outputs_tensor, self.temperature)
 
         self.output_boards_tensor = torch.cat((self.output_boards_tensor, self.current_boards_tensor.detach().cpu()))
         self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))

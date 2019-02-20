@@ -7,7 +7,7 @@ from hexboard import Board
 from hexgame import MultiHexGame
 
 
-def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name, noise_level=0, noise_alpha=0.03, temperature=1, board_size=11):
+def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name, noise_alpha=0.03, temperature=1, board_size=11):
     print("=== creating data from self play ===")
     all_board_states = torch.Tensor()
     all_moves = torch.LongTensor()
@@ -17,7 +17,7 @@ def generate_data_files(file_counter_start, file_counter_end, samples_per_file, 
     while file_counter < file_counter_end:
         while all_board_states.shape[0] < samples_per_file:
             boards = [Board(size=board_size) for idx in range(batch_size)]
-            multihexgame = MultiHexGame(boards, (model,), device, noise_level, noise_alpha, temperature)
+            multihexgame = MultiHexGame(boards, (model,), device, noise_alpha, temperature)
             board_states, moves, targets = multihexgame.play_moves()
 
             all_board_states = torch.cat((all_board_states,board_states))
@@ -52,8 +52,7 @@ def get_args(config_file):
     parser.add_argument('--samples_per_file', type=int, default=config.getint('CREATE DATA', 'samples_per_file'))
     parser.add_argument('--model', type=str, default=config.get('CREATE DATA', 'model'))
     parser.add_argument('--batch_size', type=int, default=config.getint('CREATE DATA', 'batch_size'))
-    parser.add_argument('--run_name', type=str, default=config.get('CREATE DATA', 'run_name'))
-    parser.add_argument('--noise_level', type=float, default=config.getfloat('CREATE DATA', 'noise_level'))
+    parser.add_argument('--run_name', type=str, default=config.get('CREATE DATA', 'run_name'))    
     parser.add_argument('--noise_alpha', type=float, default=config.getfloat('CREATE DATA', 'noise_alpha'))
     parser.add_argument('--temperature', type=float, default=config.getfloat('CREATE DATA', 'temperature'))
     parser.add_argument('--board_size', type=int, default=config.getint('CREATE DATA', 'board_size'))
@@ -66,7 +65,7 @@ def main(config_file = 'config.ini'):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load('models/{}.pt'.format(args.model), map_location=device)
 
-    generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device, args.batch_size, args.run_name, args.noise_level, args.noise_alpha, args.temperature, args.board_size)
+    generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device, args.batch_size, args.run_name, args.noise_alpha, args.temperature, args.board_size)
 
 if __name__ == '__main__':
     main()

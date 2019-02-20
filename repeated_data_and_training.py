@@ -37,7 +37,6 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
                 model=champion,
                 device=device,
                 run_name=config.get('CREATE DATA', 'run_name'),
-                noise_level=config.getfloat('CREATE DATA', 'noise_level'),
                 noise_alpha=config.getfloat('CREATE DATA', 'noise_alpha'),
                 temperature=config.getfloat('CREATE DATA', 'temperature')*temperature_decay_factor,
                 board_size=config.getint('CREATE DATA', 'board_size')
