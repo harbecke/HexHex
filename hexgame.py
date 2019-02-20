@@ -70,7 +70,7 @@ class MultiHexGame():
 
         if self.noise == 'singh':
             noise_alpha, noise_beta, noise_lambda = self.noise_parameters
-            outputs_tensor = singh_maddala_onto_output(outputs_tensor, noise_alpha, noise_beta, noise_lambda)
+            outputs_tensor = singh_maddala_onto_output(outputs_tensor, noise_alpha, noise_beta, noise_lambda, self.device)
 
         positions1d = tempered_moves_selection(outputs_tensor, self.temperature)
 
