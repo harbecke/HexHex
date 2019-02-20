@@ -1,4 +1,4 @@
-# HexHex v0.5
+# HexHex v0.6
 
 AlphaGo Zero adaptation of Hex. [Image of intend](https://user-images.githubusercontent.com/33026629/32346749-47b65b36-c049-11e7-9bac-08bc42cf9dae.png)
 
@@ -6,6 +6,16 @@ See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 
 
 ## Getting Started
+
+### Manual Installation
+
+* Python >= 3.6
+* Pytorch (see [here](https://pytorch.org/get-started/locally/) for installation info)
+
+* install pygame `pip install pygame` for interactive
+
+### Installation with pipenv
+
 ```
 # install pipenv to manage dependencies
 pip install pipenv 
@@ -21,6 +31,9 @@ pipenv shell
 ./run_example.py
 ```
 
+### Execution
+* test installation with `run_example.py`
+
 * copy sample_config as initial configuration file `cp sample_config.ini config.ini`
 * change parameters in config.ini
 * run scripts
@@ -28,12 +41,8 @@ pipenv shell
     - `./create_data.py`
     - `./train.py`
     - `./evaluate_two_models.py`
-
-### Prerequisites
-
-* Python >= 3.6
-* Pytorch (see [here](https://pytorch.org/get-started/locally/) for installation info)
-
+    - `./interactive.py`
+    - `./repeated_data_and_training.py`
 
 ## Features
 
@@ -49,17 +58,18 @@ pipenv shell
   * batch-wise self-play to generate datasets
   * training and validating models
   * evaluating models against each other
+  * iterative training loop
 
-* config to control parameters
-
-* plenty of hyperparameters
-
-* little documentation
+* config to control plenty of hyperparameters
 
 * playable gui `interactive.py`
 
-## To-dos (somewhat chronological)
+* trained model `five_board_wd0.001.pt` for 5x5 board
 
-* more documentation
+* puzzle validation set `puzzle.pt` for endgame strategy evaluation
+
+## To-dos
 
 * implement Monte Carlo tree search
+
+* everything...
