@@ -11,6 +11,9 @@ from visualization.image import draw_board_image
 from time import gmtime, strftime
 
 def play_games(models, number_of_games, device, batch_size, temperature, board_size, plot_board):
+    '''
+    two models play against each other
+    '''
     time = strftime("%Y-%m-%d_%H-%M-%S", gmtime())
     result = [[0, 0], [0, 0]]
     for model_idx in range(2):        

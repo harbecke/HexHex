@@ -30,20 +30,19 @@ def get_args(config_file):
 
 def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, weight_decay,
                 save_every_epoch=False, print_loss_frequency=100, validation_triple=None):
-
-    for epoch in range(epochs):  # loop over the dataset multiple times
+    '''
+    trains model with backpropagation, loss criterion is currently binary cross-entropy and optimizer is adadelta
+    '''
+    for epoch in range(epochs):
 
         running_loss = 0.0
         observed_states = 0
 
         for i, (board_states, moves, labels) in enumerate(dataloader, 0):
-            # get the inputs
             board_states, moves, labels = board_states.to(device), moves.to(device), labels.to(device)
 
-            # zero the parameter gradients
             optimizer.zero_grad()
 
-            # forward + backward + optimize
             outputs = model(board_states)
             output_values = torch.gather(outputs, 1, moves)
 
@@ -88,6 +87,9 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
     print('Finished Training\n')
 
 def train(args):
+    '''
+    loads data and sets criterion and optimizer for train_model
+    '''
     print("=== training model ===")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

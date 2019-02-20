@@ -11,8 +11,10 @@ import train
 
 def repeated_self_training(config_file, champions, runs, chi_squared_test_statistic):
     """
-    Runs a self training loop.
-    Each iteration produces a new model which is then trained on self-play data
+    runs a self training loop
+    each iteration produces a new model which is then trained on self-play data
+    data and model names are loop, so they take limited space and discard old data
+    a model is preferred over the last if it performs significantly better according to a chi squared test
     """
     config = ConfigParser()
     config.read(config_file)

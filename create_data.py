@@ -8,6 +8,10 @@ from hexgame import MultiHexGame
 
 
 def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name, noise, noise_parameters, temperature, board_size):
+    '''
+    generates data files with run_name indexed from file_counter_start to file_counter_end
+    samples_per_files number of triples (board, move, target)
+    '''
     print("=== creating data from self play ===")
     all_board_states = torch.Tensor()
     all_moves = torch.LongTensor()

@@ -20,7 +20,7 @@ class MultiHexGame():
     takes a list of HexBoards as input and playes them with a list of either one or two models
     play_moves controls batched_single_move and returns the tensor triple if there is no game left to play
     batched_single_move makes one move in each of the playable games and returns the evaluation of the games or nothing if there is no game to play
-    noise_parameters controls the spread of the noise
+    noise can be added after evaluation to boost random moves, noise and noise_parameters control the type of noise
     temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
     '''
     def __init__(self, boards, models, device, noise, noise_parameters, temperature):

@@ -8,7 +8,6 @@ def swish(x):
 
 
 class SkipLayer(nn.Module):
-
     def __init__(self, channels, reach):
         super(SkipLayer, self).__init__()
         self.conv = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach)
@@ -19,7 +18,6 @@ class SkipLayer(nn.Module):
 
 
 class SkipLayerAlpha(nn.Module):
-
     def __init__(self, channels, reach):
         super(SkipLayerAlpha, self).__init__()
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach)
@@ -34,7 +32,12 @@ class SkipLayerAlpha(nn.Module):
 
 
 class NoMCTSModel(nn.Module):
-
+    '''
+    model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
+    then a specified amount of residual or skip-layers https://en.wikipedia.org/wiki/Residual_neural_network
+    then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
+    the last sigmoid function converts all values to probabilities: interpretable as probability to win the game when making this move
+    '''
     def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach=1):
         super(NoMCTSModel, self).__init__()
         self.board_size = board_size
