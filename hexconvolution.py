@@ -17,20 +17,6 @@ class SkipLayer(nn.Module):
         return swish(x + self.bn(self.conv(x)))
 
 
-class SkipLayerAlpha(nn.Module):
-    def __init__(self, channels, reach):
-        super(SkipLayerAlpha, self).__init__()
-        self.conv1 = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach)
-        self.conv2 = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach)
-        self.bn1 = nn.BatchNorm2d(channels)
-        self.bn2 = nn.BatchNorm2d(channels)
-
-    def forward(self, x):
-        y = F.relu(self.bn1(self.conv1(x)))
-        x = x + self.bn2(self.conv2(y))
-        return F.relu(x)
-
-
 class NoMCTSModel(nn.Module):
     '''
     model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
