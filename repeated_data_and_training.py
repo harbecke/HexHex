@@ -41,6 +41,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
                 noise = config.get('CREATE DATA', 'noise'),
                 noise_parameters = [float(parameter) for parameter in config.get('CREATE DATA', 'noise_parameters').split(",")],
                 temperature=config.getfloat('CREATE DATA', 'temperature'),
+                temperature_decay=config.getfloat('CREATE DATA', 'temperature_decay'),
                 board_size=config.getint('CREATE DATA', 'board_size')
         )
         new_data_range_max = data_range[1]+1
@@ -62,6 +63,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
                 batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
                 device=device,
                 temperature=config.getfloat('EVALUATE MODELS', 'temperature'),
+                temperature_decay=config.getfloat('EVALUATE MODELS', 'temperature_decay'),
                 board_size=config.getint('EVALUATE MODELS', 'board_size'),
                 plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'))
         if signed_chi_squared > chi_squared_test_statistic:

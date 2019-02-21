@@ -14,6 +14,7 @@ def get_args():
 
     parser.add_argument('--model', type=str, default=config.get('INTERACTIVE', 'model'))
     parser.add_argument('--temperature', type=float, default=config.getfloat('INTERACTIVE', 'temperature'))
+    parser.add_argument('--temperature_decay', type=float, default=config.getfloat('INTERACTIVE', 'temperature_decay'))
     parser.add_argument('--first_move_ai', type=bool, default=config.getboolean('INTERACTIVE', 'first_move_ai'))
     parser.add_argument('--gui_radius', type=int, default=config.getint('INTERACTIVE', 'gui_radius'))
 
@@ -27,7 +28,7 @@ class InteractiveGame:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = torch.load('models/{}.pt'.format(args.model), map_location=self.device)
         self.board = Board(size=self.model.board_size)
-        self.game = MultiHexGame(boards=(self.board,), models=(self.model,), device=self.device, noise=None, noise_parameters=None, temperature=args.temperature)
+        self.game = MultiHexGame(boards=(self.board,), models=(self.model,), device=self.device, noise=None, noise_parameters=None, temperature=args.temperature, temperature_decay=args.temperature_decay)
         self.gui = Gui(self.board, args.gui_radius)
 
     def play_human_move(self):

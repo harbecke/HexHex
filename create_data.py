@@ -7,7 +7,7 @@ from hexboard import Board
 from hexgame import MultiHexGame
 
 
-def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name, noise, noise_parameters, temperature, board_size):
+def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name, noise, noise_parameters, temperature, temperature_decay, board_size):
     '''
     generates data files with run_name indexed from file_counter_start to file_counter_end
     samples_per_files number of triples (board, move, target)
@@ -21,7 +21,7 @@ def generate_data_files(file_counter_start, file_counter_end, samples_per_file, 
     while file_counter < file_counter_end:
         while all_board_states.shape[0] < samples_per_file:
             boards = [Board(size=board_size) for idx in range(batch_size)]
-            multihexgame = MultiHexGame(boards=boards, models=(model,), device=device, noise=noise, noise_parameters=noise_parameters, temperature=temperature)
+            multihexgame = MultiHexGame(boards=boards, models=(model,), device=device, noise=noise, noise_parameters=noise_parameters, temperature=temperature, temperature_decay=temperature_decay)
             board_states, moves, targets = multihexgame.play_moves()
 
             all_board_states = torch.cat((all_board_states,board_states))
@@ -60,6 +60,7 @@ def get_args(config_file):
     parser.add_argument('--noise', type=str, default=config.get('CREATE DATA', 'noise'))
     parser.add_argument('--noise_parameters', type=str, default=config.get('CREATE DATA', 'noise_parameters'))
     parser.add_argument('--temperature', type=float, default=config.getfloat('CREATE DATA', 'temperature'))
+    parser.add_argument('--temperature_decay', type=float, default=config.getfloat('CREATE DATA', 'temperature_decay'))
     parser.add_argument('--board_size', type=int, default=config.getint('CREATE DATA', 'board_size'))
 
     return parser.parse_args()
@@ -71,7 +72,7 @@ def main(config_file = 'config.ini'):
     model = torch.load('models/{}.pt'.format(args.model), map_location=device)
 
     generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device, args.batch_size, args.run_name, args.noise,
-        [float(parameter) for parameter in args.noise_parameters.split(",")], args.temperature, args.board_size)
+        [float(parameter) for parameter in args.noise_parameters.split(",")], args.temperature, args.temperature_decay, args.board_size)
 
 if __name__ == '__main__':
     main()

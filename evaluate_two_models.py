@@ -10,7 +10,7 @@ from configparser import ConfigParser
 from visualization.image import draw_board_image
 from time import gmtime, strftime
 
-def play_games(models, number_of_games, device, batch_size, temperature, board_size, plot_board):
+def play_games(models, number_of_games, device, batch_size, temperature, temperature_decay, board_size, plot_board):
     '''
     two models play against each other
     '''
@@ -21,7 +21,7 @@ def play_games(models, number_of_games, device, batch_size, temperature, board_s
         for batch_number in range(number_of_games // (2*batch_size)):
             ordered_models = models if model_idx == 0 else models[::-1]
             boards = [Board(size=board_size) for idx in range(batch_size)]
-            multihexgame = MultiHexGame(boards=boards, models=ordered_models, device=device, noise=None, noise_parameters=None, temperature=temperature)
+            multihexgame = MultiHexGame(boards=boards, models=ordered_models, device=device, noise=None, noise_parameters=None, temperature=temperature, temperature_decay=temperature_decay)
             multihexgame.play_moves()
             for board in multihexgame.boards:
                 winning_model = board.winner[0]
@@ -48,6 +48,7 @@ def get_args(config_file):
     parser.add_argument('--batch_size', type=int, default=config.getint('EVALUATE MODELS', 'batch_size'))
     parser.add_argument('--board_size', type=int, default=config.getint('EVALUATE MODELS', 'board_size'))
     parser.add_argument('--temperature', type=float, default=config.getfloat('EVALUATE MODELS', 'temperature'))
+    parser.add_argument('--temperature_decay', type=float, default=config.getfloat('EVALUATE MODELS', 'temperature_decay'))
     parser.add_argument('--plot_board', type=bool, default=config.getboolean('EVALUATE MODELS', 'plot_board'))
 
     return parser.parse_args()
@@ -60,7 +61,7 @@ def evaluate(config_file = 'config.ini'):
     model1 = torch.load('models/{}.pt'.format(args.model1), map_location=device)
     model2 = torch.load('models/{}.pt'.format(args.model2), map_location=device)
 
-    play_games((model1, model2), args.number_of_games, device, args.batch_size, args.temperature, args.board_size, args.plot_board)
+    play_games((model1, model2), args.number_of_games, device, args.batch_size, args.temperature, args.temperature_decay, args.board_size, args.plot_board)
 
 if __name__ == '__main__':
     evaluate()

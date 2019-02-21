@@ -22,8 +22,9 @@ class MultiHexGame():
     batched_single_move makes one move in each of the playable games and returns the evaluation of the games or nothing if there is no game to play
     noise can be added after evaluation to boost random moves, noise and noise_parameters control the type of noise
     temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
+    temperature_decay decays the temperature over time as a power function with base:temperature_decay and exponent:number of moves made
     '''
-    def __init__(self, boards, models, device, noise, noise_parameters, temperature):
+    def __init__(self, boards, models, device, noise, noise_parameters, temperature, temperature_decay):
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
@@ -31,6 +32,7 @@ class MultiHexGame():
         self.noise = noise
         self.noise_parameters = noise_parameters
         self.temperature = temperature
+        self.temperature_decay = temperature_decay
         self.output_boards_tensor = torch.Tensor(device='cpu')
         self.positions_tensor = torch.LongTensor(device='cpu')
         self.targets_tensor = None
@@ -72,7 +74,8 @@ class MultiHexGame():
             noise_alpha, noise_beta, noise_lambda = self.noise_parameters
             outputs_tensor = singh_maddala_onto_output(outputs_tensor, noise_alpha, noise_beta, noise_lambda, self.device)
 
-        positions1d = tempered_moves_selection(outputs_tensor, self.temperature)
+        moves_count = len(self.boards[self.current_boards[0]].made_moves)
+        positions1d = tempered_moves_selection(outputs_tensor, self.temperature*self.temperature_decay**moves_count)
 
         self.output_boards_tensor = torch.cat((self.output_boards_tensor, self.current_boards_tensor.detach().cpu()))
         self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
