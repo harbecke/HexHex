@@ -7,14 +7,15 @@ See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 
 ## Getting Started
 
-### Manual Installation
+### Option 1: Manual Installation
 
 * Python >= 3.6
+
 * Pytorch (see [here](https://pytorch.org/get-started/locally/) for installation info)
 
 * install pygame `pip install pygame` for interactive
 
-### Installation with pipenv
+### Option 2: Installation with pipenv
 
 ```
 # install pipenv to manage dependencies
@@ -35,7 +36,9 @@ pipenv shell
 * test installation with `run_example.py`
 
 * copy sample_config as initial configuration file `cp sample_config.ini config.ini`
+
 * change parameters in config.ini
+
 * run scripts
     - `./create_model.py`
     - `./create_data.py`
