@@ -5,7 +5,10 @@ from torchvision.models.resnet import BasicBlock, Bottleneck
 
 
 class ResNet(nn.Module):
-
+    '''
+    https://arxiv.org/abs/1512.03385
+    image classifier with residual layers adapted for self-play
+    '''
     def __init__(self, board_size, block, layers, zero_init_residual=False):
         super(ResNet, self).__init__()
         self.board_size = board_size
@@ -41,7 +44,7 @@ class ResNet(nn.Module):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-            	nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=3, stride=stride,
+                nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=3, stride=stride,
                      padding=1, bias=False),
                 nn.BatchNorm2d(planes * block.expansion),
             )
