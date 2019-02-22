@@ -8,6 +8,7 @@ def swish(x):
 
 
 class SkipLayer(nn.Module):
+
     def __init__(self, channels, reach):
         super(SkipLayer, self).__init__()
         self.conv = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach)
@@ -18,6 +19,7 @@ class SkipLayer(nn.Module):
 
 
 class SkipLayerAlpha(nn.Module):
+
     def __init__(self, channels, reach):
         super(SkipLayerAlpha, self).__init__()
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach)
@@ -38,12 +40,15 @@ class NoMCTSModel(nn.Module):
     then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
     the last sigmoid function converts all values to probabilities: interpretable as probability to win the game when making this move
     '''
-    def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach=1):
+    def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach_conv=1, skip_layer='single'):
         super(NoMCTSModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
-        self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach*2+1, padding=reach)
-        self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, reach) for idx in range(layers)])
+        self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
+        if skip_layer=='alpha':
+            self.skiplayers = nn.ModuleList([SkipLayerAlpha(intermediate_channels, 1) for idx in range(layers)])
+        else:
+            self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, 1) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
         self.policybn = nn.BatchNorm2d(policy_channels)
         self.policylin = nn.Linear(board_size**2 * policy_channels, board_size**2)
