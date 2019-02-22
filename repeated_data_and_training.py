@@ -69,7 +69,7 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
         if signed_chi_squared > chi_squared_test_statistic:
             champion_unbeaten_run = 1
             champion_filename = new_model_name
-            champion_iter = (champion_iter+1)%10
+            champion_iter = (champion_iter+1)%champions
             print(f'Accept {champion_filename} as new champion!')
         else:
             if champion_unbeaten_run >= data_range_max-data_range_min:
