@@ -62,3 +62,18 @@ class NoMCTSModel(nn.Module):
             x = skiplayer(x)
         p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
         return torch.sigmoid(self.policylin(p) - illegal)
+
+
+class RandomModel(nn.Module):
+    '''
+    outputs 0.5 for every legal move
+    makes random moves if temperature*temperature_decay > 0
+    '''
+    def __init__(self, board_size):
+        super(RandomModel, self).__init__()
+        self.board_size = board_size
+
+    def forward(self, x):
+        double_stones = (x[:,0]*x[:,1]).view(-1,self.board_size**2)
+        stone_bool = (x[:,0]+x[:,1]).view(-1,self.board_size**2)-double_stones
+        return 0.5*(torch.ones_like(stone_bool)-torch.sigmoid(((1000*double_stones+stone_bool).sum(dim=1)-1.5)*200).unsqueeze(1).expand_as(stone_bool)*stone_bool)
