@@ -7,7 +7,7 @@ from utils import zip_list_of_lists_first_dim_reversed
 
 
 def tempered_moves_selection(output_tensor, temperature):
-    if temperature == 0:
+    if temperature < 10**(-10):
         return output_tensor.argmax(1)
     else:
         normalized_output_tensor = output_tensor/output_tensor.max(1)[0].unsqueeze(1)
