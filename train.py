@@ -20,8 +20,7 @@ def get_args(config_file):
     parser.add_argument('--data_range_max', type=int, default=config.getint('TRAIN', 'data_range_max'))
     parser.add_argument('--weight_decay', type=float, default=config.getfloat('TRAIN', 'weight_decay'))
     parser.add_argument('--batch_size', type=int, default=config.getint('TRAIN', 'batch_size'))
-    parser.add_argument('--split', type=float, default=config.getfloat('TRAIN', 'split'))
-    parser.add_argument('--epochs', type=int, default=config.getint('TRAIN', 'epochs'))
+    parser.add_argument('--epochs', type=float, default=config.getfloat('TRAIN', 'epochs'))
     parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
     parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
     parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
@@ -98,10 +97,11 @@ def train(args):
         board_states, moves, targets = torch.load('data/{}_{}.pt'.format(args.data, idx))
         dataset_list.append(TensorDataset(board_states, moves, targets))
     concat_dataset = ConcatDataset(dataset_list)
-    if args.split < 1:
+    if args.epochs < 1:
         concat_len = concat_dataset.__len__()
-        sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len*args.split)])
+        sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len*args.epochs)])
         positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=0)
+        args.epochs = 1
     else:
         positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
@@ -115,7 +115,7 @@ def train(args):
     if args.validation_bool:
         val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{args.validation_data}.pt')
         val_triple = (val_board_tensor.to(device), val_moves_tensor.to(device), val_target_tensor.to(device))
-    train_model(model, args.save_model, positionloader, criterion, optimizer, args.epochs, device,
+    train_model(model, args.save_model, positionloader, criterion, optimizer, int(args.epochs), device,
                 args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple)
 
 
