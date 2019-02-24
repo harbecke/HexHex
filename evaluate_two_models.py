@@ -91,7 +91,7 @@ def play_games(models, number_of_games, device, batch_size, temperature, tempera
                 if plot_board:
                     draw_board_image(board.board_tensor,
                         f'images/{time}_{model_idx}_{game_number:04d}.png')
-                        board.export_as_FF4(f'images/{time}_{model_idx}_{game_number:04d}.txt')
+                    board.export_as_FF4(f'images/{time}_{model_idx}_{game_number:04d}.txt')
                 game_number += 1
         print(f'{result[model_idx][0+1*model_idx]} : {result[model_idx][1-1*model_idx]}')
     adbc = (result[0][0]*result[1][1] - result[0][1]*result[1][0])
