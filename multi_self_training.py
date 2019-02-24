@@ -25,7 +25,7 @@ def get_model_parameters(weight_decay_mean, weight_decay_std, batch_size_np, bat
     return weight_decay, batch_size, learning_rate, optimizer
 
 
-def multi_self_training(starting_models, number_of_runs, output_csv, weight_decay_mean, weight_decay_std, batch_size_np,
+def multi_self_training(starting_models, number_of_runs, model_csv, weight_decay_mean, weight_decay_std, batch_size_np,
         batch_size_p, learning_rate_mean, learning_rate_std, config_file):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,7 +49,7 @@ def multi_self_training(starting_models, number_of_runs, output_csv, weight_deca
             start = time()
             train.train(train_args)
             duration = str(int(time() - start))
-            with open(output_csv+doc_time+'.csv', 'a') as file:
+            with open(model_csv+doc_time+'.csv', 'a') as file:
                 file.write(model_name+time_str+','+duration+','+str(weight_decay)+','+str(batch_size)+','+str(optimizer)+','+str(learning_rate)+'\n')
 
 
@@ -60,7 +60,7 @@ def main(config_file = 'config.ini'):
     
     starting_models = [model for model in config.get('MULTI SELF TRAINING', 'starting_models').split(",")]
     number_of_runs = config.getint('MULTI SELF TRAINING', 'number_of_runs')
-    output_csv = config.get('MULTI SELF TRAINING', 'output_csv')
+    model_csv = config.get('MULTI SELF TRAINING', 'model_csv')
 
     weight_decay_mean = config.getfloat('MULTI SELF TRAINING', 'weight_decay_mean')
     weight_decay_std = config.getfloat('MULTI SELF TRAINING', 'weight_decay_std')
@@ -69,7 +69,7 @@ def main(config_file = 'config.ini'):
     learning_rate_mean = config.getfloat('MULTI SELF TRAINING', 'learning_rate_mean')
     learning_rate_std = config.getfloat('MULTI SELF TRAINING', 'learning_rate_std')
  
-    multi_self_training(starting_models, number_of_runs, output_csv, weight_decay_mean, weight_decay_std, batch_size_np,
+    multi_self_training(starting_models, number_of_runs, model_csv, weight_decay_mean, weight_decay_std, batch_size_np,
         batch_size_p, learning_rate_mean, learning_rate_std, config_file)
 
 if __name__ == '__main__':
