@@ -1,5 +1,8 @@
 import torch
 
+def position_to_alpha_numeric(position):
+    x, y = position
+    return chr(97 + y), x + 1
 
 def get_neighbours(position, size):
     x = int(position[0])
@@ -9,7 +12,7 @@ def get_neighbours(position, size):
     assert 0 <= y < size
 
     neighbours = set([(x-1, y), (x-1, y+1), (x, y-1), (x, y+1), (x+1, y-1), (x+1, y)])
-    
+
     if x == 0:
         neighbours.discard((x-1, y))
         neighbours.discard((x-1, y+1))
@@ -76,6 +79,7 @@ class Board():
         self.player = 0
         self.switch = False
         self.winner = False
+        self.move_history = []
 
     def __repr__(self):
         return ('Board\n'+str((self.board_tensor[0]-self.board_tensor[1]).numpy())
@@ -86,11 +90,12 @@ class Board():
 
     def set_stone(self, position):
         if len(self.made_moves)==0:
-            self.made_moves.update([position])     
+            self.made_moves.update([position])
             self.board_tensor[0][position] = 1
             self.connected_sets[0], self.winner = update_connected_sets_check_win(self.connected_sets[0], 0, position, self.size)
             self.board_tensor[2] = self.player_tensor[0]
             self.player = 1
+            self.move_history.append((0, position))
 
         elif position in self.legal_moves:
             if len(self.made_moves)==1:
@@ -98,16 +103,18 @@ class Board():
                     self.switch = True
                     self.board_tensor[1][position] = 0.001
                     self.legal_moves.remove(position)
+                    # ignore move_history, as switch rule is not implemented correctly
                 else:
                     self.made_moves.update([position])
                     self.legal_moves -= self.made_moves
                     self.board_tensor[self.player][position] = 1
                     self.connected_sets[self.player], self.winner = update_connected_sets_check_win(self.connected_sets[self.player], self.player, position, self.size)
                     self.board_tensor[2] = self.player_tensor[self.player]
+                    self.move_history.append((self.player, position))
                     self.player = 1-self.player
 
             else:
-                self.made_moves.update([position])            
+                self.made_moves.update([position])
                 self.legal_moves.remove(position)
                 self.board_tensor[self.player][position] = 1
                 self.connected_sets[self.player], self.winner = update_connected_sets_check_win(self.connected_sets[self.player], self.player, position, self.size)
@@ -116,8 +123,20 @@ class Board():
                         self.winner = [[1], [0]][self.winner[0]]
                     self.legal_moves = set()
                 self.board_tensor[2] = self.player_tensor[self.player]
+                self.move_history.append((self.player, position))
                 self.player = 1-self.player
 
         else:
             print('Illegal Move!')
             print(self)
+
+    def export_as_FF4(self, filename):
+        with open(filename, 'w') as file:
+            print(f"(;AP[HexGui:0.9.0]FF[4]GM[11]SZ[{self.size}]", file=file)
+
+            for player, position in self.move_history:
+                stone_color = 'B' if player == 0 else 'W'
+                alpha, numeric = position_to_alpha_numeric(position)
+                print(f';{stone_color}[{alpha}{numeric}]', file=file)
+
+            print(")", file=file)
