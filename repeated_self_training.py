@@ -5,6 +5,7 @@ from configparser import ConfigParser
 import create_data
 import create_model
 import evaluate_two_models
+import hexboard
 import train
 
 
@@ -16,11 +17,13 @@ def repeated_self_training(config_file):
     config = ConfigParser()
     config.read(config_file)
 
+    prefix = config.get('REPEATED SELF TRAINING', 'prefix')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    board_size = config.getint('CREATE DATA', 'board_size')
 
     create_model.create_model_from_config_file(config_file)
 
-    initial_model = '5_random'
+    initial_model = 'first_random'
     champion_iter = 1
     champion_filename = initial_model
 
@@ -39,25 +42,27 @@ def repeated_self_training(config_file):
                 temperature=config.getfloat('CREATE DATA', 'temperature'),
                 board_size=config.getint('CREATE DATA', 'board_size'),
                 batch_size=config.getint('CREATE DATA', 'batch_size'),
+                temperature_decay=1
         )
 
         train_args = train.get_args(config_file)
-        train_args.load_model = f'5_gen{model_id - 1}' if model_id > 0 else initial_model
-        train_args.save_model = f'5_gen{model_id}'
+        train_args.load_model = f'{prefix}_{model_id - 1}' if model_id > 0 else initial_model
+        train_args.save_model = f'{prefix}_{model_id}'
         train_args.data = champion_filename
         train.train(train_args)
 
-        result, signed_chi_squared = evaluate_two_models.play_games(
-                models=[torch.load(f'models/5_gen{model_id}.pt'), champion],
-                number_of_games=config.getint('EVALUATE MODELS', 'number_of_games'),
+        result, signed_chi_squared = evaluate_two_models.play_all_openings(
+                models=[torch.load(f'models/{prefix}_{model_id}.pt'), champion],
+                openings=list(hexboard.first_k_moves(board_size, 2)),
                 device=device,
-                temperature=config.getfloat('EVALUATE MODELS', 'temperature'),
                 board_size=config.getint('EVALUATE MODELS', 'board_size'),
                 plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'),
-                batch_size=config.getint('EVALUATE MODELS', 'batch_size')
+                batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
         )
-        if (result[0][0] + result[1][0]) / (sum(result[0]) + sum(result[1]))  > .55:
-            champion_filename = f'5_gen{model_id}'
+        win_rate = (result[0][0] + result[1][0]) / (sum(result[0]) + sum(result[1]))
+        print(f'win_rate = {win_rate}')
+        if win_rate  > .55:
+            champion_filename = f'{prefix}_{model_id}'
             champion_iter = 1
             print(f'Accept {champion_filename} as new champion!')
         else:
