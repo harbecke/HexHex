@@ -3,7 +3,7 @@ import torch
 from configparser import ConfigParser
 import csv
 
-from evaluate_two_models import get_args, play_games
+from evaluate_two_models import get_args, play_all_openings
 
 
 def multi_evaluate(config_file = 'config.ini'):
@@ -32,8 +32,13 @@ def multi_evaluate(config_file = 'config.ini'):
                 model1 = torch.load('models/{}.pt'.format(models[idx1]), map_location=device)
                 model2 = torch.load('models/{}.pt'.format(models[idx2]), map_location=device)
 
-                results[idx1].append(play_games((model1, model2), args.number_of_games, device, args.batch_size,
-                    args.temperature, args.temperature_decay, args.board_size, args.plot_board)[1])
+                results[idx1].append(play_all_openings(
+                        models=(model1, model2),
+                        device=device,
+                        batch_size=args.batch_size,
+                        board_size=args.board_size,
+                        plot_board=args.plot_board)[1]
+                                     )
 
                 with open(output_csv+'.csv', 'a') as csvfile:
                     csvfile.write(str(results[idx1][idx2-idx1-1])+',')

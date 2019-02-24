@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import torch
 
+import hexboard
 from hexboard import Board
 from hexgame import MultiHexGame
 
@@ -10,43 +11,24 @@ from configparser import ConfigParser
 from visualization.image import draw_board_image
 from time import gmtime, strftime
 
-def all_moves(board_size):
-    return [(x, y) for x in range(board_size) for y in range(board_size)]
 
-def first_k_moves(board_size, num_moves):
-    if num_moves == 1:
-        for move in all_moves(board_size):
-            yield [move]
-    else:
-        for first_moves in first_k_moves(board_size, num_moves - 1):
-            for next_move in all_moves(board_size):
-                if next_move not in first_moves:
-                    yield first_moves + [next_move]
+def play_all_openings(models, device, batch_size, board_size, plot_board):
+    openings = list(hexboard.first_k_moves(board_size, 2))
 
-def get_batch_of_openings(batch_size, openings):
-    num = min(batch_size, len(openings))
-    result = openings[:num]
-    openings = openings[num:]
-    return result
-
-def get_opened_board(board_size, opening):
-    board = Board(size=board_size)
-    for position in opening:
-        board.set_stone(position)
-    return board
-
-def play_all_openings(models, openings, device, batch_size, board_size, plot_board):
+    print(f'playing {len(openings)} openings')
     time = strftime("%Y-%m-%d_%H-%M-%S", gmtime())
     result = [[0, 0], [0, 0]]
 
     number_of_games = 0
+
+    print(f'    M1 - M2')
     for starting_model in range(2):
         game_number = 0
 
         while game_number < len(openings):
             ordered_models = models if starting_model == 0 else models[::-1]
             batch_of_openings = openings[game_number:game_number + batch_size]
-            boards = [get_opened_board(board_size, opening) for opening in batch_of_openings]
+            boards = [hexboard.get_opened_board(board_size, opening) for opening in batch_of_openings]
             multihexgame = MultiHexGame(
                     boards,
                     ordered_models,
@@ -58,44 +40,20 @@ def play_all_openings(models, openings, device, batch_size, board_size, plot_boa
             )
             multihexgame.play_moves()
             for board in multihexgame.boards:
-                winning_model = board.winner[0]
+                winning_model = board.winner[0] if starting_model == 0 else 1 - board.winner[0]
                 result[starting_model][winning_model] += 1
                 if plot_board:
                     draw_board_image(board.board_tensor,
                         f'images/{time}_{starting_model}_{game_number:04d}.png')
+                    board.export_as_FF4(f'images/{time}_{starting_model}_{game_number:04d}.txt')
                 game_number += 1
                 number_of_games += 1
-        print(f'{result[starting_model][starting_model]} : {result[starting_model][1-starting_model]}')
+        color_model1 = 'B' if starting_model == 0 else 'W'
+        color_model2 = 'W' if starting_model == 0 else 'B'
+        print(f'{color_model1}:{color_model2} {result[starting_model][0]} : {result[starting_model][1]}')
 
-    adbc = (result[0][0]*result[1][1] - result[0][1]*result[1][0])
-    signed_chi_squared = 4*adbc*abs(adbc)/(number_of_games*(result[0][0]+result[1][0])*(result[0][1]+result[1][1])+1)
-    print(f'signed_chi_squared = {signed_chi_squared}')
-    return result, signed_chi_squared
-
-def play_games(models, number_of_games, device, batch_size, temperature, temperature_decay, board_size, plot_board):
-    '''
-    two models play against each other
-    '''
-    time = strftime("%Y-%m-%d_%H-%M-%S", gmtime())
-    result = [[0, 0], [0, 0]]
-    for model_idx in range(2):
-        game_number = 0
-        for batch_number in range(number_of_games // (2*batch_size)):
-            ordered_models = models if model_idx == 0 else models[::-1]
-            boards = [Board(size=board_size) for idx in range(batch_size)]
-            multihexgame = MultiHexGame(boards=boards, models=ordered_models, device=device, noise=None, noise_parameters=None, temperature=temperature, temperature_decay=temperature_decay)
-            multihexgame.play_moves()
-            for board in multihexgame.boards:
-                winning_model = board.winner[0]
-                result[model_idx][winning_model] += 1
-                if plot_board:
-                    draw_board_image(board.board_tensor,
-                        f'images/{time}_{model_idx}_{game_number:04d}.png')
-                    board.export_as_FF4(f'images/{time}_{model_idx}_{game_number:04d}.txt')
-                game_number += 1
-        print(f'{result[model_idx][0+1*model_idx]} : {result[model_idx][1-1*model_idx]}')
-    adbc = (result[0][0]*result[1][1] - result[0][1]*result[1][0])
-    signed_chi_squared = 4*adbc*abs(adbc)/(number_of_games*(result[0][0]+result[1][0])*(result[0][1]+result[1][1])+1)
+    adbc = (result[0][0]*result[1][0] - result[0][1]*result[1][1])
+    signed_chi_squared = 4*adbc*abs(adbc)/(number_of_games*(result[0][0]+result[1][1])*(result[0][1]+result[1][0])+1)
     print(f'signed_chi_squared = {signed_chi_squared}')
     return result, signed_chi_squared
 
@@ -124,16 +82,13 @@ def evaluate(config_file = 'config.ini'):
     model1 = torch.load('models/{}.pt'.format(args.model1), map_location=device)
     model2 = torch.load('models/{}.pt'.format(args.model2), map_location=device)
 
-    play_games((model1, model2), args.number_of_games, device, args.batch_size, args.temperature, args.temperature_decay, args.board_size, args.plot_board)
-
-    # play_all_openings(
-    #         models=(model1, model2),
-    #         openings=list(first_k_moves(args.board_size, 2)),
-    #         device=device,
-    #         batch_size=args.batch_size,
-    #         board_size=args.board_size,
-    #         plot_board=args.plot_board
-    # )
+    play_all_openings(
+            models=(model1, model2),
+            device=device,
+            batch_size=args.batch_size,
+            board_size=args.board_size,
+            plot_board=args.plot_board
+    )
 
 if __name__ == '__main__':
     evaluate()

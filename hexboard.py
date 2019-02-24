@@ -140,3 +140,22 @@ class Board():
                 print(f';{stone_color}[{alpha}{numeric}]', file=file)
 
             print(")", file=file)
+
+def all_moves(board_size):
+    return [(x, y) for x in range(board_size) for y in range(board_size)]
+
+def first_k_moves(board_size, num_moves):
+    if num_moves == 1:
+        for move in all_moves(board_size):
+            yield [move]
+    else:
+        for first_moves in first_k_moves(board_size, num_moves - 1):
+            for next_move in all_moves(board_size):
+                if next_move not in first_moves:
+                    yield first_moves + [next_move]
+
+def get_opened_board(board_size, opening):
+    board = Board(size=board_size)
+    for position in opening:
+        board.set_stone(position)
+    return board

@@ -57,15 +57,13 @@ def repeated_self_training(config_file, champions, runs, chi_squared_test_statis
         train_args.save_model = new_model_name
         train.train(train_args)
 
-        _, signed_chi_squared = evaluate_two_models.play_games(
+        _, signed_chi_squared = evaluate_two_models.play_all_openings(
                 models=(torch.load('models/'+new_model_name+'.pt'), champion),
-                number_of_games=config.getint('EVALUATE MODELS', 'number_of_games'),
                 batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
                 device=device,
-                temperature=config.getfloat('EVALUATE MODELS', 'temperature'),
-                temperature_decay=config.getfloat('EVALUATE MODELS', 'temperature_decay'),
                 board_size=config.getint('EVALUATE MODELS', 'board_size'),
-                plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'))
+                plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'),
+        )
         if signed_chi_squared > chi_squared_test_statistic:
             champion_unbeaten_run = 1
             champion_filename = new_model_name
