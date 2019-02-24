@@ -53,7 +53,6 @@ def repeated_self_training(config_file):
 
         result, signed_chi_squared = evaluate_two_models.play_all_openings(
                 models=[torch.load(f'models/{prefix}_{model_id}.pt'), champion],
-                openings=list(hexboard.first_k_moves(board_size, 2)),
                 device=device,
                 board_size=config.getint('EVALUATE MODELS', 'board_size'),
                 plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'),
