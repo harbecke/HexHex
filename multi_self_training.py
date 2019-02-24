@@ -50,7 +50,7 @@ def multi_self_training(starting_models, number_of_runs, output_csv, weight_deca
             train.train(train_args)
             duration = str(int(time() - start))
             with open(output_csv+doc_time+'.csv', 'a') as file:
-                file.write(model_name+','+time_str+','+duration+','+str(weight_decay)+','+str(batch_size)+','+str(optimizer)+','+str(learning_rate)+'\n')
+                file.write(model_name+time_str+','+duration+','+str(weight_decay)+','+str(batch_size)+','+str(optimizer)+','+str(learning_rate)+'\n')
 
 
 def main(config_file = 'config.ini'):
