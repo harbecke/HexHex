@@ -21,6 +21,8 @@ def get_args(config_file):
     parser.add_argument('--weight_decay', type=float, default=config.getfloat('TRAIN', 'weight_decay'))
     parser.add_argument('--batch_size', type=int, default=config.getint('TRAIN', 'batch_size'))
     parser.add_argument('--epochs', type=float, default=config.getfloat('TRAIN', 'epochs'))
+    parser.add_argument('--optimizer', type=str, default=config.get('TRAIN', 'optimizer'))
+    parser.add_argument('--learning_rate', type=float, default=config.getfloat('TRAIN', 'learning_rate'))
     parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
     parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
     parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
@@ -109,7 +111,10 @@ def train(args):
     nn.DataParallel(model).to(device)
 
     criterion = nn.BCELoss(reduction='sum')
-    optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
+    if args.optimizer == 'adadelta':
+        optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
 
     val_triple = None
     if args.validation_bool:
