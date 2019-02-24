@@ -1,5 +1,5 @@
 import torch
-from hexconvolution import NoMCTSModel
+from hexconvolution import NoMCTSModel, RandomModel
 
 import argparse
 from configparser import ConfigParser
@@ -10,6 +10,7 @@ def get_args(config_file):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--board_size', type=int, default=config.getint('CREATE MODEL', 'board_size'))
+    parser.add_argument('--model_type', type=str, default=config.get('CREATE MODEL', 'model_type'))
     parser.add_argument('--layers', type=int, default=config.getint('CREATE MODEL', 'layers'))
     parser.add_argument('--intermediate_channels', type=int, default=config.getint('CREATE MODEL', 'intermediate_channels'))
     parser.add_argument('--model_name', type=str, default=config.get('CREATE MODEL', 'model_name'))
@@ -18,7 +19,10 @@ def get_args(config_file):
 
 def create_model(args):
     print("=== creating model ===")
-    model = NoMCTSModel(board_size=args.board_size, layers=args.layers,
+    if args.model_type == 'random':
+        model = RandomModel(board_size=args.board_size)
+    else:
+        model = NoMCTSModel(board_size=args.board_size, layers=args.layers,
                         intermediate_channels=args.intermediate_channels)
     model_file = f'models/{args.model_name}.pt'
     torch.save(model, model_file)
