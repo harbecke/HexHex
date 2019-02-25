@@ -27,10 +27,15 @@ def get_args(config_file):
     parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
     parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
     parser.add_argument('--print_loss_frequency', type=int, default=config.getint('TRAIN', 'print_loss_frequency'))
+    parser.add_argument('--log_file', type=str, default=config.get('TRAIN', 'log_file'))
     return parser.parse_args(args=[])
 
 def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, weight_decay,
-                save_every_epoch=False, print_loss_frequency=100, validation_triple=None):
+                save_every_epoch, print_loss_frequency, validation_triple, log_file):
+
+    with open(log_file, 'w') as log:
+        log.write('# batch val_loss pred_loss weighted_param_loss\n')
+
     '''
     trains model with backpropagation, loss criterion is currently binary cross-entropy and optimizer is adadelta
     '''
@@ -66,6 +71,8 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
                         val_loss = criterion(val_values.view(-1), validation_triple[2])
                     print('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
                           %(i + 1, len(dataloader), val_loss / num_validations, loss.item() / batch_size, l2loss, weighted_param_loss))
+                    with open(log_file, 'a') as log:
+                        log.write(f'{i+1} {val_loss / num_validations} {loss.item() / batch_size} {weighted_param_loss}\n')
                 else:
                     print('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
                           %(i + 1, len(dataloader), loss.item() / batch_size, l2loss, weighted_param_loss))
@@ -121,7 +128,7 @@ def train(args):
         val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{args.validation_data}.pt')
         val_triple = (val_board_tensor.to(device), val_moves_tensor.to(device), val_target_tensor.to(device))
     train_model(model, args.save_model, positionloader, criterion, optimizer, int(args.epochs), device,
-                args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple)
+                args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple, args.log_file)
 
 
 def train_by_config_file(config_file):
