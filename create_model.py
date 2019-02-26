@@ -11,6 +11,7 @@ def get_args(config_file):
 
     parser.add_argument('--board_size', type=int, default=config.getint('CREATE MODEL', 'board_size'))
     parser.add_argument('--model_type', type=str, default=config.get('CREATE MODEL', 'model_type'))
+    parser.add_argument('--layer_type', type=str, default=config.get('CREATE MODEL', 'layer_type'))
     parser.add_argument('--layers', type=int, default=config.getint('CREATE MODEL', 'layers'))
     parser.add_argument('--intermediate_channels', type=int, default=config.getint('CREATE MODEL', 'intermediate_channels'))
     parser.add_argument('--model_name', type=str, default=config.get('CREATE MODEL', 'model_name'))
@@ -23,7 +24,7 @@ def create_model(args):
         model = RandomModel(board_size=args.board_size)
     else:
         model = NoMCTSModel(board_size=args.board_size, layers=args.layers,
-                        intermediate_channels=args.intermediate_channels)
+                        intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
     model_file = f'models/{args.model_name}.pt'
     torch.save(model, model_file)
     print(f'wrote {model_file}\n')
