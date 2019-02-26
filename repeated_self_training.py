@@ -51,12 +51,17 @@ def repeated_self_training(config_file):
         train_args.data = champion_filename
         train.train(train_args)
 
-        result, signed_chi_squared = evaluate_two_models.play_all_openings(
+        eval_args = evaluate_two_models.get_args(config_file)
+        result, signed_chi_squared = evaluate_two_models.play_games(
                 models=[torch.load(f'models/{prefix}_{model_id}.pt'), champion],
+                openings=eval_args.openings,
+                number_of_games=eval_args.number_of_games,
                 device=device,
-                board_size=config.getint('EVALUATE MODELS', 'board_size'),
-                plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'),
-                batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
+                batch_size=eval_args.batch_size,
+                board_size=eval_args.board_size,
+                temperature=eval_args.temperature,
+                temperature_decay=eval_args.temperature_decay,
+                plot_board=eval_args.plot_board
         )
         win_rate = (result[0][0] + result[1][0]) / (sum(result[0]) + sum(result[1]))
         print(f'win_rate = {win_rate}')
