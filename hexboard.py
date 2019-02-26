@@ -151,7 +151,7 @@ def first_k_moves(board_size, num_moves):
     else:
         for first_moves in first_k_moves(board_size, num_moves - 1):
             for next_move in all_moves(board_size):
-                if next_move not in first_moves:
+                if next_move not in first_moves or len(first_moves)==1:
                     yield first_moves + [next_move]
 
 def get_opened_board(board_size, opening):
