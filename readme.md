@@ -61,6 +61,16 @@ pipenv run python play_cli.py
 ```
 - The ai can then be used by `Program -> connect local program`
 
+### BayesElo evaluation
+BayesElo is the elo evaluation tools used in the AlphaGo paper. It can be found [here](https://www.remi-coulom.fr/Bayesian-Elo).
+Installation works fine on linux when building with `make`.
+
+- Extract the BayesElo folder [this](https://www.remi-coulom.fr/Bayesian-Elo/bayeselo.tar.bz2) 
+in the folder containing the project root (parallel to the project root)
+- `cd BayesElo`
+- `make` # ignore the warnings
+- `$(HEX_ROOT)/evaluation/elo.py` can be used to create elo ratings 
+
 ## Features
 
 * board representation with logic + switch rule
