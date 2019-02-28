@@ -1,3 +1,4 @@
+import copy
 import torch
 
 def position_to_alpha_numeric(position):
@@ -87,6 +88,15 @@ class Board():
             +'\nLegal moves\n'+str(self.legal_moves)
             +'\nWinner\n'+str(self.winner)
             +'\nConnected sets\n'+str(self.connected_sets))+'\n'
+
+    def set_stone_immutable(self, position):
+        """
+        Same as set_stone but does not alter the board.
+        Instead it returns a modified deep copy of the board with the stone set.
+        """
+        self_copy = copy.deepcopy(self)
+        self_copy.set_stone(position)
+        return self_copy
 
     def set_stone(self, position):
         if len(self.made_moves)==0:
