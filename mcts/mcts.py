@@ -43,10 +43,11 @@ class Node:
             self.parent.backup(1 - val)
 
 class MCTS:
-    def __init__(self, model, c_puct, root_board):
-        self.model = model
+    def __init__(self, model, c_puct, root_board, device):
+        self.model = model.to(device)
         self.c_puct = c_puct  # exploration parameter
         self.root = Node(board=root_board, parent=None, move_idx=None)
+        self.device = device
 
     def search(self):
         self._visit(self.root)
@@ -62,7 +63,7 @@ class MCTS:
 
         if node.is_leaf():
             with torch.no_grad():
-                model_policy = self.model(node.board.board_tensor.unsqueeze(0))[0]
+                model_policy = self.model(node.board.board_tensor.unsqueeze(0).to(self.device))[0]
                 node.expand(model_policy)
 
             v = .5  # TODO model should also predict rating for this position
@@ -90,11 +91,12 @@ class MCTS:
 
 
 def test():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     board_size = 5
-    model = torch.load('models/five_board_wd0.001.pt', map_location=device.device)
+    model = torch.load('models/five_board_wd0.001.pt', map_location=device)#.device) wtf how does this work?
 
     board = Board(board_size)
-    mcts = MCTS(model=model, c_puct=.5, root_board=board)
+    mcts = MCTS(model=model, c_puct=.5, root_board=board, device=device)
     for i in range(0, 1600):
         if i % 100 == 0:
             print(i)
