@@ -45,7 +45,7 @@ class Gui:
         y = pos[1]
         return [self.r + x * self.r / 2 + y * self.r, self.r + math.sqrt(3) / 2 * x * self.r]
 
-    def update_board(self, board, move_ratings=None):
+    def update_board(self, board, field_text=None):
         self.board = board
 
         # Clear the screen and set the screen background
@@ -64,9 +64,9 @@ class Gui:
                     pygame.draw.polygon(self.screen, PLAYER_2, points,0)
                 pygame.draw.polygon(self.screen, BLACK, points,3)
 
-                if move_ratings is not None:
-                    rating = move_ratings[0][x * board.size + y]
-                    textsurface = self.font.render(f'{int(100*rating)}', True, (0, 0, 0))
+                if field_text is not None:
+                    text = field_text[x * board.size + y]
+                    textsurface = self.font.render(f'{text}', True, (0, 0, 0))
                     self.screen.blit(textsurface, (center[0]-self.r/6, center[1] - self.r/6))
 
         # Go ahead and update the screen with what we've drawn.
