@@ -17,3 +17,11 @@ def zip_list_of_lists_first_dim_reversed(*iterables):
 class dotdict(dict):
     def __getattr__(self, name):
         return self[name]
+
+def all_unique(x):
+    """
+    Returns whether all elements in the list are unique,
+    i.e. if no element appears twice or more often.
+    """
+    seen = set()
+    return not any(i in seen or seen.add(i) for i in x)
