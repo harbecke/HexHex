@@ -143,7 +143,7 @@ class Board():
                 self.player = 1-self.player
 
         else:
-            print('Illegal Move!')
+            print(f'Illegal Move! {position}')
             print(self)
 
     def export_as_FF4(self, filename):
