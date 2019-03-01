@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import time
 
 import torch
@@ -75,8 +77,8 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
                         val_values = torch.gather(val_pred_tensor, 1, validation_triple[1])
                         val_loss = criterion(val_values.view(-1), validation_triple[2])
                     duration = int(time.time() - start)
-                    print('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
-                          %(i + 1, len(dataloader), val_loss / num_validations, loss.item() / batch_size, l2loss, weighted_param_loss))
+                    print('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f pred_loss_batch: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
+                          %(i + 1, len(dataloader), val_loss / num_validations, loss.item() / batch_size, loss.item(), l2loss, weighted_param_loss))
                     with open(log_file, 'a') as log:
                         log.write(f'{i+1} {val_loss / num_validations} {loss.item() / batch_size} {weighted_param_loss} {duration}\n')
                 else:
@@ -126,6 +128,8 @@ def train(args):
     criterion = nn.BCELoss(reduction='sum')
     if args.optimizer == 'adadelta':
         optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
+    elif args.optimizer == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9, weight_decay=args.weight_decay)
     else:
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
 
