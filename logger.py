@@ -9,7 +9,7 @@ logger = logging.getLogger('hexhex')
 logger.setLevel(logging.DEBUG)
 
 # handler for file output
-fh = logging.FileHandler(config.get('LOGGING', 'file'))
+fh = logging.FileHandler(config.get('LOGGING', 'file'), mode=config.get('LOGGING', 'file_mode'))
 fh.setLevel(config.get('LOGGING', 'file_level'))
 
 # handle for console output
