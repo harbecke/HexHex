@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
+
 import torch
-from hexconvolution import NoMCTSModel, RandomModel
+from hexconvolution import NoMCTSModel, RandomModel, MCTSModel
 
 import argparse
 from configparser import ConfigParser
@@ -22,6 +24,9 @@ def create_model(args):
     print("=== creating model ===")
     if args.model_type == 'random':
         model = RandomModel(board_size=args.board_size)
+    elif args.model_type == 'mcts':
+        model = MCTSModel(board_size=args.board_size, layers=args.layers,
+                          intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
     else:
         model = NoMCTSModel(board_size=args.board_size, layers=args.layers,
                         intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
