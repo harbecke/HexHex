@@ -83,6 +83,6 @@ class MultiHexGame():
         self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
 
         for idx in range(len(self.current_boards)):
-            self.boards[self.current_boards[idx]].set_stone(to_move(positions1d[idx], self.board_size))
+            self.boards[self.current_boards[idx]].set_stone(to_move(positions1d[idx].item(), self.board_size))
             self.targets_list[self.current_boards[idx]].append(self.reverse_winner)
         return outputs_tensor
