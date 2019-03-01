@@ -13,3 +13,7 @@ def zip_list_of_lists_first_dim_reversed(*iterables):
         output_list.extend(list(iter_list))
         if iter_list==[]:
             return output_list
+
+class dotdict(dict):
+    def __getattr__(self, name):
+        return self[name]
