@@ -1,6 +1,12 @@
 import copy
 import torch
 
+def to_move_idx(move, board_size):
+    return move[0] * board_size + move[1]
+
+def to_move(move_idx, board_size):
+    return move_idx // board_size, move_idx % board_size
+
 def position_to_alpha_numeric(position):
     x, y = position
     return chr(97 + y), x + 1

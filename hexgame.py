@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 
 from torch.distributions.categorical import Categorical
+
+from hexboard import to_move
 from noise import singh_maddala_onto_output
 from utils import zip_list_of_lists_first_dim_reversed
 
@@ -81,6 +83,6 @@ class MultiHexGame():
         self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
 
         for idx in range(len(self.current_boards)):
-            self.boards[self.current_boards[idx]].set_stone((int(positions1d[idx] / self.board_size), int(positions1d[idx] % self.board_size)))
+            self.boards[self.current_boards[idx]].set_stone(to_move(positions1d[idx], self.board_size))
             self.targets_list[self.current_boards[idx]].append(self.reverse_winner)
         return outputs_tensor
