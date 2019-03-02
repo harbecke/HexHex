@@ -95,8 +95,4 @@ in the folder containing the project root (parallel to the project root)
 
 * puzzle validation set `puzzle.pt` for endgame strategy evaluation
 
-## To-dos
-
-* implement Monte Carlo tree search
-
-* everything...
+* Monte Carlo tree search
