@@ -3,3 +3,7 @@
 __pycache__/
 .idea/
 config.ini
+*.log
+ratings.txt
+*.profile
+game_history.pgn
