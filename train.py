@@ -13,6 +13,9 @@ import os
 import argparse
 from configparser import ConfigParser
 
+import device
+from hexconvolution import MCTSModel
+
 def get_args(config_file):
     config = ConfigParser()
     config.read(config_file)
@@ -32,6 +35,76 @@ def get_args(config_file):
     parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
     parser.add_argument('--print_loss_frequency', type=int, default=config.getint('TRAIN', 'print_loss_frequency'))
     return parser.parse_args(args=[])
+
+class Training:
+    def __init__(self, args, model, optimizer):
+        self.args = args
+        self.model = model
+        self.log_file = os.path.join('logs', args.save_model + '.csv')
+        with open(self.log_file, 'w') as log:
+            log.write('# batch val_loss pred_loss weighted_param_loss duration[s]\n')
+        self.device = device.device
+        self.optimizer = optimizer
+        self.policy_loss_fct = nn.BCELoss(reduction='sum')
+        self.value_loss_fct = nn.MSELoss(reduction='sum')
+
+    def train_mcts_model(self, dataloader):
+        start = time.time()
+
+        for epoch in range(int(self.args.epochs)):
+
+            running_loss = 0.0
+            observed_states = 0
+
+            for i, (board_states, policies_train, value_train) in enumerate(dataloader, 0):
+                board_states, policies_train, value_train \
+                    = board_states.to(self.device), policies_train.to(self.device), value_train.to(self.device)
+
+                self.optimizer.zero_grad()
+                policies_out, values_out = self.model(board_states)
+                # TODO rather train on direct output instead of exp() version?
+                loss = self.policy_loss_fct(policies_out.exp(), policies_train) \
+                       + self.value_loss_fct(values_out, value_train)
+                loss.backward()
+                self.optimizer.step()
+
+                batch_size = board_states.shape[0]
+                running_loss += loss.item()
+                observed_states += batch_size
+
+                if i % self.args.print_loss_frequency == 0:
+                    l2loss = sum(torch.pow(p, 2).sum() for p in self.model.parameters() if p.requires_grad)
+                    weighted_param_loss = self.args.weight_decay * l2loss
+                    # if self.args.validation_triple is not None:
+                    #     with torch.no_grad():
+                    #         num_validations = len(self.args.validation_triple[0])
+                    #         val_pred_tensor = self.model(self.args.validation_triple[0])
+                    #         val_values = torch.gather(val_pred_tensor, 1, self.args.validation_triple[1])
+                    #         val_loss = self.loss_fct(val_values.view(-1), self.args.validation_triple[2])
+                    #     duration = int(time.time() - start)
+                    #     print('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f pred_loss_batch: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
+                    #           %(i + 1, len(dataloader), val_loss / num_validations, loss.item() / batch_size, loss.item(), l2loss, weighted_param_loss))
+                    #     with open(self.log_file, 'a') as log:
+                    #         log.write(f'{i+1} {val_loss / num_validations} {loss.item() / batch_size} {weighted_param_loss} {duration}\n')
+                    # else:
+                    print('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
+                          %(i + 1, len(dataloader), loss.item() / batch_size, l2loss, weighted_param_loss))
+
+            l2loss = sum(torch.pow(p, 2).sum() for p in self.model.parameters() if p.requires_grad)
+            weighted_param_loss = self.args.weight_decay * l2loss
+            print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
+                  %(epoch + 1, running_loss / observed_states, l2loss, weighted_param_loss))
+            if self.args.save_every_epoch:
+                file_name = 'models/{}_{}.pt'.format(self.args.save_model_path, epoch)
+                torch.save(self.model, file_name)
+                print(f'wrote {file_name}')
+
+        if not self.args.save_every_epoch:
+            file_name = 'models/{}.pt'.format(self.args.save_model)
+            torch.save(self.model, file_name)
+            print(f'wrote {file_name}')
+
+        print('Finished Training\n')
 
 def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, weight_decay,
                 save_every_epoch, print_loss_frequency, validation_triple):
@@ -125,7 +198,6 @@ def train(args):
     model = torch.load('models/{}.pt'.format(args.load_model), map_location=device)
     nn.DataParallel(model).to(device)
 
-    criterion = nn.BCELoss(reduction='sum')
     if args.optimizer == 'adadelta':
         optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
     elif args.optimizer == 'sgd':
@@ -137,8 +209,14 @@ def train(args):
     if args.validation_bool:
         val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{args.validation_data}.pt')
         val_triple = (val_board_tensor.to(device), val_moves_tensor.to(device), val_target_tensor.to(device))
-    train_model(model, args.save_model, positionloader, criterion, optimizer, int(args.epochs), device,
-                args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple)
+
+    if model.__class__ == MCTSModel:
+        training = Training(args, model, optimizer)
+        training.train_mcts_model(positionloader)
+    else:
+        criterion = nn.BCELoss(reduction='sum')
+        train_model(model, args.save_model, positionloader, criterion, optimizer, int(args.epochs), device,
+                    args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple)
 
 
 def train_by_config_file(config_file):
