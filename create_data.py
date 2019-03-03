@@ -5,11 +5,60 @@ import torch
 import argparse
 from configparser import ConfigParser
 
-from hexboard import Board
+from hexboard import Board, to_move
+from hexconvolution import MCTSModel
 from hexgame import MultiHexGame
+from logger import logger
+from mcts.mcts import MCTSSearch
+from utils import dotdict
 
 
-def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name, noise, noise_parameters, temperature, temperature_decay, board_size):
+class SelfPlayGenerator:
+    def __init__(self, model: MCTSModel, mcts_args):
+        self.model = model
+        self.mcts_args = mcts_args
+        self.board_size = model.board_size
+        self.args = dotdict({'temperature': 1})
+
+    def self_play_mcts_game(self):
+        """
+        Generates data files from MCTS runs.
+        yields 3 tensors containing for each move:
+        - board_tensor
+        - mcts policy
+        - result of game for active player (-1 or 1)
+        """
+        all_board_tensors = []
+        all_mcts_policies = []
+
+        search = MCTSSearch(self.model, self.mcts_args)
+        board = Board(size=self.board_size)
+        while not board.winner:
+            move_counts = search.move_counts(board)
+            mcts_policy = search.move_probabilities(move_counts, self.args.temperature)
+            move = search.sample_move(mcts_policy)
+
+            all_board_tensors.append(board.board_tensor)
+            mcts_policy_tensor = torch.Tensor(mcts_policy)
+            all_mcts_policies.append(mcts_policy_tensor)
+
+            board.set_stone(to_move(move, self.board_size))
+
+        result_first_player = 1 if board.winner == [0] else -1
+        current_result = result_first_player
+
+        for board_tensor, mcts_policy in zip(all_board_tensors, all_mcts_policies):
+            yield board_tensor, mcts_policy, torch.Tensor([current_result])
+            current_result = -current_result
+
+    def position_generator(self):
+        while True:
+            for x in self.self_play_mcts_game():
+                yield x
+
+
+def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name,
+                        noise, noise_parameters, temperature, temperature_decay, board_size):
     '''
     generates data files with run_name indexed from file_counter_start to file_counter_end
     samples_per_files number of triples (board, move, target)
@@ -64,17 +113,48 @@ def get_args(config_file):
     parser.add_argument('--temperature', type=float, default=config.getfloat('CREATE DATA', 'temperature'))
     parser.add_argument('--temperature_decay', type=float, default=config.getfloat('CREATE DATA', 'temperature_decay'))
     parser.add_argument('--board_size', type=int, default=config.getint('CREATE DATA', 'board_size'))
+    parser.add_argument('--c_puct', type=float, default=config.getfloat('CREATE DATA', 'c_puct'))
+    parser.add_argument('--num_mcts_simulations', type=int, default=config.getint('CREATE DATA', 'num_mcts_simulations'))
+    parser.add_argument('--mcts_batch_size', type=int, default=config.getint('CREATE DATA', 'mcts_batch_size'))
+    parser.add_argument('--n_virtual_loss', type=int, default=config.getint('CREATE DATA', 'n_virtual_loss'))
 
     return parser.parse_args()
 
-def main(config_file = 'config.ini'):
+def main(config_file='config.ini'):
     args = get_args(config_file)
-    
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load('models/{}.pt'.format(args.model), map_location=device)
 
-    generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device, args.batch_size, args.run_name, args.noise,
-        [float(parameter) for parameter in args.noise_parameters.split(",")], args.temperature, args.temperature_decay, args.board_size)
+    if model.__class__ == MCTSModel:
+        create_mcts_self_play_data(args, model)
+
+    else:
+        generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device,
+                            args.batch_size,
+                            args.run_name, args.noise,
+                            [float(parameter) for parameter in args.noise_parameters.split(",")], args.temperature,
+                            args.temperature_decay, args.board_size)
+
+
+def create_mcts_self_play_data(args, model):
+    logger.info("=== creating data from self play ===")
+    self_play_generator = SelfPlayGenerator(model, args)
+    position_generator = self_play_generator.position_generator()
+    for file_idx in range(args.data_range_min, args.data_range_max):
+        all_boards_tensor = torch.Tensor()
+        all_mcts_policies = torch.Tensor()
+        all_results = torch.Tensor()
+        for _ in range(args.samples_per_file):
+            board_tensor, mcts_policy, result = next(position_generator)
+            all_boards_tensor = torch.cat((all_boards_tensor, board_tensor.unsqueeze(0)))
+            all_mcts_policies = torch.cat((all_mcts_policies, mcts_policy.unsqueeze(0)))
+            all_results = torch.cat((all_results, result.unsqueeze(0)))
+
+        file_name = f'data/{args.run_name}_{file_idx}.pt'
+        torch.save((all_boards_tensor, all_mcts_policies, all_results), file_name)
+        logger.info(f'self-play data generation wrote {file_name}')
+
 
 if __name__ == '__main__':
     main()
