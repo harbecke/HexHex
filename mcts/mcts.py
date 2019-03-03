@@ -135,7 +135,7 @@ class MCTSSearch:
         self.model = model
         self.args = args
 
-    def move_counts(self, board):
+    def simulate(self, board):
         """
         Runs a Monte Carlo Tree Search and
         returns visit counts for the next moves.
@@ -152,7 +152,7 @@ class MCTSSearch:
             counts[child.move_idx] = child.N
             Qs[child.move_idx] = child.W / child.N if child.N > 0 else 0
 
-        return counts
+        return counts, Qs
 
     @staticmethod
     def move_probabilities(counts, temperature):
@@ -184,7 +184,7 @@ def test():
     mcts_search = MCTSSearch(model, args)
 
     board = Board(board_size)
-    counts = mcts_search.move_counts(board)
+    counts = mcts_search.simulate(board)
     logger.debug(torch.Tensor(counts).view(5, 5))
     # TODO add noise
 
