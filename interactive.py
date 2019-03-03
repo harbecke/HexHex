@@ -56,7 +56,7 @@ class InteractiveGame:
         if self.args.model_type == 'mcts':
             move_counts = self.mcts_search.move_counts(self.board)
             move_ratings = self.mcts_search.move_probabilities(move_counts, self.args.temperature)
-            move_idx = np.random.choice(range(len(move_ratings)), p=move_ratings)
+            move_idx = self.mcts_search.sample_move(move_ratings)
             self.board.set_stone(to_move(move_idx, self.board.size))
             self.gui.update_board(self.board, field_text=np.array(move_counts))
 

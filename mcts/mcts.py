@@ -166,6 +166,9 @@ class MCTSSearch:
             probs = [x / float(sum(counts)) for x in counts]
             return probs
 
+    @staticmethod
+    def sample_move(move_probabilities):
+        return np.random.choice(range(len(move_probabilities)), p=move_probabilities)
 
 def test():
     board_size = 5
