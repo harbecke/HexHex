@@ -34,7 +34,7 @@ class SelfPlayGenerator:
         search = MCTSSearch(self.model, self.mcts_args)
         board = Board(size=self.board_size)
         while not board.winner:
-            move_counts = search.simulate(board)
+            move_counts, Qs = search.simulate(board)
             mcts_policy = search.move_probabilities(move_counts, self.args.temperature)
             move = search.sample_move(mcts_policy)
 

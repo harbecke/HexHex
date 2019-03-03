@@ -184,7 +184,7 @@ def test():
     mcts_search = MCTSSearch(model, args)
 
     board = Board(board_size)
-    counts = mcts_search.simulate(board)
+    counts, Qs = mcts_search.simulate(board)
     logger.debug(torch.Tensor(counts).view(5, 5))
     # TODO add noise
 
