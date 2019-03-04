@@ -8,15 +8,17 @@ from utils import dotdict
 from logger import logger
 
 class Node:
-    def __init__(self, parent, move_idx):
+    def __init__(self, parent, move_idx, board_size):
         self._board = None  # will be set upon first call of board(). For root node this needs to be set manually
-        self.N = 0
-        self.W = 0
-        self.Q = 0
         self.P = None
-        self.children = []
+        self.N = 0
+        self.child_Ns = torch.zeros(board_size*board_size)
+        self.child_Ws = torch.zeros(board_size*board_size)
+        self.child_Qs = torch.zeros(board_size*board_size)
+        self.children = [None for _ in range(board_size * board_size)]
         self.parent = parent
         self.move_idx = move_idx # last move on the board, None for root node
+        self._is_leaf = True
 
     def move_history(self):
         history = []
@@ -28,7 +30,7 @@ class Node:
 
     @staticmethod
     def create_root_node(board):
-        root = Node(parent=None, move_idx=None)
+        root = Node(parent=None, move_idx=None, board_size=board.size)
         root._board = board
         return root
 
@@ -41,14 +43,16 @@ class Node:
         return self.board().winner != False
 
     def is_leaf(self):
-        return self.children == []
+        return self._is_leaf
 
     def expand(self, model_policy):
+        self._is_leaf = False
         self.P = torch.exp(model_policy)
         for move_idx, p in enumerate(self.P):
             move = to_move(move_idx, self.board().size)
             if move in self.board().legal_moves and p > 1e-6:
-                self.children.append(Node(self, move_idx))
+                self.children[move_idx] = Node(self, move_idx, self.board().size)
+
 
 
 class MCTS:
@@ -65,12 +69,16 @@ class MCTS:
                 leaf_nodes.append(leaf_node)
         self.expand_leafes(leaf_nodes)
 
-    def _backup(self, node: Node, val: float):
+    def _backup(self, node: Node, val: float, child = None):
         node.N += 1 - self.args.n_virtual_loss
-        node.W += val + self.args.n_virtual_loss
-        node.Q = node.W / node.N
+
+        if child:
+            node.child_Ns[child.move_idx] += 1 - self.args.n_virtual_loss
+            node.child_Ws[child.move_idx] += val + self.args.n_virtual_loss
+            node.child_Qs[child.move_idx] = node.child_Ws[child.move_idx] / node.child_Ns[child.move_idx]
+
         if node.parent is not None:
-            self._backup(node.parent, -val)
+            self._backup(node.parent, -val, node)
 
 
     def _visit(self, node: Node):
@@ -81,9 +89,12 @@ class MCTS:
         """
 
         # prevent node to be visited before backup is run
-        node.W += -self.args.n_virtual_loss
         node.N += self.args.n_virtual_loss
-        node.Q = node.W / node.N
+        if node.parent:
+            node.parent.child_Ns[node.move_idx] += self.args.n_virtual_loss
+            node.parent.child_Ws[node.move_idx] += -self.args.n_virtual_loss
+            node.parent.child_Qs[node.move_idx] = node.parent.child_Ws[node.move_idx] / node.parent.child_Ns[node.move_idx]
+            assert(node.parent.child_Ns[node.move_idx] == node.N)
 
         if node.has_winner():
             self._backup(node, 1.)  # player has won the game -> value last move with 1
@@ -96,22 +107,16 @@ class MCTS:
         return self._visit(best_move)
 
     def find_best_move(self, node: Node):
-        max_val, best_child = -float("inf"), None
+        # formula from alpha go paper doesn't make much sense for the case node.N == 1
+        # just use model predicted policy there
 
-        for child in node.children:
-            if node.N == 1:
-                # formula from alpha go paper doesn't make much sense for this case.
-                # just use model predicted policy here
-                U = self.args.c_puct * node.P[child.move_idx]
-            else:
-                U = self.args.c_puct * node.P[child.move_idx] * np.sqrt(node.N - 1) / (1 + child.N)
-                # assert(node.N - 1 == sum(child.N for child in node.children))
-            # logger.debug(f'{child.move_idx:2d} {Q:.3f} {U:.3f}')
-            if U + child.Q > max_val:
-                max_val = U + child.Q
-                best_child = child
+        if node.N == 1:
+            child_ratings = node.child_Qs + self.args.c_puct * node.P
+        else:
+            N_factor = np.sqrt(node.N - 1)
+            child_ratings = node.child_Qs + self.args.c_puct * node.P * N_factor / (1 + node.child_Ns)
 
-        return best_child
+        return node.children[np.argmax(child_ratings)]
 
     def expand_leafes(self, leaf_nodes):
         if len(leaf_nodes) == 0:
@@ -146,11 +151,8 @@ class MCTSSearch:
         for i in range(self.args.num_mcts_simulations // self.args.mcts_batch_size):
             mcts.search(batch_size=self.args.mcts_batch_size)
 
-        counts = [0] * board.size * board.size
-        Qs = [0] * board.size * board.size
-        for child in mcts.root.children:
-            counts[child.move_idx] = child.N
-            Qs[child.move_idx] = child.W / child.N if child.N > 0 else 0
+        counts = mcts.root.child_Ns
+        Qs = mcts.root.child_Qs
 
         return counts, Qs
 
@@ -172,12 +174,12 @@ class MCTSSearch:
 
 def test():
     board_size = 5
-    model = MCTSModel(board_size=5, layers=2, intermediate_channels=1)
+    model = MCTSModel(board_size=5, layers=10, intermediate_channels=32)
 
     args = dotdict({
         'c_puct': 5.,
         'num_mcts_simulations': 1600,
-        'mcts_batch_size': 1,
+        'mcts_batch_size': 8,
         'n_virtual_loss': 3
     })
 
@@ -191,4 +193,6 @@ def test():
 if __name__ == '__main__':
     import cProfile
     cProfile.run('test()', 'mcts.profile')
-    # test()
+    import pstats
+    p = pstats.Stats('mcts.profile')
+    p.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(20)
