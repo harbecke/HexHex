@@ -16,6 +16,9 @@ from configparser import ConfigParser
 import device
 from hexconvolution import MCTSModel
 
+from logger import logger
+
+
 def get_args(config_file):
     config = ConfigParser()
     config.read(config_file)
@@ -45,55 +48,45 @@ class Training:
             log.write('# batch val_loss pred_loss weighted_param_loss duration[s]\n')
         self.device = device.device
         self.optimizer = optimizer
-        self.policy_loss_fct = nn.BCELoss(reduction='sum')
-        self.value_loss_fct = nn.MSELoss(reduction='sum')
 
-    def train_mcts_model(self, dataloader):
-        start = time.time()
-
+    def train_mcts_model(self, training_dataloader, validation_dataloader):
+        dataloaders = {'train': training_dataloader, 'val': validation_dataloader}
+        mean_epoch_loss_history = {}
         for epoch in range(int(self.args.epochs)):
+            for phase in ['train', 'val']:
+                running_loss = 0.0
+                for i, (board_states, policies_train, value_train) in enumerate(dataloaders[phase], 0):
+                    board_states, policies_train, value_train \
+                        = board_states.to(self.device), policies_train.to(self.device), value_train.to(self.device)
 
-            running_loss = 0.0
-            observed_states = 0
+                    self.optimizer.zero_grad()
+                    with torch.set_grad_enabled(phase == 'train'):
+                        param_loss, policy_loss, value_loss = self.measure_mean_losses(
+                                board_states,
+                                policies_train,
+                                value_train
+                        )
 
-            for i, (board_states, policies_train, value_train) in enumerate(dataloader, 0):
-                board_states, policies_train, value_train \
-                    = board_states.to(self.device), policies_train.to(self.device), value_train.to(self.device)
+                        loss = policy_loss + value_loss + param_loss
+                        running_loss += loss.item() * board_states.size(0)
 
-                self.optimizer.zero_grad()
-                policies_out, values_out = self.model(board_states)
-                # TODO rather train on direct output instead of exp() version?
-                loss = self.policy_loss_fct(policies_out.exp(), policies_train) \
-                       + self.value_loss_fct(values_out, value_train)
-                loss.backward()
-                self.optimizer.step()
+                        if phase == 'train':
+                            loss.backward()
+                            self.optimizer.step()
 
-                batch_size = board_states.shape[0]
-                running_loss += loss.item()
-                observed_states += batch_size
+                        if i % self.args.print_loss_frequency == 0 and phase == 'train':
+                            logger.info(
+                                    f'batch {i + 1:4d} / { len(dataloaders[phase]):4d} '
+                                    f'loss: {loss.item():.3f} '
+                                    f'value_loss: {value_loss.item():.3f} '
+                                    f'policy_loss: {policy_loss.item():.3f} '
+                                    f'param_loss (weighted): {param_loss:.3f} '
+                            )
 
-                if i % self.args.print_loss_frequency == 0:
-                    l2loss = sum(torch.pow(p, 2).sum() for p in self.model.parameters() if p.requires_grad)
-                    weighted_param_loss = self.args.weight_decay * l2loss
-                    # if self.args.validation_triple is not None:
-                    #     with torch.no_grad():
-                    #         num_validations = len(self.args.validation_triple[0])
-                    #         val_pred_tensor = self.model(self.args.validation_triple[0])
-                    #         val_values = torch.gather(val_pred_tensor, 1, self.args.validation_triple[1])
-                    #         val_loss = self.loss_fct(val_values.view(-1), self.args.validation_triple[2])
-                    #     duration = int(time.time() - start)
-                    #     print('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f pred_loss_batch: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
-                    #           %(i + 1, len(dataloader), val_loss / num_validations, loss.item() / batch_size, loss.item(), l2loss, weighted_param_loss))
-                    #     with open(self.log_file, 'a') as log:
-                    #         log.write(f'{i+1} {val_loss / num_validations} {loss.item() / batch_size} {weighted_param_loss} {duration}\n')
-                    # else:
-                    print('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
-                          %(i + 1, len(dataloader), loss.item() / batch_size, l2loss, weighted_param_loss))
+                mean_epoch_loss_history[phase].append(running_loss / len(dataloaders[phase].dataset))
 
-            l2loss = sum(torch.pow(p, 2).sum() for p in self.model.parameters() if p.requires_grad)
-            weighted_param_loss = self.args.weight_decay * l2loss
-            print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
-                  %(epoch + 1, running_loss / observed_states, l2loss, weighted_param_loss))
+            logger.info('Epoch [%d] train_loss: %.3f val_loss: %.3f'
+                        % (epoch + 1, mean_epoch_loss_history['train'][-1], mean_epoch_loss_history['val'][-1]))
             if self.args.save_every_epoch:
                 file_name = 'models/{}_{}.pt'.format(self.args.save_model_path, epoch)
                 torch.save(self.model, file_name)
@@ -106,9 +99,22 @@ class Training:
 
         print('Finished Training\n')
 
+    def measure_mean_losses(self, board_states, policies_train, value_train):
+        policies_log, values_out = self.model(board_states)
+        policies_train_entropy = torch.distributions.Categorical(probs=policies_train).entropy()
+        # this calculated cross entropy as policy output is log(p)
+        # subtracting policies_train_entropy, s.t. policy_loss == 0 if both policies are equal
+        policy_loss = torch.mean(torch.sum(-policies_log * policies_train, dim=1) - policies_train_entropy)
+        value_loss_fct = nn.MSELoss(reduction='mean')
+        value_loss = value_loss_fct(values_out, value_train)
+        param_loss = self.args.weight_decay * \
+                     sum(torch.pow(p, 2).sum() for p in self.model.parameters() if p.requires_grad)
+        return param_loss, policy_loss, value_loss
+
+
+
 def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, weight_decay,
                 save_every_epoch, print_loss_frequency, validation_triple):
-
     log_file = os.path.join('logs', save_model_path + '.csv')
 
     with open(log_file, 'w') as log:
@@ -150,19 +156,23 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
                         val_values = torch.gather(val_pred_tensor, 1, validation_triple[1])
                         val_loss = criterion(val_values.view(-1), validation_triple[2])
                     duration = int(time.time() - start)
-                    print('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f pred_loss_batch: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
-                          %(i + 1, len(dataloader), val_loss / num_validations, loss.item() / batch_size, loss.item(), l2loss, weighted_param_loss))
+                    print(
+                            'batch %3d / %3d val_loss: %.3f  pred_loss: %.3f pred_loss_batch: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
+                            % (
+                                i + 1, len(dataloader), val_loss / num_validations, loss.item() / batch_size,
+                                loss.item(),
+                                l2loss, weighted_param_loss))
                     with open(log_file, 'a') as log:
-                        log.write(f'{i+1} {val_loss / num_validations} {loss.item() / batch_size} {weighted_param_loss} {duration}\n')
+                        log.write(
+                                f'{i + 1} {val_loss / num_validations} {loss.item() / batch_size} {weighted_param_loss} {duration}\n')
                 else:
                     print('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
-                          %(i + 1, len(dataloader), loss.item() / batch_size, l2loss, weighted_param_loss))
-
+                          % (i + 1, len(dataloader), loss.item() / batch_size, l2loss, weighted_param_loss))
 
         l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
         weighted_param_loss = weight_decay * l2loss
         print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
-              %(epoch + 1, running_loss / observed_states, l2loss, weighted_param_loss))
+              % (epoch + 1, running_loss / observed_states, l2loss, weighted_param_loss))
         if save_every_epoch:
             file_name = 'models/{}_{}.pt'.format(save_model_path, epoch)
             torch.save(model, file_name)
@@ -174,6 +184,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
         print(f'wrote {file_name}')
 
     print('Finished Training\n')
+
 
 def train(args):
     '''
@@ -187,23 +198,34 @@ def train(args):
         board_states, moves, targets = torch.load('data/{}_{}.pt'.format(args.data, idx))
         dataset_list.append(TensorDataset(board_states, moves, targets))
     concat_dataset = ConcatDataset(dataset_list)
+    total_len = len(concat_dataset)
+    val_fraction = .1
+    val_part = int(val_fraction * total_len)
+    train_dataset, val_dataset = torch.utils.data.random_split(concat_dataset, [total_len - val_part, val_part])
     if args.epochs < 1:
-        concat_len = concat_dataset.__len__()
-        sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len*args.epochs)])
-        positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=0)
+        concat_len = train_dataset.__len__()
+        sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len * args.epochs)])
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler,
+                                                     num_workers=0)
         args.epochs = 1
     else:
-        positionloader = torch.utils.data.DataLoader(concat_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                                                     num_workers=0)
+
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size)
 
     model = torch.load('models/{}.pt'.format(args.load_model), map_location=device)
     nn.DataParallel(model).to(device)
 
+    # don't use weight_decay in optimizer for MCTSModel, as the outcome is more predictable if measured in loss directly
+    optimizer_weight_decay = 0 if model.__class__ == MCTSModel else args.weight_decay
     if args.optimizer == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), weight_decay=args.weight_decay)
+        optimizer = optim.Adadelta(model.parameters(), weight_decay=optimizer_weight_decay)
     elif args.optimizer == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9, weight_decay=args.weight_decay)
+        optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9,
+                              weight_decay=optimizer_weight_decay)
     else:
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=optimizer_weight_decay)
 
     val_triple = None
     if args.validation_bool:
@@ -212,16 +234,17 @@ def train(args):
 
     if model.__class__ == MCTSModel:
         training = Training(args, model, optimizer)
-        training.train_mcts_model(positionloader)
+        training.train_mcts_model(train_loader, val_loader)
     else:
         criterion = nn.BCELoss(reduction='sum')
-        train_model(model, args.save_model, positionloader, criterion, optimizer, int(args.epochs), device,
+        train_model(model, args.save_model, train_loader, criterion, optimizer, int(args.epochs), device,
                     args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple)
 
 
 def train_by_config_file(config_file):
     args = get_args(config_file)
     train(args)
+
 
 if __name__ == "__main__":
     train_by_config_file('config.ini')
