@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 
+import argparse
+import os
 import time
+from configparser import ConfigParser
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from torch.utils.data.dataset import TensorDataset, ConcatDataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
-import os
-import argparse
-from configparser import ConfigParser
-
-import device
-from hexconvolution import MCTSModel
-
-from logger import logger
+import hex.utils.utils
+from hex.model.hexconvolution import MCTSModel
+from hex.utils.logger import logger
 
 
 def get_args(config_file):
@@ -46,7 +43,7 @@ class Training:
         self.log_file = os.path.join('logs', args.save_model + '.csv')
         with open(self.log_file, 'w') as log:
             log.write('# batch val_loss pred_loss weighted_param_loss duration[s]\n')
-        self.device = device.device
+        self.device = hex.utils.utils.device
         self.optimizer = optimizer
 
     def train_mcts_model(self, training_dataloader, validation_dataloader):

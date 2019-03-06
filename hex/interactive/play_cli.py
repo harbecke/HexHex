@@ -3,12 +3,11 @@ import sys
 
 import argparse
 import logging
-import random
 import torch
 from configparser import ConfigParser
 
-import hexboard
-from hexgame import MultiHexGame
+from hex.logic import hexboard
+from hex.logic.hexgame import MultiHexGame
 
 logging.basicConfig(level=logging.DEBUG, filename='play_cli.log', filemode='w')
 

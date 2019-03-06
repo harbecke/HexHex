@@ -2,11 +2,9 @@
 import torch
 from configparser import ConfigParser
 
-import create_data
-import create_model
-import evaluate_two_models
-import hexboard
 import train
+from hex.creation import create_data, create_model
+from hex.evaluation import evaluate_two_models
 
 
 def repeated_self_training(config_file):

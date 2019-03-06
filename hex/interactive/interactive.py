@@ -4,12 +4,12 @@ from configparser import ConfigParser
 import argparse
 import torch
 
-from logger import logger
-from hexboard import Board
-from hexgame import MultiHexGame
-from mcts.mcts import MCTSSearch
-from hexboard import to_move
-from visualization.gui import Gui
+from hex.utils.logger import logger
+from hex.logic.hexboard import Board
+from hex.logic.hexgame import MultiHexGame
+from hex.model.mcts import MCTSSearch
+from hex.logic.hexboard import to_move
+from hex.interactive.interactive import Gui
 
 def get_args():
     config = ConfigParser()

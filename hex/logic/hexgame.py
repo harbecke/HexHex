@@ -3,9 +3,9 @@ import torch.nn as nn
 
 from torch.distributions.categorical import Categorical
 
-from hexboard import to_move
-from noise import singh_maddala_onto_output
-from utils import zip_list_of_lists_first_dim_reversed
+from hex.logic.hexboard import to_move
+from hex.creation.noise import singh_maddala_onto_output
+from hex.utils.utils import zip_list_of_lists_first_dim_reversed
 
 
 def tempered_moves_selection(output_tensor, temperature):
@@ -21,8 +21,8 @@ class MultiHexGame():
     '''
     takes a list of HexBoards as input and playes them with a list of either one or two models
     play_moves controls batched_single_move and returns the tensor triple if there is no game left to play
-    batched_single_move makes one move in each of the playable games and returns the evaluation of the games or nothing if there is no game to play
-    noise can be added after evaluation to boost random moves, noise and noise_parameters control the type of noise
+    batched_single_move makes one move in each of the playable games and returns the elo of the games or nothing if there is no game to play
+    noise can be added after elo to boost random moves, noise and noise_parameters control the type of noise
     temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
     temperature_decay decays the temperature over time as a power function with base:temperature_decay and exponent:number of moves made
     '''

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import numpy as np
 import torch
-import device
-from hexboard import Board, to_move
-from hexconvolution import MCTSModel
-from utils import dotdict
-from logger import logger
+
+import hex.utils.utils
+from hex.model.hexconvolution import MCTSModel
+from hex.utils.logger import logger
+from hex.logic.hexboard import Board, to_move
+from hex.utils.utils import dotdict
+
 
 class Node:
     def __init__(self, parent, move_idx, board_size):
@@ -57,7 +59,7 @@ class Node:
 
 class MCTS:
     def __init__(self, model, root_board, args):
-        self.model = model.to(device.device)
+        self.model = model.to(hex.utils.utils.device)
         self.args = args
         self.root = Node.create_root_node(board=root_board)
 
@@ -124,7 +126,7 @@ class MCTS:
         with torch.no_grad():
             board_tensors = torch.stack(
                     [leaf_node.board().board_tensor for leaf_node in leaf_nodes]
-            ).to(device.device)
+            ).to(hex.utils.utils.device)
             model_policies, model_values = self.model(board_tensors)
             for idx, node in enumerate(leaf_nodes):
                 # leaf_nodes might contain duplicates. don't expand a node twice

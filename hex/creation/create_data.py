@@ -5,12 +5,12 @@ import torch
 import argparse
 from configparser import ConfigParser
 
-from hexboard import Board, to_move
-from hexconvolution import MCTSModel
-from hexgame import MultiHexGame
-from logger import logger
-from mcts.mcts import MCTSSearch
-from utils import dotdict
+from hex.logic.hexboard import Board, to_move
+from hex.model.hexconvolution import MCTSModel
+from hex.logic.hexgame import MultiHexGame
+from hex.utils.logger import logger
+from hex.model.mcts import MCTSSearch
+from hex.utils.utils import dotdict
 
 
 class SelfPlayGenerator:

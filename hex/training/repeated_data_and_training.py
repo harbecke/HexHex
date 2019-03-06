@@ -4,9 +4,9 @@ import torch
 import sys
 from configparser import ConfigParser
 
-import create_data
-import evaluate_two_models
 import train
+from hex.creation import create_data
+from hex.evaluation import evaluate_two_models
 
 
 def repeated_self_training(config_file, champions, runs, chi_squared_test_statistic):

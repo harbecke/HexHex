@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 import torch
 
-import hexboard
-from hexboard import Board
-from hexgame import MultiHexGame
+from hex.logic import hexboard
+from hex.logic.hexboard import Board
+from hex.logic.hexgame import MultiHexGame
 
 import argparse
 from configparser import ConfigParser
 
-from visualization.image import draw_board_image
+from hex.visualization.image import draw_board_image
 from time import gmtime, strftime
 
 

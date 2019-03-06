@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+import torch
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def _one_pass(iters):
     for it in iters:
         try:

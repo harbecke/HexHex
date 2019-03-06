@@ -3,7 +3,7 @@ import torch
 from configparser import ConfigParser
 import csv
 
-from evaluate_two_models import get_args, play_games
+from hex.evaluation.evaluate_two_models import get_args, play_games
 
 
 def multi_evaluate(config_file = 'config.ini'):

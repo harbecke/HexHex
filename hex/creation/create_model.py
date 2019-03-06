@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import torch
-from hexconvolution import NoMCTSModel, RandomModel, MCTSModel
+from hex.model.hexconvolution import NoMCTSModel, RandomModel, MCTSModel
 
 import argparse
 from configparser import ConfigParser

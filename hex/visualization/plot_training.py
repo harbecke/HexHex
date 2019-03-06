@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-from collections import defaultdict
 
 import argparse
 import csv
 import matplotlib.pyplot as plt
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -51,6 +51,7 @@ def plot_training(data):
     ax.set_ylabel(y)
     ax.legend()
     plt.show()
+
 
 def main():
     args = get_args()

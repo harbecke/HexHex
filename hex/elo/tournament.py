@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 import itertools
-
 import torch
-import device
-import evaluate_two_models
-from evaluation import elo
-from evaluation.match import MatchResults
+
+import hex.utils.utils
+import match
+from hex.evaluation import evaluate_two_models
 
 
 def play_tournament(model_files):
-    models = [torch.load(model_file, map_location=device.device) for model_file in model_files]
+    models = [torch.load(model_file, map_location=hex.utils.utils.device) for model_file in model_files]
 
     all_results = []
 
     for first_idx, second_idx in itertools.combinations(range(len(model_files)), 2):
         results, signed_chi_squared = evaluate_two_models.play_games(
                 models=(models[first_idx], models[second_idx]),
-                device=device.device,
+                device=hex.utils.utils.device,
                 openings=False,
                 number_of_games=32,
                 batch_size=32,
@@ -25,7 +24,7 @@ def play_tournament(model_files):
                 temperature_decay=0,
                 plot_board=False
         )
-        all_results.append(MatchResults(model_files[first_idx], model_files[second_idx], results))
+        all_results.append(match.MatchResults(model_files[first_idx], model_files[second_idx], results))
     return all_results
 
 # def test():

@@ -10,6 +10,7 @@ RED = (255, 0, 0)
 PLAYER_1 = RED  # (123, 52, 123)
 PLAYER_2 = BLUE  # (255, 255, 128)
 
+
 class Gui:
     def __init__(self, board, radius):
         self.r = radius
@@ -22,7 +23,7 @@ class Gui:
         pygame.display.set_caption("HexHex")
 
         self.clock = pygame.time.Clock()
-         # distance of neighboring hexagons
+        # distance of neighboring hexagons
         self.board = board
         self.update_board(board)
         pygame.font.init()
@@ -35,6 +36,7 @@ class Gui:
 
     def pixel_to_pos(self, pixel):
         positions = [(x, y) for x in range(self.board.size) for y in range(self.board.size)]
+
         def squared_distance(pos1, pos2):
             return (pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2
         centers = [(position, self.get_center(position)) for position in positions]

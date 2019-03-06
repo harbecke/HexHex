@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
-import create_data
-import create_model
-import evaluate_two_models
-import train
+from hex.training import train
+from hex.creation import create_data, create_model
+from hex.evaluation import evaluate_two_models
 
 
-def _main(config_file = 'sample_config.ini'):
+def _main(config_file = 'config.ini'):
     '''
     executes all basic scripts with values from sample config
     should be run as test before every commit

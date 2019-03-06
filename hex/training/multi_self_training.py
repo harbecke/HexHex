@@ -6,7 +6,6 @@ from torch.distributions.binomial import Binomial
 
 import train
 
-from argparse import ArgumentParser
 from configparser import ConfigParser
 
 from random import getrandbits
