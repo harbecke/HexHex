@@ -51,10 +51,10 @@ class Training:
 
     def train_mcts_model(self, training_dataloader, validation_dataloader):
         dataloaders = {'train': training_dataloader, 'val': validation_dataloader}
-        mean_epoch_loss_history = {}
+        mean_epoch_loss_history = {'train': [], 'val': []}
         for epoch in range(int(self.args.epochs)):
             for phase in ['train', 'val']:
-                running_loss = 0.0
+                running_losses = {'value': 0.0, 'policy': 0.0, 'param': 0.0}
                 for i, (board_states, policies_train, value_train) in enumerate(dataloaders[phase], 0):
                     board_states, policies_train, value_train \
                         = board_states.to(self.device), policies_train.to(self.device), value_train.to(self.device)
@@ -68,7 +68,9 @@ class Training:
                         )
 
                         loss = policy_loss + value_loss + param_loss
-                        running_loss += loss.item() * board_states.size(0)
+                        running_losses['value'] += value_loss.item() * board_states.size(0)
+                        running_losses['policy'] += policy_loss.item() * board_states.size(0)
+                        running_losses['param'] += param_loss.item() * board_states.size(0)
 
                         if phase == 'train':
                             loss.backward()
@@ -83,12 +85,21 @@ class Training:
                                     f'param_loss (weighted): {param_loss:.3f} '
                             )
 
-                mean_epoch_loss_history[phase].append(running_loss / len(dataloaders[phase].dataset))
+                mean_epoch_loss_history[phase].append(
+                        {key: value / len(dataloaders[phase].dataset) for key, value in running_losses.items()}
+                )
 
-            logger.info('Epoch [%d] train_loss: %.3f val_loss: %.3f'
-                        % (epoch + 1, mean_epoch_loss_history['train'][-1], mean_epoch_loss_history['val'][-1]))
+            logger.info('Epoch [%d] VAL value: %.3f policy: %9.3f param: %6.3f TRAIN value: %.3f policy %9.3f param %6.3f'
+                        % (epoch + 1,
+                           mean_epoch_loss_history['val'][-1]['value'],
+                           mean_epoch_loss_history['val'][-1]['policy'],
+                           mean_epoch_loss_history['val'][-1]['param'],
+                           mean_epoch_loss_history['train'][-1]['value'],
+                           mean_epoch_loss_history['train'][-1]['policy'],
+                           mean_epoch_loss_history['train'][-1]['param'],
+                        ))
             if self.args.save_every_epoch:
-                file_name = 'models/{}_{}.pt'.format(self.args.save_model_path, epoch)
+                file_name = 'models/{}_{}.pt'.format(self.args.save_model, epoch)
                 torch.save(self.model, file_name)
                 print(f'wrote {file_name}')
 
