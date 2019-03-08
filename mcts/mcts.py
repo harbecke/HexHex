@@ -73,16 +73,17 @@ class MCTS:
                 leaf_nodes.append(leaf_node)
         self.expand_leafes(leaf_nodes)
 
-    def _backup(self, node: Node, val: float, child = None):
-        node.N += 1 - self.args.n_virtual_loss
+    def _backup(self, child: Node, val: float):
+        child.N += 1 - self.args.n_virtual_loss
 
-        if child:
-            node.child_Ns[child.move_idx] += 1 - self.args.n_virtual_loss
-            node.child_Ws[child.move_idx] += val + self.args.n_virtual_loss
-            node.child_Qs[child.move_idx] = node.child_Ws[child.move_idx] / node.child_Ns[child.move_idx]
+        parent = child.parent
+        if parent:
+            parent.child_Ns[child.move_idx] += 1 - self.args.n_virtual_loss
+            parent.child_Ws[child.move_idx] += val + self.args.n_virtual_loss
+            parent.child_Qs[child.move_idx] = parent.child_Ws[child.move_idx] / parent.child_Ns[child.move_idx]
 
-        if node.parent is not None:
-            self._backup(node.parent, -val, node)
+            if parent.parent is not None:
+                self._backup(parent, -val)
 
 
     def _visit(self, node: Node):
@@ -94,10 +95,11 @@ class MCTS:
 
         # prevent node to be visited before backup is run
         node.N += self.args.n_virtual_loss
-        if node.parent:
-            node.parent.child_Ns[node.move_idx] += self.args.n_virtual_loss
-            node.parent.child_Ws[node.move_idx] += -self.args.n_virtual_loss
-            node.parent.child_Qs[node.move_idx] = node.parent.child_Ws[node.move_idx] / node.parent.child_Ns[node.move_idx]
+        parent = node.parent
+        if parent:
+            parent.child_Ns[node.move_idx] += self.args.n_virtual_loss
+            parent.child_Ws[node.move_idx] += -self.args.n_virtual_loss
+            parent.child_Qs[node.move_idx] = node.parent.child_Ws[node.move_idx] / node.parent.child_Ns[node.move_idx]
             assert(node.parent.child_Ns[node.move_idx] == node.N)
 
         if node.has_winner():
