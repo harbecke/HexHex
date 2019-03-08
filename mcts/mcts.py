@@ -123,7 +123,7 @@ class MCTS:
             child_ratings = node.child_Qs + self.args.c_puct * node.P * N_factor / (1 + node.child_Ns)
 
         best_move_idx = np.argmax(child_ratings).item()
-        assert(node.child[best_move_idx] is not None)
+        assert(node.children[best_move_idx] is not None)
         return node.children[best_move_idx]
 
     def expand_leafes(self, leaf_nodes):
