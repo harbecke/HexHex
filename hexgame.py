@@ -4,6 +4,7 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
 from hexboard import to_move
+from hexconvolution import MCTSModel
 from noise import singh_maddala_onto_output
 from utils import zip_list_of_lists_first_dim_reversed
 
@@ -70,7 +71,12 @@ class MultiHexGame():
         self.current_boards_tensor = self.current_boards_tensor.to(self.device)
 
         with torch.no_grad():
-            outputs_tensor = model(self.current_boards_tensor).detach()
+            if model.module.__class__ == MCTSModel:
+                policy_log, value = model(self.current_boards_tensor)
+                outputs_tensor = policy_log.exp()
+                outputs_tensor.detach()
+            else:
+                outputs_tensor = model(self.current_boards_tensor).detach()
 
         if self.noise == 'singh':
             noise_alpha, noise_beta, noise_lambda = self.noise_parameters
