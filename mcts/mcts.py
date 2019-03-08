@@ -50,8 +50,12 @@ class Node:
         self.P = torch.exp(model_policy)
         for move_idx, p in enumerate(self.P):
             move = to_move(move_idx, self.board().size)
-            if move in self.board().legal_moves and p > 1e-6:
+            if move in self.board().legal_moves:
                 self.children[move_idx] = Node(self, move_idx, self.board().size)
+            else:
+                self.P[move_idx] = 0.0
+                self.child_Qs[move_idx] = -1e6 # avoid picking this move in search
+        self.P /= torch.sum(self.P) # normalize to remove p components from illegal moves
 
 
 
@@ -103,8 +107,8 @@ class MCTS:
         if node.is_leaf():
             return node
 
-        best_move = self.find_best_move(node)
-        return self._visit(best_move)
+        best_move_node = self.find_best_move(node)
+        return self._visit(best_move_node)
 
     def find_best_move(self, node: Node):
         # formula from alpha go paper doesn't make much sense for the case node.N == 1
@@ -116,7 +120,9 @@ class MCTS:
             N_factor = np.sqrt(node.N - 1)
             child_ratings = node.child_Qs + self.args.c_puct * node.P * N_factor / (1 + node.child_Ns)
 
-        return node.children[np.argmax(child_ratings)]
+        best_move_idx = np.argmax(child_ratings).item()
+        assert(node.child[best_move_idx] is not None)
+        return node.children[best_move_idx]
 
     def expand_leafes(self, leaf_nodes):
         if len(leaf_nodes) == 0:
@@ -170,6 +176,14 @@ class MCTSSearch:
 
     @staticmethod
     def sample_move(move_probabilities):
+        move_probabilities = np.array(move_probabilities)
+
+        if np.abs(move_probabilities.sum() - 1) > 1e-4:
+            logger.error(f'move probabilities sum up to value != 1: {move_probabilities}, sum = {move_probabilities.sum()}')
+            exit(1)
+
+        # numpy is *really* picky about these values summing up to 1 with high precision, so we better make sure they actually do
+        move_probabilities /= move_probabilities.sum()
         return np.random.choice(range(len(move_probabilities)), p=move_probabilities)
 
 def test():
