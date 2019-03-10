@@ -185,7 +185,7 @@ class MCTSSearch:
             exit(1)
 
         # numpy is *really* picky about these values summing up to 1 with high precision, so we better make sure they actually do
-        move_probabilities /= move_probabilities.sum()
+        move_probabilities = move_probabilities / move_probabilities.sum()
         return np.random.choice(range(len(move_probabilities)), p=move_probabilities)
 
 def test():
