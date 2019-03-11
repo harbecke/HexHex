@@ -2,75 +2,103 @@
 import torch
 from configparser import ConfigParser
 
-import train
+from hex.utils.utils import dotdict
 from hex.creation import create_data, create_model
 from hex.evaluation import evaluate_two_models
+from hex.training import train
 
+class RepeatedSelfTrainer:
+    def __init__(self, config_file):
+        self.config = ConfigParser()
+        self.config.read(config_file)
+        self.model_names = []
+        self.data_files = []
 
-def repeated_self_training(config_file):
-    """
-    Runs a self training loop.
-    Each iteration produces a new model which is then trained on self-play data
-    """
-    config = ConfigParser()
-    config.read(config_file)
+    def repeated_self_training(self):
+        model_name = self.create_initial_model()
+        for i in range(100):
+            data_file = self.create_data_samples(model_name)
+            self.data_files.append(data_file)
+            new_model_name = '%s_%04d' % (self.config.get('REPEATED SELF TRAINING', 'name'), i)
+            data_file = self.prepare_training_data()
+            self.train_model(model_name, new_model_name, data_file)
+            model_name = new_model_name
+            self.create_elo_ratings(model_name)
+            self.model_names.append(model_name)
 
-    prefix = config.get('REPEATED SELF TRAINING', 'prefix')
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    board_size = config.getint('CREATE DATA', 'board_size')
+        # create k data samples from last model
+        # train for x epochs on n data samples each keeping the last N data samples
+        # create elo ratings
 
-    create_model.create_model_from_config_file(config_file)
+    def create_initial_model(self):
+        model_creation_args = dotdict({
+            'model_type': self.config.get('REPEATED SELF TRAINING', 'model_type'),
+            'board_size': self.config.getint('REPEATED SELF TRAINING', 'board_size'),
+            'layers': self.config.getint('REPEATED SELF TRAINING', 'layers'),
+            'intermediate_channels': self.config.getint('REPEATED SELF TRAINING', 'intermediate_channels'),
+            'layer_type': self.config.get('REPEATED SELF TRAINING', 'layer_type'),
+            'model_name': self.config.get('REPEATED SELF TRAINING', 'name') + '_initial'
+        })
+        create_model.create_model(model_creation_args)
+        return model_creation_args.model_name
 
-    initial_model = 'first_random'
-    champion_iter = 1
-    champion_filename = initial_model
+    def create_data_samples(self, model_name):
+        model = torch.load('models/' + model_name + '.pt')
 
-    for model_id in range(10000):
-        champion = torch.load(f'models/{champion_filename}.pt', map_location=device)
-
-        create_data.generate_data_files(
-                file_counter_start=config.getint('CREATE DATA', 'data_range_min'),
-                file_counter_end=config.getint('CREATE DATA', 'data_range_max'),
-                samples_per_file=config.getint('CREATE DATA', 'samples_per_file'),
-                model=champion,
-                device=device,
-                run_name=champion_filename,
-                noise=config.get('CREATE DATA', 'noise'),
-                noise_parameters=[float(parameter) for parameter in config.get('CREATE DATA', 'noise_parameters').split(",")],
-                temperature=config.getfloat('CREATE DATA', 'temperature'),
-                board_size=config.getint('CREATE DATA', 'board_size'),
-                batch_size=config.getint('CREATE DATA', 'batch_size'),
-                temperature_decay=1
+        self_play_args = dotdict(
+                {
+                    'data_range_min': 0,
+                    'data_range_max': 1,
+                    'samples_per_file': self.config.getint('REPEATED SELF TRAINING', 'samples_per_model'),
+                    'c_puct': self.config.getfloat('REPEATED SELF TRAINING', 'c_puct'),
+                    'num_mcts_simulations': self.config.getint('REPEATED SELF TRAINING', 'num_mcts_simulations'),
+                    'mcts_batch_size': self.config.getint('REPEATED SELF TRAINING', 'mcts_batch_size'),
+                    'n_virtual_loss': self.config.getint('REPEATED SELF TRAINING', 'n_virtual_loss'),
+                    'run_name': model_name
+                }
         )
 
-        train_args = train.get_args(config_file)
-        train_args.load_model = f'{prefix}_{model_id - 1}' if model_id > 0 else initial_model
-        train_args.save_model = f'{prefix}_{model_id}'
-        train_args.data = champion_filename
-        train.train(train_args)
-
-        eval_args = evaluate_two_models.get_args(config_file)
-        result, signed_chi_squared = evaluate_two_models.play_games(
-                models=[torch.load(f'models/{prefix}_{model_id}.pt'), champion],
-                openings=eval_args.openings,
-                number_of_games=eval_args.number_of_games,
-                device=device,
-                batch_size=eval_args.batch_size,
-                board_size=eval_args.board_size,
-                temperature=eval_args.temperature,
-                temperature_decay=eval_args.temperature_decay,
-                plot_board=eval_args.plot_board
+        create_data.create_mcts_self_play_data(
+                self_play_args, model
         )
-        win_rate = (result[0][0] + result[1][0]) / (sum(result[0]) + sum(result[1]))
-        print(f'win_rate = {win_rate}')
-        if win_rate  > .55:
-            champion_filename = f'{prefix}_{model_id}'
-            champion_iter = 1
-            print(f'Accept {champion_filename} as new champion!')
-        else:
-            champion_iter += 1
-            print(f'The champion remains in place. Iteration: {champion_iter}')
+        return self_play_args.run_name
+
+    def prepare_training_data(self):
+        N = self.config.getint('REPEATED SELF TRAINING', 'train_samples_pool_size')
+        x, y, z = torch.Tensor(), torch.Tensor(), torch.Tensor()
+        for file in self.data_files[::-1]:
+            x_new,y_new,z_new = torch.load('data/' + file + '_0.pt')
+            x, y, z = torch.cat([x, x_new]), torch.cat([y, y_new]), torch.cat([z, z_new])
+            if x.shape[0] >= N:
+                break
+        if x.shape[0] > N:
+            x, y, z = x[:N], y[:N], z[:N]
+        torch.save((x, y, z), 'data/current_training_data_0.pt')
+        return 'current_training_data'
+
+    def train_model(self, input_model, output_model, data_file):
+        training_args = dotdict({
+            'load_model': input_model,
+            'save_model': output_model,
+            'data': data_file,
+            'data_range_min': 0,
+            'data_range_max': 1,
+            'batch_size': self.config.getint('REPEATED SELF TRAINING', 'batch_size'),
+            'optimizer': self.config.get('REPEATED SELF TRAINING', 'optimizer'),
+            'learning_rate': self.config.getfloat('REPEATED SELF TRAINING', 'learning_rate'),
+            'validation_bool': False,
+            'epochs': self.config.getint('REPEATED SELF TRAINING', 'epochs_per_model'),
+            'samples_per_epoch': self.config.getint('REPEATED SELF TRAINING', 'samples_per_epoch'),
+            'weight_decay': self.config.getfloat('REPEATED SELF TRAINING', 'weight_decay'),
+            'save_every_epoch': False
+        })
+        train.train(training_args)
+
+    def create_elo_ratings(self, latest_model):
+        # TODO would like to incrementally update elo ratings here
+        pass
 
 
 if __name__ == '__main__':
-    repeated_self_training(config_file='repeated_self_training.ini')
+    trainer = RepeatedSelfTrainer('config.ini')
+    trainer.repeated_self_training()
