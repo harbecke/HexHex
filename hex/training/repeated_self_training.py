@@ -54,7 +54,9 @@ class RepeatedSelfTrainer:
                     'num_mcts_simulations': self.config.getint('REPEATED SELF TRAINING', 'num_mcts_simulations'),
                     'mcts_batch_size': self.config.getint('REPEATED SELF TRAINING', 'mcts_batch_size'),
                     'n_virtual_loss': self.config.getint('REPEATED SELF TRAINING', 'n_virtual_loss'),
-                    'run_name': model_name
+                    'run_name': model_name,
+                    'noise_epsilon': self.config.getfloat('REPEATED SELF TRAINING', 'noise_epsilon'),
+                    'noise_spread': self.config.getfloat('REPEATED SELF TRAINING', 'noise_spread'),
                 }
         )
 
