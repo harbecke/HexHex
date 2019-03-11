@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
-import match
+
+from hex.elo import match
 
 
 def export_tournament_as_pgn(filename, tournament):

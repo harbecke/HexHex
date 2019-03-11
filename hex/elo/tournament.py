@@ -3,7 +3,7 @@ import itertools
 import torch
 
 import hex.utils.utils
-import match
+from hex.elo import match
 from hex.evaluation import evaluate_two_models
 
 
