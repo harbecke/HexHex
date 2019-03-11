@@ -57,6 +57,8 @@ class RepeatedSelfTrainer:
                     'run_name': model_name,
                     'noise_epsilon': self.config.getfloat('REPEATED SELF TRAINING', 'noise_epsilon'),
                     'noise_spread': self.config.getfloat('REPEATED SELF TRAINING', 'noise_spread'),
+                    'temperature': self.config.getint('REPEATED SELF TRAINING', 'temperature'),
+                    'temperature_freeze': self.config.getint('REPEATED SELF TRAINING', 'temperature_freeze'),
                 }
         )
 

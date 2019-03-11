@@ -18,7 +18,6 @@ class SelfPlayGenerator:
         self.model = model
         self.mcts_args = mcts_args
         self.board_size = model.board_size
-        self.args = dotdict({'temperature': 1})
 
     def self_play_mcts_game(self):
         """
@@ -35,7 +34,9 @@ class SelfPlayGenerator:
         board = Board(size=self.board_size)
         while not board.winner:
             move_counts, Qs = search.simulate(board)
-            mcts_policy = search.move_probabilities(move_counts, self.args.temperature)
+            temperature_freeze = len(board.move_history) >= self.mcts_args.temperature_freeze
+            temperature = 0 if temperature_freeze else self.mcts_args.temperature
+            mcts_policy = search.move_probabilities(move_counts, temperature)
             move = search.sample_move(mcts_policy)
 
             all_board_tensors.append(board.board_tensor.clone())

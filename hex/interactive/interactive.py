@@ -20,12 +20,15 @@ def get_args():
     parser.add_argument('--model_type', type=str, default=config.get('INTERACTIVE', 'model_type'))
     parser.add_argument('--temperature', type=float, default=config.getfloat('INTERACTIVE', 'temperature'))
     parser.add_argument('--temperature_decay', type=float, default=config.getfloat('INTERACTIVE', 'temperature_decay'))
+    parser.add_argument('--temperature_freeze', type=int, default=config.getint('INTERACTIVE', 'temperature_freeze'))
     parser.add_argument('--first_move_ai', type=bool, default=config.getboolean('INTERACTIVE', 'first_move_ai'))
     parser.add_argument('--gui_radius', type=int, default=config.getint('INTERACTIVE', 'gui_radius'))
     parser.add_argument('--num_mcts_simulations', type=int, default=config.getint('INTERACTIVE', 'num_mcts_simulations'))
     parser.add_argument('--mcts_batch_size', type=int, default=config.getint('INTERACTIVE', 'mcts_batch_size'))
     parser.add_argument('--c_puct', type=float, default=config.getfloat('INTERACTIVE', 'c_puct'))
     parser.add_argument('--n_virtual_loss', type=int, default=config.getint('INTERACTIVE', 'n_virtual_loss'))
+    parser.add_argument('--noise_epsilon', type=float, default=config.getfloat('INTERACTIVE', 'noise_epsilon'))
+    parser.add_argument('--noise_spread', type=float, default=config.getfloat('INTERACTIVE', 'noise_spread'))
 
     return parser.parse_args()
 
@@ -55,7 +58,9 @@ class InteractiveGame:
     def play_ai_move(self):
         if self.args.model_type == 'mcts':
             move_counts, Qs = self.mcts_search.simulate(self.board)
-            move_ratings = self.mcts_search.move_probabilities(move_counts, self.args.temperature)
+            temperature_freeze = len(self.board.move_history) >= self.args.temperature_freeze
+            temperature = 0 if temperature_freeze else self.args.temperature
+            move_ratings = self.mcts_search.move_probabilities(move_counts, temperature)
             move_idx = self.mcts_search.sample_move(move_ratings)
             print(f'Expected outcome for agent: {Qs[move_idx]}')
             self.board.set_stone(to_move(move_idx, self.board.size))
