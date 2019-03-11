@@ -13,7 +13,7 @@ See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 
 * Pytorch (see [here](https://pytorch.org/get-started/locally/) for installation info)
 
-* install pygame `pip install pygame` for interactive
+* install requirements.txt
 
 ### Option 2: Installation with pipenv
 
@@ -33,19 +33,22 @@ pipenv shell
 ```
 
 ### Execution
-* test installation with `run_example.py`
+
+* run all scripts from root directory
+
+* test installation with `python -m tests.run_example`
 
 * copy sample_config as initial configuration file `cp sample_config.ini config.ini`
 
 * change parameters in config.ini
 
 * run scripts
-    - `./create_model.py`
-    - `./create_data.py`
-    - `./train.py`
-    - `./evaluate_two_models.py`
-    - `./interactive.py`
-    - `./repeated_data_and_training.py`
+    - `python -m hex.creation.create_model`
+    - `python -m hex.creation.create_data`
+    - `python -m hex.training.train`
+    - `python -m hex.evaluation.evaluate_two_models`
+    - `python -m hex.interactive.interactive`
+    - `python -m hex.tranining.repeated_data_and_training.py`
 
 ### Loading Into hexgui
 [hexgui](https://github.com/ryanbhayward/hexgui) can be used for interactive play as well.
