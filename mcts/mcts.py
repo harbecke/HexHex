@@ -178,15 +178,11 @@ class MCTSSearch:
 
     @staticmethod
     def sample_move(move_probabilities):
-        move_probabilities = np.array(move_probabilities)
-
-        if np.abs(move_probabilities.sum() - 1) > 1e-4:
+        if abs(sum(move_probabilities) - 1) > 1e-4:
             logger.error(f'move probabilities sum up to value != 1: {move_probabilities}, sum = {move_probabilities.sum()}')
             exit(1)
 
-        # numpy is *really* picky about these values summing up to 1 with high precision, so we better make sure they actually do
-        move_probabilities = move_probabilities / move_probabilities.sum()
-        return np.random.choice(range(len(move_probabilities)), p=move_probabilities)
+        return torch.distributions.categorical.Categorical(torch.Tensor(move_probabilities)).sample().item()
 
 def test():
     board_size = 5
