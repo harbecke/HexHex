@@ -52,8 +52,12 @@ class Node:
         self.P = torch.exp(model_policy)
         for move_idx, p in enumerate(self.P):
             move = to_move(move_idx, self.board().size)
-            if move in self.board().legal_moves and p > 1e-6:
+            if move in self.board().legal_moves:
                 self.children[move_idx] = Node(self, move_idx, self.board().size)
+            else:
+                self.P[move_idx] = 0.0
+                self.child_Qs[move_idx] = -1e6 # avoid picking this move in search
+        self.P /= torch.sum(self.P) # normalize to remove p components from illegal moves
 
 
 
@@ -71,16 +75,17 @@ class MCTS:
                 leaf_nodes.append(leaf_node)
         self.expand_leafes(leaf_nodes)
 
-    def _backup(self, node: Node, val: float, child = None):
-        node.N += 1 - self.args.n_virtual_loss
+    def _backup(self, child: Node, val: float):
+        child.N += 1 - self.args.n_virtual_loss
 
-        if child:
-            node.child_Ns[child.move_idx] += 1 - self.args.n_virtual_loss
-            node.child_Ws[child.move_idx] += val + self.args.n_virtual_loss
-            node.child_Qs[child.move_idx] = node.child_Ws[child.move_idx] / node.child_Ns[child.move_idx]
+        parent = child.parent
+        if parent:
+            parent.child_Ns[child.move_idx] += 1 - self.args.n_virtual_loss
+            parent.child_Ws[child.move_idx] += val + self.args.n_virtual_loss
+            parent.child_Qs[child.move_idx] = parent.child_Ws[child.move_idx] / parent.child_Ns[child.move_idx]
 
-        if node.parent is not None:
-            self._backup(node.parent, -val, node)
+            if parent.parent is not None:
+                self._backup(parent, -val)
 
 
     def _visit(self, node: Node):
@@ -92,10 +97,11 @@ class MCTS:
 
         # prevent node to be visited before backup is run
         node.N += self.args.n_virtual_loss
-        if node.parent:
-            node.parent.child_Ns[node.move_idx] += self.args.n_virtual_loss
-            node.parent.child_Ws[node.move_idx] += -self.args.n_virtual_loss
-            node.parent.child_Qs[node.move_idx] = node.parent.child_Ws[node.move_idx] / node.parent.child_Ns[node.move_idx]
+        parent = node.parent
+        if parent:
+            parent.child_Ns[node.move_idx] += self.args.n_virtual_loss
+            parent.child_Ws[node.move_idx] += -self.args.n_virtual_loss
+            parent.child_Qs[node.move_idx] = node.parent.child_Ws[node.move_idx] / node.parent.child_Ns[node.move_idx]
             assert(node.parent.child_Ns[node.move_idx] == node.N)
 
         if node.has_winner():
@@ -105,8 +111,8 @@ class MCTS:
         if node.is_leaf():
             return node
 
-        best_move = self.find_best_move(node)
-        return self._visit(best_move)
+        best_move_node = self.find_best_move(node)
+        return self._visit(best_move_node)
 
     def find_best_move(self, node: Node):
         # formula from alpha go paper doesn't make much sense for the case node.N == 1
@@ -118,7 +124,9 @@ class MCTS:
             N_factor = np.sqrt(node.N - 1)
             child_ratings = node.child_Qs + self.args.c_puct * node.P * N_factor / (1 + node.child_Ns)
 
-        return node.children[np.argmax(child_ratings)]
+        best_move_idx = np.argmax(child_ratings).item()
+        assert(node.children[best_move_idx] is not None)
+        return node.children[best_move_idx]
 
     def expand_leafes(self, leaf_nodes):
         if len(leaf_nodes) == 0:
@@ -172,7 +180,11 @@ class MCTSSearch:
 
     @staticmethod
     def sample_move(move_probabilities):
-        return np.random.choice(range(len(move_probabilities)), p=move_probabilities)
+        if abs(sum(move_probabilities) - 1) > 1e-4:
+            logger.error(f'move probabilities sum up to value != 1: {move_probabilities}, sum = {move_probabilities.sum()}')
+            exit(1)
+
+        return torch.distributions.categorical.Categorical(torch.Tensor(move_probabilities)).sample().item()
 
 def test():
     board_size = 5

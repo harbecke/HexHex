@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument('--gui_radius', type=int, default=config.getint('INTERACTIVE', 'gui_radius'))
     parser.add_argument('--num_mcts_simulations', type=int, default=config.getint('INTERACTIVE', 'num_mcts_simulations'))
     parser.add_argument('--mcts_batch_size', type=int, default=config.getint('INTERACTIVE', 'mcts_batch_size'))
-    parser.add_argument('--c_puct', type=float, default=config.getint('INTERACTIVE', 'c_puct'))
+    parser.add_argument('--c_puct', type=float, default=config.getfloat('INTERACTIVE', 'c_puct'))
     parser.add_argument('--n_virtual_loss', type=int, default=config.getint('INTERACTIVE', 'n_virtual_loss'))
 
     return parser.parse_args()
@@ -59,7 +59,7 @@ class InteractiveGame:
             move_idx = self.mcts_search.sample_move(move_ratings)
             print(f'Expected outcome for agent: {Qs[move_idx]}')
             self.board.set_stone(to_move(move_idx, self.board.size))
-            self.gui.update_board(self.board, field_text=np.array(move_counts))
+            self.gui.update_board(self.board, field_text=np.array(move_counts, dtype=int))
 
         else:
             move_ratings = self.game.batched_single_move(self.model)

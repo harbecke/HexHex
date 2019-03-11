@@ -38,9 +38,8 @@ class SelfPlayGenerator:
             mcts_policy = search.move_probabilities(move_counts, self.args.temperature)
             move = search.sample_move(mcts_policy)
 
-            all_board_tensors.append(board.board_tensor)
-            mcts_policy_tensor = torch.Tensor(mcts_policy)
-            all_mcts_policies.append(mcts_policy_tensor)
+            all_board_tensors.append(board.board_tensor.clone())
+            all_mcts_policies.append(torch.Tensor(mcts_policy).clone())
 
             board.set_stone(to_move(move, self.board_size))
 
