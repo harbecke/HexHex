@@ -131,18 +131,19 @@ class MCTS:
     def expand_leafes(self, leaf_nodes):
         if len(leaf_nodes) == 0:
             return
-        with torch.no_grad():
-            board_tensors = torch.stack(
-                    [leaf_node.board().board_tensor for leaf_node in leaf_nodes]
+        board_tensors = torch.stack(
+            [leaf_node.board().board_tensor for leaf_node in leaf_nodes]
             ).to(hex.utils.utils.device)
+        with torch.no_grad():
             model_policies, model_values = self.model(board_tensors)
-            for idx, node in enumerate(leaf_nodes):
-                # leaf_nodes might contain duplicates. don't expand a node twice
-                # but we backup v twice
-                if node.is_leaf():
-                    node.expand(model_policies[idx])
-                v = model_values[idx].item()
-                self._backup(node, v)
+        model_policies, model_values = model_policies.cpu(), model_values.cpu()
+        for idx, node in enumerate(leaf_nodes):
+            # leaf_nodes might contain duplicates. don't expand a node twice
+            # but we backup v twice
+            if node.is_leaf():
+                node.expand(model_policies[idx])
+            v = model_values[idx].item()
+            self._backup(node, v)
 
 
 class MCTSSearch:
