@@ -52,8 +52,13 @@ class SelfPlayGenerator:
 
     def position_generator(self):
         while True:
-            for x in self.self_play_mcts_game():
-                yield x
+            for board_tensor, mcts_policy, result_tensor in self.self_play_mcts_game():
+                yield board_tensor, mcts_policy, result_tensor
+                mirror_board = torch.flip(board_tensor, dims=(1, 2)).clone()
+                mirror_policy = torch.flip(mcts_policy, dims=(0,)).clone()
+                same_result = result_tensor.clone()
+                yield mirror_board, mirror_policy, same_result
+
 
 
 def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name,
