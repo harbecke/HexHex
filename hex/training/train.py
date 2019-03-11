@@ -5,6 +5,7 @@ import os
 import time
 from configparser import ConfigParser
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -28,6 +29,7 @@ def get_args(config_file):
     parser.add_argument('--weight_decay', type=float, default=config.getfloat('TRAIN', 'weight_decay'))
     parser.add_argument('--batch_size', type=int, default=config.getint('TRAIN', 'batch_size'))
     parser.add_argument('--epochs', type=float, default=config.getfloat('TRAIN', 'epochs'))
+    parser.add_argument('--samples_per_epoch', type=int, default=config.getint('TRAIN', 'samples_per_epoch'))
     parser.add_argument('--optimizer', type=str, default=config.get('TRAIN', 'optimizer'))
     parser.add_argument('--learning_rate', type=float, default=config.getfloat('TRAIN', 'learning_rate'))
     parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
@@ -35,6 +37,57 @@ def get_args(config_file):
     parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
     parser.add_argument('--print_loss_frequency', type=int, default=config.getint('TRAIN', 'print_loss_frequency'))
     return parser.parse_args(args=[])
+
+class LossTriple:
+    def __init__(self, value_loss, policy_loss, param_loss):
+        self.value = value_loss
+        self.policy = policy_loss
+        self.param = param_loss
+
+    def total(self):
+        return self.value + self.policy + self.param
+
+class TrainingStats:
+    def __init__(self):
+        self.stats = {
+            'value': {'train': [], 'val': []},
+            'policy': {'train': [], 'val': []},
+            'param': {'train': [], 'val': []},
+        }
+
+
+    def add_batch(self, phase: str, epoch: int, batch_idx: int, loss: LossTriple):
+        for type in self.all_loss_types():
+            epochs = self.stats[type][phase]
+            if epoch >= len(epochs):
+                epochs.append([])
+            batches = epochs[epoch]
+            if batch_idx >= len(batches):
+                batches.append([])
+            batch = batches[batch_idx]
+            batch.append(loss.__getattribute__(type))
+
+    @staticmethod
+    def all_loss_types():
+        return ['value', 'policy', 'param']
+
+    def get_epoch_mean(self, loss_type: str, phase: str, epoch = -1):
+        if loss_type == 'total':
+            return sum(self.get_epoch_mean(t, phase, epoch) for t in self.all_loss_types())
+        return np.mean(self.stats[loss_type][phase][epoch]).item()
+
+    def last_values_to_string(self):
+        return "total: {:.3f} {:.3f} | value: {:.3f} {:.3f} | policy: {:.3f} {:.3f} | param: {:.3f} {:.3f} | train val".format(
+                self.get_epoch_mean('total', 'train'),
+                self.get_epoch_mean('total', 'val'),
+                self.get_epoch_mean('value', 'train'),
+                self.get_epoch_mean('value', 'val'),
+                self.get_epoch_mean('policy', 'train'),
+                self.get_epoch_mean('policy', 'val'),
+                self.get_epoch_mean('param', 'train'),
+                self.get_epoch_mean('param', 'val'),
+        )
+
 
 class Training:
     def __init__(self, args, model, optimizer):
@@ -45,13 +98,17 @@ class Training:
             log.write('# batch val_loss pred_loss weighted_param_loss duration[s]\n')
         self.device = hex.utils.utils.device
         self.optimizer = optimizer
+        self.stats = TrainingStats()
 
-    def train_mcts_model(self, training_dataloader, validation_dataloader):
-        dataloaders = {'train': training_dataloader, 'val': validation_dataloader}
+    def train_mcts_model(self, train_dataset, val_dataset):
         mean_epoch_loss_history = {'train': [], 'val': []}
         for epoch in range(int(self.args.epochs)):
-            for phase in ['train', 'val']:
-                running_losses = {'value': 0.0, 'policy': 0.0, 'param': 0.0}
+            sampler = SubsetRandomSampler(torch.randperm(len(train_dataset))[:self.args.samples_per_epoch])
+            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.args.batch_size, sampler=sampler)
+            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.args.batch_size)
+            dataloaders = {'train': train_loader, 'val': val_loader}
+
+            for phase in ['val', 'train']: # run validation first, s.t. loss values are from the same network
                 for i, (board_states, policies_train, value_train) in enumerate(dataloaders[phase], 0):
                     board_states, policies_train, value_train \
                         = board_states.to(self.device), policies_train.to(self.device), value_train.to(self.device)
@@ -65,36 +122,21 @@ class Training:
                         )
 
                         loss = policy_loss + value_loss + param_loss
-                        running_losses['value'] += value_loss.item() * board_states.size(0)
-                        running_losses['policy'] += policy_loss.item() * board_states.size(0)
-                        running_losses['param'] += param_loss.item() * board_states.size(0)
+
+                        loss_triple = LossTriple(value_loss.item(), policy_loss.item(), param_loss.item())
+                        self.stats.add_batch(phase, epoch, i, loss_triple)
 
                         if phase == 'train':
                             loss.backward()
                             self.optimizer.step()
 
-                        if i % self.args.print_loss_frequency == 0 and phase == 'train':
-                            logger.info(
-                                    f'batch {i + 1:4d} / { len(dataloaders[phase]):4d} '
-                                    f'loss: {loss.item():.3f} '
-                                    f'value_loss: {value_loss.item():.3f} '
-                                    f'policy_loss: {policy_loss.item():.3f} '
-                                    f'param_loss (weighted): {param_loss:.3f} '
-                            )
+                # mean_epoch_loss_history[phase].append(
+                #         {key: value / len(dataloaders[phase].dataset) for key, value in running_losses.items()}
+                # )
 
-                mean_epoch_loss_history[phase].append(
-                        {key: value / len(dataloaders[phase].dataset) for key, value in running_losses.items()}
-                )
-
-            logger.info('Epoch [%d] VAL value: %.3f policy: %9.3f param: %6.3f TRAIN value: %.3f policy %9.3f param %6.3f'
-                        % (epoch + 1,
-                           mean_epoch_loss_history['val'][-1]['value'],
-                           mean_epoch_loss_history['val'][-1]['policy'],
-                           mean_epoch_loss_history['val'][-1]['param'],
-                           mean_epoch_loss_history['train'][-1]['value'],
-                           mean_epoch_loss_history['train'][-1]['policy'],
-                           mean_epoch_loss_history['train'][-1]['param'],
-                        ))
+            logger.info('Epoch [%3d] mini-batches [%8d] %s'
+                        % (epoch, epoch * len(train_loader), self.stats.last_values_to_string())
+                        )
             if self.args.save_every_epoch:
                 file_name = 'models/{}_{}.pt'.format(self.args.save_model, epoch)
                 torch.save(self.model, file_name)
@@ -116,7 +158,7 @@ class Training:
         value_loss_fct = nn.MSELoss(reduction='mean')
         value_loss = value_loss_fct(values_out, value_train)
         param_loss = self.args.weight_decay * \
-                     sum(torch.pow(p, 2).sum() for p in self.model.parameters() if p.requires_grad)
+                     sum(torch.pow(p, 2).sum() for p in self.model.parameters())
         return param_loss, policy_loss, value_loss
 
 
@@ -220,8 +262,6 @@ def train(args):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                                                      num_workers=0)
 
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size)
-
     model = torch.load('models/{}.pt'.format(args.load_model), map_location=device)
     nn.DataParallel(model).to(device)
 
@@ -242,7 +282,7 @@ def train(args):
 
     if model.__class__ == MCTSModel:
         training = Training(args, model, optimizer)
-        training.train_mcts_model(train_loader, val_loader)
+        training.train_mcts_model(train_dataset, val_dataset)
     else:
         criterion = nn.BCELoss(reduction='sum')
         train_model(model, args.save_model, train_loader, criterion, optimizer, int(args.epochs), device,
