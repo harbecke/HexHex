@@ -14,9 +14,9 @@ class Node:
         self._board = None  # will be set upon first call of board(). For root node this needs to be set manually
         self.P = None
         self.N = 0
-        self.child_Ns = torch.zeros(board_size*board_size)
-        self.child_Ws = torch.zeros(board_size*board_size)
-        self.child_Qs = torch.zeros(board_size*board_size)
+        self.child_Ns = torch.zeros(board_size*board_size, device=hex.utils.utils.device)
+        self.child_Ws = torch.zeros(board_size*board_size, device=hex.utils.utils.device)
+        self.child_Qs = torch.zeros(board_size*board_size, device=hex.utils.utils.device)
         self.children = [None for _ in range(board_size * board_size)]
         self.parent = parent
         self.move_idx = move_idx # last move on the board, None for root node
@@ -124,7 +124,7 @@ class MCTS:
             N_factor = np.sqrt(node.N - 1)
             child_ratings = node.child_Qs + self.args.c_puct * node.P * N_factor / (1 + node.child_Ns)
 
-        best_move_idx = np.argmax(child_ratings).item()
+        best_move_idx = child_ratings.argmax()
         assert(node.children[best_move_idx] is not None)
         return node.children[best_move_idx]
 
@@ -136,7 +136,6 @@ class MCTS:
             ).to(hex.utils.utils.device)
         with torch.no_grad():
             model_policies, model_values = self.model(board_tensors)
-        model_policies, model_values = model_policies.cpu(), model_values.cpu()
         for idx, node in enumerate(leaf_nodes):
             # leaf_nodes might contain duplicates. don't expand a node twice
             # but we backup v twice
