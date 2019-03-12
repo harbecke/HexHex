@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
-import match
+
+from hex.elo import match
 
 
 def export_tournament_as_pgn(filename, tournament):
@@ -11,7 +12,7 @@ def export_tournament_as_pgn(filename, tournament):
 def create_ratings(tournament):
     """needs to be called from hex home directory."""
     export_tournament_as_pgn("game_history.pgn", tournament)
-    subprocess.check_call(['call_bayeselo.sh'])
+    subprocess.check_call(['hex/elo/call_bayeselo.sh'])
 
 def test():
     tournament = [

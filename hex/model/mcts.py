@@ -158,6 +158,11 @@ class MCTSSearch:
         mcts = MCTS(model=self.model, root_board=board, args=self.args)
         # initial search with batch_size=1 to allow expanding first node
         mcts.search(batch_size=1)
+        if self.args.noise_epsilon > 0:
+            eps = self.args.noise_epsilon
+            dirichlet = torch.distributions.dirichlet.Dirichlet(torch.tensor([self.args.noise_spread]*board.size**2))
+            noise = dirichlet.sample()
+            mcts.root.P = (1 - eps) * mcts.root.P + eps*noise
         for i in range(self.args.num_mcts_simulations // self.args.mcts_batch_size):
             mcts.search(batch_size=self.args.mcts_batch_size)
 
@@ -202,7 +207,6 @@ def test():
     board = Board(board_size)
     counts, Qs = mcts_search.simulate(board)
     logger.debug(torch.Tensor(counts).view(5, 5))
-    # TODO add noise
 
 if __name__ == '__main__':
     import cProfile

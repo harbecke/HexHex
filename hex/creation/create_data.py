@@ -18,7 +18,6 @@ class SelfPlayGenerator:
         self.model = model
         self.mcts_args = mcts_args
         self.board_size = model.board_size
-        self.args = dotdict({'temperature': 1})
 
     def self_play_mcts_game(self):
         """
@@ -35,7 +34,9 @@ class SelfPlayGenerator:
         board = Board(size=self.board_size)
         while not board.winner:
             move_counts, Qs = search.simulate(board)
-            mcts_policy = search.move_probabilities(move_counts, self.args.temperature)
+            temperature_freeze = len(board.move_history) >= self.mcts_args.temperature_freeze
+            temperature = 0 if temperature_freeze else self.mcts_args.temperature
+            mcts_policy = search.move_probabilities(move_counts, temperature)
             move = search.sample_move(mcts_policy)
 
             all_board_tensors.append(board.board_tensor.clone())
@@ -52,8 +53,13 @@ class SelfPlayGenerator:
 
     def position_generator(self):
         while True:
-            for x in self.self_play_mcts_game():
-                yield x
+            for board_tensor, mcts_policy, result_tensor in self.self_play_mcts_game():
+                yield board_tensor, mcts_policy, result_tensor
+                mirror_board = torch.flip(board_tensor, dims=(1, 2)).clone()
+                mirror_policy = torch.flip(mcts_policy, dims=(0,)).clone()
+                same_result = result_tensor.clone()
+                yield mirror_board, mirror_policy, same_result
+
 
 
 def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name,
