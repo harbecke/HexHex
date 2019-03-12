@@ -9,7 +9,7 @@ from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
 from hex.model.mcts import MCTSSearch
 from hex.logic.hexboard import to_move
-from hex.interactive.interactive import Gui
+from hex.interactive.gui import Gui
 
 def get_args():
     config = ConfigParser()

@@ -71,10 +71,9 @@ class MultiHexGame():
         self.current_boards_tensor = self.current_boards_tensor.to(self.device)
 
         with torch.no_grad():
-            if model.module.__class__ == MCTSModel:
+            if model.__class__ == MCTSModel:
                 policy_log, value = model(self.current_boards_tensor)
                 outputs_tensor = policy_log.exp()
-                outputs_tensor.detach()
             else:
                 outputs_tensor = model(self.current_boards_tensor).detach()
 
