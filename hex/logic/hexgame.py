@@ -3,7 +3,6 @@ import torch.nn as nn
 
 from torch.distributions.categorical import Categorical
 
-from hex.model.hexconvolution import MCTSModel
 from hex.logic.hexboard import to_move
 from hex.creation.noise import singh_maddala_onto_output
 from hex.utils.utils import zip_list_of_lists_first_dim_reversed
@@ -71,7 +70,7 @@ class MultiHexGame():
         self.current_boards_tensor = self.current_boards_tensor.to(self.device)
 
         with torch.no_grad():
-            if model.module.__class__ == MCTSModel:
+            if model.__class__.__name__ == 'MCTSModel':
                 policy_log, value = model(self.current_boards_tensor)
                 outputs_tensor = policy_log.exp()
             else:

@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-
 import argparse
 import os
 import time
 from configparser import ConfigParser
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,7 +12,6 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 import hex.utils.utils
 from hex.utils.losses import LQLoss
-from hex.model.hexconvolution import MCTSModel
 from hex.utils.logger import logger
 
 
@@ -262,7 +259,7 @@ def train(args):
     nn.DataParallel(model).to(device)
 
     # don't use weight_decay in optimizer for MCTSModel, as the outcome is more predictable if measured in loss directly
-    optimizer_weight_decay = 0 if model.__class__ == MCTSModel else args.weight_decay
+    optimizer_weight_decay = 0 if model.__class__.__name__ == 'MCTSModel' else args.weight_decay
     if args.optimizer == 'adadelta':
         optimizer = optim.Adadelta(model.parameters(), weight_decay=optimizer_weight_decay)
     elif args.optimizer == 'sgd':
@@ -276,7 +273,7 @@ def train(args):
         val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{args.validation_data}.pt')
         val_triple = (val_board_tensor.to(device), val_moves_tensor.to(device), val_target_tensor.to(device))
 
-    if model.__class__ == MCTSModel:
+    if model.__class__.__name__ == 'MCTSModel':
         training = Training(args, model, optimizer)
         training.train_mcts_model(train_dataset, val_dataset)
     else:
