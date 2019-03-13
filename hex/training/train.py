@@ -32,6 +32,7 @@ def get_args(config_file):
     parser.add_argument('--learning_rate', type=float, default=config.getfloat('TRAIN', 'learning_rate'))
     parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
     parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
+    parser.add_argument('--validation_split', type=float, default=config.getfloat('TRAIN', 'validation_split'))
     parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
     parser.add_argument('--print_loss_frequency', type=int, default=config.getint('TRAIN', 'print_loss_frequency'))
     return parser.parse_args(args=[])
@@ -235,22 +236,23 @@ def train(args):
     '''
     print("=== training model ===")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     dataset_list = []
+
     for idx in range(args.data_range_min, args.data_range_max):
         board_states, moves, targets = torch.load('data/{}_{}.pt'.format(args.data, idx))
         dataset_list.append(TensorDataset(board_states, moves, targets))
+
     concat_dataset = ConcatDataset(dataset_list)
-    total_len = len(concat_dataset)
-    val_fraction = .1
-    val_part = int(val_fraction * total_len)
+    val_part = int(args.validation_split * len(concat_dataset))
     train_dataset, val_dataset = torch.utils.data.random_split(concat_dataset, [total_len - val_part, val_part])
+
     if args.epochs < 1:
         concat_len = train_dataset.__len__()
         sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len * args.epochs)])
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler,
                                                      num_workers=0)
         args.epochs = 1
+
     else:
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                                                      num_workers=0)
@@ -260,6 +262,7 @@ def train(args):
 
     # don't use weight_decay in optimizer for MCTSModel, as the outcome is more predictable if measured in loss directly
     optimizer_weight_decay = 0 if model.__class__.__name__ == 'MCTSModel' else args.weight_decay
+
     if args.optimizer == 'adadelta':
         optimizer = optim.Adadelta(model.parameters(), weight_decay=optimizer_weight_decay)
     elif args.optimizer == 'sgd':
