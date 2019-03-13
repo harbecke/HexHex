@@ -29,7 +29,7 @@ pipenv install --skip-lock
 pipenv shell 
 
 # create model, training data, train model, and evaluate
-./run_example.py
+./tests/run_example.py
 ```
 
 ### Execution
@@ -48,7 +48,7 @@ pipenv shell
     - `python -m hex.training.train`
     - `python -m hex.evaluation.evaluate_two_models`
     - `python -m hex.interactive.interactive`
-    - `python -m hex.tranining.repeated_data_and_training.py`
+    - `python -m hex.training.repeated_data_and_training.py`
 
 ### Loading Into hexgui
 [hexgui](https://github.com/ryanbhayward/hexgui) can be used for interactive play as well.
@@ -64,16 +64,6 @@ pipenv run python play_cli.py
 ```
 - The ai can then be used by `Program -> connect local program`
 
-### BayesElo evaluation
-BayesElo is the elo evaluation tools used in the AlphaGo paper. It can be found [here](https://www.remi-coulom.fr/Bayesian-Elo).
-Installation works fine on linux when building with `make`.
-
-- Extract the BayesElo folder [this](https://www.remi-coulom.fr/Bayesian-Elo/bayeselo.tar.bz2) 
-in the folder containing the project root (parallel to the project root)
-- `cd BayesElo`
-- `make` # ignore the warnings
-- `$(HEX_ROOT)/evaluation/elo.py` can be used to create elo ratings 
-
 ## Features
 
 * board representation with logic + switch rule
@@ -88,14 +78,15 @@ in the folder containing the project root (parallel to the project root)
   * batch-wise self-play to generate datasets
   * training and validating models
   * evaluating models against each other
+  * ELO rating via `output_ratings` in `hex/elo/elo.py`
   * iterative training loop
 
 * config to control plenty of hyperparameters
 
-* playable gui `interactive.py`
+* playable gui `hex/interactive/interactive.py`
 
-* trained model `five_board_wd0.001.pt` for 5x5 board
+* trained model `models/five_board_wd0.001.pt` for 5x5 board
 
-* puzzle validation set `puzzle.pt` for endgame strategy evaluation
+* puzzle validation set `data/puzzle.pt` for endgame strategy evaluation
 
 * Monte Carlo tree search
