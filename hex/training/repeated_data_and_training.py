@@ -4,7 +4,7 @@ import torch
 import sys
 from configparser import ConfigParser
 
-import train
+import hex.training.train as train
 from hex.creation import create_data
 from hex.evaluation import evaluate_two_models
 
