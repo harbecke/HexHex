@@ -216,7 +216,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
         l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
         weighted_param_loss = weight_decay * l2loss
         print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
-              % (epoch + 1, running_loss/i, l2loss, weighted_param_loss))
+              % (epoch + 1, running_loss/(i+1), l2loss, weighted_param_loss))
         if save_every_epoch:
             file_name = 'models/{}_{}.pt'.format(save_model_path, epoch)
             torch.save(model, file_name)
