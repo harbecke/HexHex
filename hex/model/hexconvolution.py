@@ -83,6 +83,13 @@ class MCTSModel(nn.Module):
         self.valuelin1 = nn.Linear(board_size**2 * value_channels, value_intermediate_fcn)
         self.valuelin2 = nn.Linear(value_intermediate_fcn, 1)
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
     def forward(self, x):
         """
         Returns log probabilities

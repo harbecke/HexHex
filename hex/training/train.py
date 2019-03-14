@@ -266,6 +266,8 @@ def train(args):
 
     if args.optimizer == 'adadelta':
         optimizer = optim.Adadelta(model.parameters(), weight_decay=optimizer_weight_decay)
+    elif args.optimizer == 'rmsprop':
+        optimizer = optim.RMSprop(model.parameters(), lr=args.learning_rate, weight_decay=optimizer_weight_decay)
     elif args.optimizer == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9,
                               weight_decay=optimizer_weight_decay)
@@ -281,7 +283,7 @@ def train(args):
         training = Training(args, model, optimizer)
         training.train_mcts_model(train_dataset, val_dataset)
     else:
-        criterion = LQLoss(0.5, reduction='sum')
+        criterion = LQLoss(0.8, reduction='mean')
         train_model(model, args.save_model, train_loader, criterion, optimizer, int(args.epochs), device,
                     args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple)
 
