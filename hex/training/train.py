@@ -243,7 +243,8 @@ def train(args):
         dataset_list.append(TensorDataset(board_states, moves, targets))
 
     concat_dataset = ConcatDataset(dataset_list)
-    val_part = int(args.validation_split * len(concat_dataset))
+    total_len = len(concat_dataset)
+    val_part = int(args.validation_split * total_len)
     train_dataset, val_dataset = torch.utils.data.random_split(concat_dataset, [total_len - val_part, val_part])
 
     if args.epochs < 1:
@@ -280,7 +281,7 @@ def train(args):
         training = Training(args, model, optimizer)
         training.train_mcts_model(train_dataset, val_dataset)
     else:
-        criterion = LQLoss(0.8, reduction='mean')
+        criterion = LQLoss(0.5, reduction='sum')
         train_model(model, args.save_model, train_loader, criterion, optimizer, int(args.epochs), device,
                     args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple)
 
