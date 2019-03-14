@@ -48,7 +48,7 @@ pipenv shell
     - `python -m hex.training.train`
     - `python -m hex.evaluation.evaluate_two_models`
     - `python -m hex.interactive.interactive`
-    - `python -m hex.training.repeated_data_and_training.py`
+    - `python -m hex.training.star_league.py`
 
 ### Loading Into hexgui
 [hexgui](https://github.com/ryanbhayward/hexgui) can be used for interactive play as well.
