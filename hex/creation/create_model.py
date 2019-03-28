@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import torch
-from hex.model.hexconvolution import NoMCTSModel, RandomModel, MCTSModel
+from hex.model.hexconvolution import NoMCTSModel, RandomModel, MCTSModel, InceptionModel
 
 import argparse
 from configparser import ConfigParser
@@ -27,6 +27,9 @@ def create_model(args):
     elif args.model_type == 'mcts':
         model = MCTSModel(board_size=args.board_size, layers=args.layers,
                           intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
+    elif args.model_type == 'inception':
+        model = InceptionModel(board_size=args.board_size, layers=args.layers, 
+            intermediate_channels=args.intermediate_channels)
     else:
         model = NoMCTSModel(board_size=args.board_size, layers=args.layers,
                         intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)

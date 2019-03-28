@@ -15,7 +15,7 @@ class LQLoss(_Loss):
 
     @weak_script_method
     def forward(self, input, target):
-        ret = (1-(1-torch.abs(input-target))**self.q)/self.q
+        ret = (1-(1+1e-8-torch.abs(input-target))**self.q)/self.q
         if self.reduction != 'none':
             ret = torch.mean(ret) if self.reduction == 'mean' else torch.sum(ret)
 
