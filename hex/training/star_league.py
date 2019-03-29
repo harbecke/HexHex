@@ -8,6 +8,7 @@ import hex.training.train as train
 import hex.elo.elo as elo
 from hex.creation import create_data
 from hex.evaluation import evaluate_two_models
+from  hex.utils.utils import load_model
 
 
 def league(config_file, champions, runs, chi_squared_test_statistic):
@@ -24,7 +25,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    champion = torch.load(f'models/{config.get("CREATE DATA", "model")}.pt', map_location=device)
+    champion = load_model(f'models/{config.get("CREATE DATA", "model")}.pt')
     champion_filename = f'{config.get("SELF TRAINING", "champion_names")}0'
     torch.save(champion, f'models/{champion_filename}.pt')
 
@@ -38,7 +39,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
     league_winner_elo = 0
 
     for run in range(runs):
-        champion = torch.load(f'models/{champion_filename}.pt', map_location=device)
+        champion = load_model(f'models/{champion_filename}.pt')
 
         create_data.generate_data_files(
                 file_counter_start=data_pos,
@@ -66,11 +67,13 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
 
         train_args.load_model = champion_filename
         train_args.save_model = new_model_name
+        if run > 0:
+            train_args.optimizer_load = True
         train.train(train_args)
         eval_args = evaluate_two_models.get_args(config_file)
 
         signed_chi_squared = evaluate_two_models.play_games(
-                models=(torch.load('models/'+new_model_name+'.pt'), champion),
+                models=(load_model(f'models/{new_model_name}.pt'), champion),
                 openings=eval_args.openings,
                 number_of_games=eval_args.number_of_games,
                 device=device,
@@ -95,7 +98,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
                 league_winner_tuple = champions_with_ratings[0]
                 league_winner_elo += league_winner_tuple[0]
                 print(f'{league_winner_tuple[1]} won the league! It has ELO {league_winner_elo}!')
-                league_winner = torch.load(f'models/{league_winner_tuple[1]}.pt', map_location=device)
+                league_winner = load_model(f'models/{league_winner_tuple[1]}.pt')
                 champion_filename = f'{champion_names}{champions+league_winners}'
                 torch.save(league_winner, f'models/{champion_filename}.pt')
                 league_winners += 1

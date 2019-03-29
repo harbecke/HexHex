@@ -3,20 +3,20 @@ import itertools
 import torch
 import math
 
-import hex.utils.utils as utils
+from hex.utils.utils import device, load_model
 from hex.evaluation import evaluate_two_models
 
 
 def play_tournament(model_list):
 
     num_models = len(model_list)
-    models = [torch.load('models/{}.pt'.format(model_file), map_location=utils.device) for model_file in model_list]
+    models = [load_model(f'models/{model_file}.pt') for model_file in model_list]
     all_results = [[0 for _ in range(num_models)] for _ in range(num_models)]
 
     for first_idx, second_idx in itertools.combinations(range(num_models), 2):
         result, signed_chi_squared = evaluate_two_models.play_games(
                 models=(models[first_idx], models[second_idx]),
-                device=utils.device,
+                device=device,
                 openings=False,
                 number_of_games=32,
                 batch_size=32,

@@ -4,6 +4,8 @@ import torch.nn as nn
 import argparse
 from configparser import ConfigParser
 
+from hex.utils.utils import load_model
+
 config = ConfigParser()
 config.read('config.ini')
 parser = argparse.ArgumentParser()
@@ -15,7 +17,7 @@ args = parser.parse_args()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 criterion = nn.MSELoss(reduction='sum')
 
-model = torch.load('models/{}.pt'.format(args.model), map_location=device)
+model = load_model(f'models/{args.model}.pt')
 model = nn.DataParallel(model).to(device)
 
 board_tensor, moves_tensor, target_tensor = torch.load('data/{}.pt'.format(data))

@@ -33,13 +33,22 @@ def create_model(args):
     else:
         model = NoMCTSModel(board_size=args.board_size, layers=args.layers,
                         intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
-    model_file = f'models/{args.model_name}.pt'
-    torch.save(model, model_file)
-    print(f'wrote {model_file}\n')
+    return model
 
 def create_model_from_config_file(config_file):
     args = get_args(config_file)
-    create_model(args)
+    model = create_model(args)
+    model_file = f'models/{args.model_name}.pt'
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'board_size': args.board_size,
+        'model_type': args.model_type,
+        'layers': args.layers,
+        'layer_type': args.layer_type,
+        'intermediate_channels': args.intermediate_channels,
+        'optimizer': False
+        }, model_file)
+    print(f'wrote {model_file}\n')
 
 if __name__ == '__main__':
     create_model_from_config_file('config.ini')

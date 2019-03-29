@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import torch
+import argparse
+
+from hex.creation.create_model import create_model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -30,3 +33,18 @@ def all_unique(x):
     """
     seen = set()
     return not any(i in seen or seen.add(i) for i in x)
+
+def load_model(model_file):
+    print("=== loading model ===")
+    checkpoint = torch.load(model_file, map_location=device)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--board_size', type=int, default=checkpoint['board_size'])
+    parser.add_argument('--model_type', type=str, default=checkpoint['model_type'])
+    parser.add_argument('--layer_type', type=str, default=checkpoint['layer_type'])
+    parser.add_argument('--layers', type=int, default=checkpoint['layers'])
+    parser.add_argument('--intermediate_channels', type=int, default=checkpoint['intermediate_channels'])
+
+    model = create_model(parser.parse_args())
+    model.load_state_dict(checkpoint['model_state_dict'])
+    return model

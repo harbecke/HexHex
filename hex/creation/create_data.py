@@ -10,7 +10,7 @@ from hex.model.hexconvolution import MCTSModel
 from hex.logic.hexgame import MultiHexGame
 from hex.utils.logger import logger
 from hex.model.mcts import MCTSSearch
-from hex.utils.utils import dotdict
+from hex.utils.utils import dotdict, load_model
 
 
 class SelfPlayGenerator:
@@ -77,7 +77,8 @@ def generate_data_files(file_counter_start, file_counter_end, samples_per_file, 
     while file_counter < file_counter_end:
         while all_board_states.shape[0] < samples_per_file:
             boards = [Board(size=board_size) for idx in range(batch_size)]
-            multihexgame = MultiHexGame(boards=boards, models=(model,), device=device, noise=noise, noise_parameters=noise_parameters, temperature=temperature, temperature_decay=temperature_decay)
+            multihexgame = MultiHexGame(boards=boards, models=(model,), device=device, noise=noise, 
+                noise_parameters=noise_parameters, temperature=temperature, temperature_decay=temperature_decay)
             board_states, moves, targets = multihexgame.play_moves()
 
             all_board_states = torch.cat((all_board_states,board_states))
@@ -129,15 +130,13 @@ def main(config_file='config.ini'):
     args = get_args(config_file)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = torch.load('models/{}.pt'.format(args.model), map_location=device)
+    model = load_model(f'models/{args.model}.pt')
 
     if model.__class__.__name__ == 'MCTSModel':
         create_mcts_self_play_data(args, model)
-
     else:
         generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device,
-                            args.batch_size,
-                            args.run_name, args.noise,
+                            args.batch_size, args.run_name, args.noise,
                             [float(parameter) for parameter in args.noise_parameters.split(",")], args.temperature,
                             args.temperature_decay, args.board_size)
 

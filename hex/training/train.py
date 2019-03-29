@@ -10,7 +10,7 @@ import torch.optim as optim
 from torch.utils.data.dataset import TensorDataset, ConcatDataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
-import hex.utils.utils
+from hex.utils.utils import device, load_model
 from hex.utils.losses import LQLoss
 from hex.utils.logger import logger
 
@@ -29,11 +29,11 @@ def get_args(config_file):
     parser.add_argument('--epochs', type=float, default=config.getfloat('TRAIN', 'epochs'))
     parser.add_argument('--samples_per_epoch', type=int, default=config.getint('TRAIN', 'samples_per_epoch'))
     parser.add_argument('--optimizer', type=str, default=config.get('TRAIN', 'optimizer'))
+    parser.add_argument('--optimizer_load', type=bool, default=config.getboolean('TRAIN', 'optimizer_load'))
     parser.add_argument('--learning_rate', type=float, default=config.getfloat('TRAIN', 'learning_rate'))
     parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
     parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
     parser.add_argument('--validation_split', type=float, default=config.getfloat('TRAIN', 'validation_split'))
-    parser.add_argument('--save_every_epoch', type=bool, default=config.getboolean('TRAIN', 'save_every_epoch'))
     parser.add_argument('--print_loss_frequency', type=int, default=config.getint('TRAIN', 'print_loss_frequency'))
     return parser.parse_args(args=[])
 
@@ -95,7 +95,7 @@ class Training:
         self.log_file = os.path.join('logs', args.save_model + '.csv')
         with open(self.log_file, 'w') as log:
             log.write('# batch val_loss pred_loss weighted_param_loss duration[s]\n')
-        self.device = hex.utils.utils.device
+        self.device = device
         self.optimizer = optimizer
         self.stats = TrainingStats()
 
@@ -136,17 +136,9 @@ class Training:
             logger.info('Epoch [%3d] mini-batches [%8d] %s'
                         % (epoch, epoch * len(train_loader), self.stats.last_values_to_string())
                         )
-            if self.args.save_every_epoch:
-                file_name = 'models/{}_{}.pt'.format(self.args.save_model, epoch)
-                torch.save(self.model, file_name)
-                print(f'wrote {file_name}')
-
-        if not self.args.save_every_epoch:
-            file_name = 'models/{}.pt'.format(self.args.save_model)
-            torch.save(self.model, file_name)
-            print(f'wrote {file_name}')
 
         print('Finished Training\n')
+        return self.model, self.optimizer
 
     def measure_mean_losses(self, board_states, policies_train, value_train):
         policies_log, values_out = self.model(board_states)
@@ -163,7 +155,7 @@ class Training:
 
 
 def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, weight_decay,
-                save_every_epoch, print_loss_frequency, validation_triple):
+                print_loss_frequency, validation_triple):
     log_file = os.path.join('logs', save_model_path + '.csv')
 
     with open(log_file, 'w') as log:
@@ -217,17 +209,9 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
         weighted_param_loss = weight_decay * l2loss
         print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
               % (epoch + 1, running_loss/(i+1), l2loss, weighted_param_loss))
-        if save_every_epoch:
-            file_name = 'models/{}_{}.pt'.format(save_model_path, epoch)
-            torch.save(model, file_name)
-            print(f'wrote {file_name}')
-
-    if not save_every_epoch:
-        file_name = 'models/{}.pt'.format(save_model_path)
-        torch.save(model, file_name)
-        print(f'wrote {file_name}')
-
+    
     print('Finished Training\n')
+    return model, optimizer
 
 
 def train(args):
@@ -258,7 +242,7 @@ def train(args):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                                                      num_workers=0)
 
-    model = torch.load('models/{}.pt'.format(args.load_model), map_location=device)
+    model = load_model(f'models/{args.load_model}.pt')
     nn.DataParallel(model).to(device)
 
     # don't use weight_decay in optimizer for MCTSModel, as the outcome is more predictable if measured in loss directly
@@ -274,6 +258,9 @@ def train(args):
     else:
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=optimizer_weight_decay)
 
+    if checkpoint['optimizer'] and args.optimizer_load:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
     val_triple = None
     if args.validation_bool:
         val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{args.validation_data}.pt')
@@ -281,11 +268,23 @@ def train(args):
 
     if model.__class__.__name__ == 'MCTSModel':
         training = Training(args, model, optimizer)
-        training.train_mcts_model(train_dataset, val_dataset)
+        trained_model, trained_optimizer = training.train_mcts_model(train_dataset, val_dataset)
     else:
         criterion = LQLoss(0.8, reduction='mean')
-        train_model(model, args.save_model, train_loader, criterion, optimizer, int(args.epochs), device,
-                    args.weight_decay, args.save_every_epoch, args.print_loss_frequency, val_triple)
+        trained_model, trained_optimizer = train_model(model, args.save_model, train_loader, criterion, optimizer, 
+            int(args.epochs), device, args.weight_decay, args.print_loss_frequency, val_triple)
+
+    file_name = f'models/{args.save_model}.pt'
+    torch.save({
+        'model_state_dict': trained_model.state_dict(),
+        'board_size': args.board_size,
+        'model_type': args.model_type,
+        'layers': args.layers,
+        'layer_type': args.layer_type,
+        'intermediate_channels': args.intermediate_channels,
+        'optimizer': trained_optimizer.state_dict()
+        }, file_name)
+    print(f'wrote {file_name}')
 
 
 def train_by_config_file(config_file):

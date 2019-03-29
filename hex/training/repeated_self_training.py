@@ -6,6 +6,7 @@ from hex.utils.utils import dotdict
 from hex.creation import create_data, create_model
 from hex.evaluation import evaluate_two_models
 from hex.training import train
+from hex.utils.utils import device, load_model
 
 class RepeatedSelfTrainer:
     def __init__(self, config_file):
@@ -43,7 +44,7 @@ class RepeatedSelfTrainer:
         return model_creation_args.model_name
 
     def create_data_samples(self, model_name):
-        model = torch.load('models/' + model_name + '.pt')
+        model = load_model(f'models/{model_name}.pt')
 
         self_play_args = dotdict(
                 {

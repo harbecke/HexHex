@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 import torch
+import argparse
+from configparser import ConfigParser
+from time import gmtime, strftime
 
 from hex.logic import hexboard
 from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
-
-import argparse
-from configparser import ConfigParser
-
 from hex.visualization.image import draw_board_image
 from hex.model.mcts import MCTSSearch
+from hex.utils.utils import load_model
 
-from time import gmtime, strftime
 
 def play_mcts_games(model1, model2, args):
     args.n_virtual_loss = 3
@@ -102,8 +101,8 @@ def evaluate(config_file = 'config.ini'):
     args = get_args(config_file)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model1 = torch.load('models/{}.pt'.format(args.model1), map_location=device)
-    model2 = torch.load('models/{}.pt'.format(args.model2), map_location=device)
+    model1 = load_model(f'models/{args.model1}.pt')
+    model2 = load_model(f'models/{args.model2}.pt')
 
     play_games(
             models=(model1, model2),
