@@ -95,7 +95,6 @@ class RepeatedSelfTrainer:
             'epochs': self.config.getint('REPEATED SELF TRAINING', 'epochs_per_model'),
             'samples_per_epoch': self.config.getint('REPEATED SELF TRAINING', 'samples_per_epoch'),
             'weight_decay': self.config.getfloat('REPEATED SELF TRAINING', 'weight_decay'),
-            'save_every_epoch': False
         })
         train.train(training_args)
 
