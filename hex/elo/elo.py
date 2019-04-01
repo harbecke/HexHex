@@ -10,7 +10,7 @@ from hex.evaluation import evaluate_two_models
 def play_tournament(model_list):
 
     num_models = len(model_list)
-    models = [load_model(f'models/{model_file}.pt') for model_file in model_list]
+    models = [load_model(f'models/{model_file}.pt')[0] for model_file in model_list]
     all_results = [[0 for _ in range(num_models)] for _ in range(num_models)]
 
     for first_idx, second_idx in itertools.combinations(range(num_models), 2):

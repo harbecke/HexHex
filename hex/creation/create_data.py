@@ -130,7 +130,7 @@ def main(config_file='config.ini'):
     args = get_args(config_file)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = load_model(f'models/{args.model}.pt')
+    model, _ = load_model(f'models/{args.model}.pt')
 
     if model.__class__.__name__ == 'MCTSModel':
         create_mcts_self_play_data(args, model)

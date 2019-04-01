@@ -6,11 +6,10 @@ from configparser import ConfigParser
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data.dataset import TensorDataset, ConcatDataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
-from hex.utils.utils import device, load_model
+from hex.utils.utils import device, load_model, create_optimizer, load_optimizer
 from hex.utils.losses import LQLoss
 from hex.utils.logger import logger
 
@@ -27,7 +26,6 @@ def get_args(config_file):
     parser.add_argument('--weight_decay', type=float, default=config.getfloat('TRAIN', 'weight_decay'))
     parser.add_argument('--batch_size', type=int, default=config.getint('TRAIN', 'batch_size'))
     parser.add_argument('--epochs', type=float, default=config.getfloat('TRAIN', 'epochs'))
-    parser.add_argument('--samples_per_epoch', type=int, default=config.getint('TRAIN', 'samples_per_epoch'))
     parser.add_argument('--optimizer', type=str, default=config.get('TRAIN', 'optimizer'))
     parser.add_argument('--optimizer_load', type=bool, default=config.getboolean('TRAIN', 'optimizer_load'))
     parser.add_argument('--learning_rate', type=float, default=config.getfloat('TRAIN', 'learning_rate'))
@@ -242,24 +240,18 @@ def train(args):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                                                      num_workers=0)
 
-    model = load_model(f'models/{args.load_model}.pt')
+    model_file = f'models/{args.load_model}.pt'
+    model, model_args = load_model(model_file)
     nn.DataParallel(model).to(device)
 
     # don't use weight_decay in optimizer for MCTSModel, as the outcome is more predictable if measured in loss directly
     optimizer_weight_decay = 0 if model.__class__.__name__ == 'MCTSModel' else args.weight_decay
 
-    if args.optimizer == 'adadelta':
-        optimizer = optim.Adadelta(model.parameters(), weight_decay=optimizer_weight_decay)
-    elif args.optimizer == 'rmsprop':
-        optimizer = optim.RMSprop(model.parameters(), lr=args.learning_rate, weight_decay=optimizer_weight_decay)
-    elif args.optimizer == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9,
-                              weight_decay=optimizer_weight_decay)
-    else:
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=optimizer_weight_decay)
+    optimizer = create_optimizer(optimizer_type=args.optimizer, parameters=model.parameters(), 
+        optimizer_weight_decay=optimizer_weight_decay, learning_rate=args.learning_rate)
 
-    if checkpoint['optimizer'] and args.optimizer_load:
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    if args.optimizer_load:
+        optimizer = load_optimizer(optimizer, model_file)
 
     val_triple = None
     if args.validation_bool:
@@ -277,11 +269,11 @@ def train(args):
     file_name = f'models/{args.save_model}.pt'
     torch.save({
         'model_state_dict': trained_model.state_dict(),
-        'board_size': args.board_size,
-        'model_type': args.model_type,
-        'layers': args.layers,
-        'layer_type': args.layer_type,
-        'intermediate_channels': args.intermediate_channels,
+        'board_size': model_args.board_size,
+        'model_type': model_args.model_type,
+        'layers': model_args.layers,
+        'layer_type': model_args.layer_type,
+        'intermediate_channels': model_args.intermediate_channels,
         'optimizer': trained_optimizer.state_dict()
         }, file_name)
     print(f'wrote {file_name}')

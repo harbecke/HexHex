@@ -44,7 +44,7 @@ class RepeatedSelfTrainer:
         return model_creation_args.model_name
 
     def create_data_samples(self, model_name):
-        model = load_model(f'models/{model_name}.pt')
+        model, _ = load_model(f'models/{model_name}.pt')
 
         self_play_args = dotdict(
                 {

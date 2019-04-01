@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import torch
+import torch.optim as optim
 import argparse
 
 from hex.creation.create_model import create_model
@@ -44,7 +45,26 @@ def load_model(model_file):
     parser.add_argument('--layer_type', type=str, default=checkpoint['layer_type'])
     parser.add_argument('--layers', type=int, default=checkpoint['layers'])
     parser.add_argument('--intermediate_channels', type=int, default=checkpoint['intermediate_channels'])
+    args = parser.parse_args()
 
-    model = create_model(parser.parse_args())
+    model = create_model(args)
     model.load_state_dict(checkpoint['model_state_dict'])
-    return model
+    return model, args
+
+def create_optimizer(optimizer_type, parameters, optimizer_weight_decay, learning_rate):
+    print("=== creating optimizer ===")
+    if optimizer_type == 'adadelta':
+        return optim.Adadelta(parameters, weight_decay=optimizer_weight_decay)
+    elif optimizer_type == 'rmsprop':
+        return optim.RMSprop(parameters, lr=learning_rate, weight_decay=optimizer_weight_decay)
+    elif optimizer_type == 'sgd':
+        return optim.SGD(parameters, lr=learning_rate, momentum=0.9, weight_decay=optimizer_weight_decay)
+    else:
+        return optim.Adam(parameters, lr=learning_rate, weight_decay=optimizer_weight_decay)
+
+def load_optimizer(optimizer, model_file):
+    print("=== loading optimizer ===")
+    checkpoint = torch.load(model_file, map_location=device)
+
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    return optimizer

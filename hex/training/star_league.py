@@ -25,7 +25,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    champion = load_model(f'models/{config.get("CREATE DATA", "model")}.pt')
+    champion, _ = load_model(f'models/{config.get("CREATE DATA", "model")}.pt')
     champion_filename = f'{config.get("SELF TRAINING", "champion_names")}0'
     torch.save(champion, f'models/{champion_filename}.pt')
 
@@ -73,7 +73,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
         eval_args = evaluate_two_models.get_args(config_file)
 
         signed_chi_squared = evaluate_two_models.play_games(
-                models=(load_model(f'models/{new_model_name}.pt'), champion),
+                models=(load_model(f'models/{new_model_name}.pt')[0], champion),
                 openings=eval_args.openings,
                 number_of_games=eval_args.number_of_games,
                 device=device,
@@ -98,7 +98,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
                 league_winner_tuple = champions_with_ratings[0]
                 league_winner_elo += league_winner_tuple[0]
                 print(f'{league_winner_tuple[1]} won the league! It has ELO {league_winner_elo}!')
-                league_winner = load_model(f'models/{league_winner_tuple[1]}.pt')
+                league_winner, _ = load_model(f'models/{league_winner_tuple[1]}.pt')
                 champion_filename = f'{champion_names}{champions+league_winners}'
                 torch.save(league_winner, f'models/{champion_filename}.pt')
                 league_winners += 1
