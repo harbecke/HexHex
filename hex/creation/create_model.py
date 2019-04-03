@@ -18,7 +18,7 @@ def get_args(config_file):
     parser.add_argument('--intermediate_channels', type=int, default=config.getint('CREATE MODEL', 'intermediate_channels'))
     parser.add_argument('--model_name', type=str, default=config.get('CREATE MODEL', 'model_name'))
 
-    return parser.parse_args()
+    return parser.parse_args(args=[])
 
 def create_model(args):
     print("=== creating model ===")
