@@ -29,7 +29,7 @@ class CliGame:
     def __init__(self, args):
         self.board = None
         self.device = device
-        self.model = load_model(f'models/{args.model}.pt')
+        self.model, _ = load_model(f'models/{args.model}.pt')
         self.args = args
 
 

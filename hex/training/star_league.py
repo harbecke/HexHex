@@ -39,7 +39,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
     league_winner_elo = 0
 
     for run in range(runs):
-        champion = load_model(f'models/{champion_filename}.pt')
+        champion, _ = load_model(f'models/{champion_filename}.pt')
 
         create_data.generate_data_files(
                 file_counter_start=data_pos,

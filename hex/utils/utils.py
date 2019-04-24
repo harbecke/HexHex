@@ -45,7 +45,7 @@ def load_model(model_file):
     parser.add_argument('--layer_type', type=str, default=checkpoint['layer_type'])
     parser.add_argument('--layers', type=int, default=checkpoint['layers'])
     parser.add_argument('--intermediate_channels', type=int, default=checkpoint['intermediate_channels'])
-    args = parser.parse_args()
+    args = parser.parse_args(args=[])
 
     model = create_model(args)
     model.load_state_dict(checkpoint['model_state_dict'])
