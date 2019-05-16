@@ -6,7 +6,7 @@ from configparser import ConfigParser
 
 import hex.training.train as train
 import hex.elo.elo as elo
-from hex.creation import create_data
+from hex.creation import create_data, create_model
 from hex.evaluation import evaluate_two_models
 from  hex.utils.utils import load_model
 
@@ -25,9 +25,18 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    champion, _ = load_model(f'models/{config.get("CREATE DATA", "model")}.pt')
+    champion, model_args = load_model(f'models/{config.get("CREATE DATA", "model")}.pt')
     champion_filename = f'{config.get("SELF TRAINING", "champion_names")}0'
-    torch.save(champion, f'models/{champion_filename}.pt')
+    torch.save({
+        'model_state_dict': champion.state_dict(),
+        'board_size': model_args.board_size,
+        'model_type': model_args.model_type,
+        'layers': model_args.layers,
+        'layer_type': model_args.layer_type,
+        'intermediate_channels': model_args.intermediate_channels,
+        'optimizer': False
+        }, f'models/{champion_filename}.pt')
+    print(f'wrote models/{champion_filename}.pt')
 
     data_range_min = config.getint('CREATE DATA', 'data_range_min')
     data_range_max = config.getint('CREATE DATA', 'data_range_max')
@@ -121,7 +130,8 @@ def _main():
     league(config_file,
         config.getint('SELF TRAINING', 'champions'),
         config.getint('SELF TRAINING', 'runs'),
-        config.getfloat('SELF TRAINING', 'chi_squared_test_statistic'))
+        config.getfloat('SELF TRAINING', 'chi_squared_test_statistic')
+        )
 
 if __name__ == '__main__':
     _main()

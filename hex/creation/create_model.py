@@ -35,8 +35,7 @@ def create_model(args):
                         intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
     return model
 
-def create_model_from_config_file(config_file):
-    args = get_args(config_file)
+def create_model_from_args(args):
     model = create_model(args)
     model_file = f'models/{args.model_name}.pt'
     torch.save({
@@ -51,4 +50,5 @@ def create_model_from_config_file(config_file):
     print(f'wrote {model_file}\n')
 
 if __name__ == '__main__':
-    create_model_from_config_file('config.ini')
+    args = get_args('config.ini')
+    create_model_from_config_file(args)

@@ -10,7 +10,8 @@ def _main(config_file = 'config.ini'):
     executes all basic scripts with values from sample config
     should be run as test before every commit
     '''
-    create_model.create_model_from_config_file(config_file)
+    args = create_model.get_args(config_file)
+    create_model.create_model_from_args(args)
     create_data.main(config_file)
     train.train_by_config_file(config_file)
     evaluate_two_models.evaluate(config_file)
