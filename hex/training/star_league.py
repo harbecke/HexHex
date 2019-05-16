@@ -76,7 +76,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
 
         train_args.load_model = champion_filename
         train_args.save_model = new_model_name
-        if run > 0:
+        if league_winners > 0:
             train_args.optimizer_load = True
         train.train(train_args)
         eval_args = evaluate_two_models.get_args(config_file)

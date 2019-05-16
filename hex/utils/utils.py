@@ -66,5 +66,5 @@ def load_optimizer(optimizer, model_file):
     print("=== loading optimizer ===")
     checkpoint = torch.load(model_file, map_location=device)
 
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
     return optimizer
