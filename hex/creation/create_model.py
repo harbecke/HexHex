@@ -51,4 +51,4 @@ def create_model_from_args(args):
 
 if __name__ == '__main__':
     args = get_args('config.ini')
-    create_model_from_config_file(args)
+    create_model_from_args(args)
