@@ -7,7 +7,7 @@ from hex.utils.utils import device, load_model
 from hex.evaluation import evaluate_two_models
 
 
-def play_tournament(model_list):
+def play_tournament(model_list, args):
 
     num_models = len(model_list)
     models = [load_model(f'models/{model_file}.pt')[0] for model_file in model_list]
@@ -17,13 +17,13 @@ def play_tournament(model_list):
         result, signed_chi_squared = evaluate_two_models.play_games(
                 models=(models[first_idx], models[second_idx]),
                 device=device,
-                openings=False,
-                number_of_games=32,
-                batch_size=32,
-                board_size=5,
-                temperature=0.1,
-                temperature_decay=0,
-                plot_board=False
+                openings=args.openings,
+                number_of_games=args.number_of_games,
+                batch_size=args.batch_size,
+                board_size=args.board_size,
+                temperature=args.temperature,
+                temperature_decay=args.temperature_decay,
+                plot_board=args.plot_board
         )
         all_results[first_idx][second_idx] = result[0][0] + result[1][0]
         all_results[second_idx][first_idx] = result[0][1] + result[1][1]
@@ -52,9 +52,9 @@ def create_ratings(results, runs=100):
     return elo_ratings
 
 
-def output_ratings(model_list, output_file='ratings.txt'):
+def output_ratings(model_list, args, output_file='ratings.txt'):
     
-    tournament = play_tournament(model_list)
+    tournament = play_tournament(model_list, args)
     ratings = create_ratings(tournament)
     model_with_ratings = list(zip(ratings, model_list))
     model_with_ratings.sort(reverse=True)

@@ -97,7 +97,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
 
             if champion_iter+1 == champions:
                 champions_list = [f'{champion_names}{idx}' for idx in range(champions+league_winners)]
-                results = elo.play_tournament(champions_list)
+                results = elo.play_tournament(champions_list, eval_args)
                 ratings = elo.create_ratings(results)
                 champions_with_ratings = list(zip(ratings, champions_list))
                 if league_winners > 0:
