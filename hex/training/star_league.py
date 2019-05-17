@@ -107,9 +107,18 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
                 league_winner_tuple = champions_with_ratings[0]
                 league_winner_elo += league_winner_tuple[0]
                 print(f'{league_winner_tuple[1]} won the league! It has ELO {league_winner_elo}!')
-                league_winner, _ = load_model(f'models/{league_winner_tuple[1]}.pt')
+                league_winner, model_args = load_model(f'models/{league_winner_tuple[1]}.pt')
                 champion_filename = f'{champion_names}{champions+league_winners}'
-                torch.save(league_winner, f'models/{champion_filename}.pt')
+                torch.save({
+                    'model_state_dict': league_winner.state_dict(),
+                    'board_size': model_args.board_size,
+                    'model_type': model_args.model_type,
+                    'layers': model_args.layers,
+                    'layer_type': model_args.layer_type,
+                    'intermediate_channels': model_args.intermediate_channels,
+                    'optimizer': torch.load(f'models/{league_winner_tuple[1]}.pt', map_location=device)['optimizer']
+                    }, f'models/{champion_filename}.pt')
+                print(f'wrote models/{champion_filename}.pt')
                 league_winners += 1
                 champion_iter = 0
 
