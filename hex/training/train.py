@@ -262,7 +262,7 @@ def train(args):
         training = Training(args, model, optimizer)
         trained_model, trained_optimizer = training.train_mcts_model(train_dataset, val_dataset)
     else:
-        criterion = LQLoss(0.8, reduction='mean')
+        criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
         trained_model, trained_optimizer = train_model(model, args.save_model, train_loader, criterion, optimizer, 
             int(args.epochs), device, args.weight_decay, args.print_loss_frequency, val_triple)
 
