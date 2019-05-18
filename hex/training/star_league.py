@@ -34,7 +34,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
         'layers': model_args.layers,
         'layer_type': model_args.layer_type,
         'intermediate_channels': model_args.intermediate_channels,
-        'optimizer': False
+        'optimizer': torch.load(f'models/{config.get("CREATE DATA", "model")}.pt', map_location=device)['optimizer']
         }, f'models/{champion_filename}.pt')
     print(f'wrote models/{champion_filename}.pt')
 
