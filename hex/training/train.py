@@ -173,7 +173,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
             optimizer.zero_grad()
 
-            outputs = model(board_states)
+            outputs = torch.exp(model(board_states))
             output_values = torch.gather(outputs, 1, moves)
 
             loss = criterion(output_values.view(-1), labels)
