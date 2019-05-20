@@ -81,7 +81,7 @@ class NoMCTSModel(nn.Module):
         for skiplayer in self.skiplayers:
             x = skiplayer(x)
         p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
-        return torch.sigmoid(self.policylin(p) - illegal)
+        return F.logsigmoid(self.policylin(p) - illegal)
 
 
 class InceptionModel(nn.Module):
@@ -109,7 +109,7 @@ class InceptionModel(nn.Module):
         for inceptionlayer in self.inceptionlayers:
             x = inceptionlayer(x)
         p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
-        return torch.sigmoid(self.policylin(p) - illegal)
+        return F.logsigmoid(self.policylin(p) - illegal)
 
 
 class MCTSModel(nn.Module):

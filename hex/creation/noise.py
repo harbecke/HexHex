@@ -10,5 +10,5 @@ def singh_maddala_onto_output(output_tensor, noise_alpha, noise_beta, noise_lamb
     '''
     batch_size = output_tensor.shape[0]
     output_tensor[torch.arange(0, batch_size).long(), torch.randint(torch.numel(output_tensor[0]), 
-        (batch_size,))] *= 1 + noise_lambda*(Pareto(1, noise_alpha).sample((batch_size,)).to(device)-1)**(1/noise_beta)
+        (batch_size,))] += torch.log(1 + noise_lambda*(Pareto(1, noise_alpha).sample((batch_size,)).to(device)-1)**(1/noise_beta))
     return output_tensor
