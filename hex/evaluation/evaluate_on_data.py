@@ -15,16 +15,16 @@ parser.add_argument('--data', type=str, default=config.get('EVALUATE DATA', 'dat
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-criterion = nn.MSELoss(reduction='sum')
+criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
 
 model, _ = load_model(f'models/{args.model}.pt')
 model = nn.DataParallel(model).to(device)
 
-board_tensor, moves_tensor, target_tensor = torch.load('data/{}.pt'.format(data))
+board_tensor, moves_tensor, target_tensor = torch.load('data/{}.pt'.format(args.data))
 board_tensor, moves_tensor, target_tensor = board_tensor.to(device), moves_tensor.to(device), target_tensor.to(device)
 
 with torch.no_grad():
-    full_pred_tensor = model(board_tensor)
+    full_pred_tensor = torch.exp(model(board_tensor))
     local_predictions = torch.gather(full_pred_tensor, 1, moves_tensor)
     loss = criterion(local_predictions.view(-1), target_tensor)
-    print(loss)
+    print(loss.item())
