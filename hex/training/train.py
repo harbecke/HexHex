@@ -274,7 +274,7 @@ def train(args):
         'layers': model_args.layers,
         'layer_type': model_args.layer_type,
         'intermediate_channels': model_args.intermediate_channels,
-        'optimizer': trained_optimizer.state_dict()
+        'optimizer': False #trained_optimizer.state_dict()
         }, file_name)
     print(f'wrote {file_name}')
 

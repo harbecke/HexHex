@@ -76,8 +76,8 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
 
         train_args.load_model = champion_filename
         train_args.save_model = new_model_name
-        if league_winners > 0:
-            train_args.optimizer_load = True
+        #if league_winners > 0:
+        #    train_args.optimizer_load = True
         train.train(train_args)
         eval_args = evaluate_two_models.get_args(config_file)
 
@@ -116,7 +116,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
                     'layers': model_args.layers,
                     'layer_type': model_args.layer_type,
                     'intermediate_channels': model_args.intermediate_channels,
-                    'optimizer': torch.load(f'models/{league_winner_tuple[1]}.pt', map_location=device)['optimizer']
+                    'optimizer': False #torch.load(f'models/{league_winner_tuple[1]}.pt', map_location=device)['optimizer']
                     }, f'models/{champion_filename}.pt')
                 print(f'wrote models/{champion_filename}.pt')
                 league_winners += 1
