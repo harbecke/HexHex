@@ -119,7 +119,7 @@ def league(config_file, champions, runs, chi_squared_test_statistic):
                     'optimizer': False #torch.load(f'models/{league_winner_tuple[1]}.pt', map_location=device)['optimizer']
                     }, f'models/{champion_filename}.pt')
                 print(f'wrote models/{champion_filename}.pt')
-                league_winners += 1
+                league_winners = 1
                 champion_iter = 0
 
             else:
