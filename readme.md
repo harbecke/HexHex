@@ -23,7 +23,7 @@ pip install pipenv
 
 # install dependencies
 # use --skip-lock due to a recent regression in pipenv: https://github.com/pypa/pipenv/issues/2284
-pipenv install --skip-lock
+pipenv install -r requirements.txt --skip-lock
 
 # activate virtual environment
 pipenv shell 
@@ -36,9 +36,9 @@ pipenv shell
 
 * run all scripts from root directory
 
-* test installation with `python -m tests.run_example`
-
 * copy sample_config as initial configuration file `cp sample_config.ini config.ini`
+
+* test installation with `python -m tests.run_example`
 
 * change parameters in config.ini
 
