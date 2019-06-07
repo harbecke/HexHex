@@ -33,6 +33,27 @@ class SkipLayerAlpha(nn.Module):
         return F.relu(x)
 
 
+class SkipLayerStar(nn.Module):
+
+    def __init__(self, board_size, channels, reach):
+        super(SkipLayerStar, self).__init__()
+        self.board_size = board_size
+        self.channels = channels
+        self.conv1 = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach)
+        self.conv2 = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach)
+        self.bn1 = nn.BatchNorm2d(channels)
+        self.bn2 = nn.BatchNorm2d(channels)
+        self.fc1 = nn.Linear(board_size**2 * channels, channels)
+        self.fc2 = nn.Linear(board_size**2 * channels, channels)
+
+    def forward(self, x):
+        y = swish(self.bn1(x))
+        y = self.conv1(y) + self.fc1(torch.flatten(y, start_dim=1)).view(-1, self.channels, 1, 1).expand(-1, -1, self.board_size, self.board_size)
+        y = swish(self.bn2(x))
+        y = self.conv2(y) + self.fc2(torch.flatten(y, start_dim=1)).view(-1, self.channels, 1, 1).expand(-1, -1, self.board_size, self.board_size)
+        return x + y
+
+
 class InceptionLayer(nn.Module):
     def __init__(self, channels):
         super(SkipLayerAlpha, self).__init__()
@@ -67,6 +88,8 @@ class NoMCTSModel(nn.Module):
         self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
         if skip_layer=='alpha':
             self.skiplayers = nn.ModuleList([SkipLayerAlpha(intermediate_channels, 1) for idx in range(layers)])
+        elif skip_layer=='star':
+            self.skiplayers = nn.ModuleList([SkipLayerStar(board_size, intermediate_channels, 1) for idx in range(layers)])
         else:
             self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, 1) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
