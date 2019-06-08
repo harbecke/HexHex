@@ -1,34 +1,16 @@
 #!/usr/bin/env python
-import torch
 import argparse
 from configparser import ConfigParser
 from time import gmtime, strftime
 
+import torch
+
 from hex.logic import hexboard
 from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
-from hex.visualization.image import draw_board_image
-from hex.model.mcts import MCTSSearch
 from hex.utils.utils import load_model
+from hex.visualization.image import draw_board_image
 
-
-def play_mcts_games(model1, model2, args):
-    args.n_virtual_loss = 3
-    args.num_mcts_simulations = 1600
-    args.mcts_batch_size = 8
-    args.c_puct = 5
-
-    assert(model1.board_size == model2.board_size)
-    board = Board(size=model1.board_size)
-    searches = [MCTSSearch(model, args) for model in (model1, model2)]
-
-    while not board.winner:
-        counts, Qs = searches[board.player].simulate(board)
-        move_probabilities = MCTSSearch.move_probabilities(counts, temperature=0)
-        move = MCTSSearch.sample_move(move_probabilities)
-        board.set_stone(hexboard.to_move(move, model1.board_size))
-        draw_board_image(board.board_tensor, "images/mcts.png")
-    print(f'winner: {board.winner}')
 
 def play_games(models, device, openings, number_of_games, batch_size, board_size, temperature, temperature_decay, plot_board):
     if openings:
@@ -96,6 +78,7 @@ def get_args(config_file):
 
     return parser.parse_args(args=[])
 
+
 def evaluate(config_file = 'config.ini'):
     print("=== evaluate two models ===")
     args = get_args(config_file)
@@ -115,6 +98,7 @@ def evaluate(config_file = 'config.ini'):
             temperature_decay=args.temperature_decay,
             plot_board=args.plot_board
         )
+
 
 if __name__ == '__main__':
     evaluate()

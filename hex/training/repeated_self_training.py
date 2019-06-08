@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-import torch
 from configparser import ConfigParser
 
-from hex.utils.utils import dotdict
+import torch
+
 from hex.creation import create_data, create_model
-from hex.evaluation import evaluate_two_models
 from hex.training import train
-from hex.utils.utils import device, load_model
+from hex.utils.utils import dotdict
+from hex.utils.utils import load_model
+
 
 class RepeatedSelfTrainer:
     def __init__(self, config_file):
@@ -40,7 +41,7 @@ class RepeatedSelfTrainer:
             'layer_type': self.config.get('REPEATED SELF TRAINING', 'layer_type'),
             'model_name': self.config.get('REPEATED SELF TRAINING', 'name') + '_initial'
         })
-        create_model.create_model(model_creation_args)
+        create_model.create_model_from_args(model_creation_args)
         return model_creation_args.model_name
 
     def create_data_samples(self, model_name):
@@ -58,12 +59,12 @@ class RepeatedSelfTrainer:
                     'run_name': model_name,
                     'noise_epsilon': self.config.getfloat('REPEATED SELF TRAINING', 'noise_epsilon'),
                     'noise_spread': self.config.getfloat('REPEATED SELF TRAINING', 'noise_spread'),
-                    'temperature': self.config.getint('REPEATED SELF TRAINING', 'temperature'),
+                    'temperature': self.config.getfloat('REPEATED SELF TRAINING', 'temperature'),
                     'temperature_freeze': self.config.getint('REPEATED SELF TRAINING', 'temperature_freeze'),
                 }
         )
 
-        create_data.create_mcts_self_play_data(
+        create_data.create_self_play_data(
                 self_play_args, model
         )
         return self_play_args.run_name

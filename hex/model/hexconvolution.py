@@ -152,49 +152,6 @@ class InceptionModel(nn.Module):
         return F.logsigmoid(self.policylin(p) - illegal)
 
 
-class MCTSModel(nn.Module):
-    def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, value_channels=1, value_intermediate_fcn=256, reach_conv=1, skip_layer='single'):
-        super(MCTSModel, self).__init__()
-        self.board_size = board_size
-        self.policy_channels = policy_channels
-        self.value_channels = value_channels
-        self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
-        if skip_layer=='alpha':
-            self.skiplayers = nn.ModuleList([SkipLayerAlpha(intermediate_channels, 1) for idx in range(layers)])
-        else:
-            self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, 1) for idx in range(layers)])
-        self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
-        self.policybn = nn.BatchNorm2d(policy_channels)
-        self.policylin = nn.Linear(board_size**2 * policy_channels, board_size**2)
-        self.valueconv = nn.Conv2d(intermediate_channels, value_channels, kernel_size=1)
-        self.valuebn = nn.BatchNorm2d(value_channels)
-        self.valuelin1 = nn.Linear(board_size**2 * value_channels, value_intermediate_fcn)
-        self.valuelin2 = nn.Linear(value_intermediate_fcn, 1)
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-
-    def forward(self, x):
-        """
-        Returns log probabilities
-        """
-        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
-        illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
-        x = self.conv(x)
-        for skiplayer in self.skiplayers:
-            x = skiplayer(x)
-        p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
-        p = F.log_softmax(self.policylin(p)-illegal, dim=1)
-        v = swish(self.valuebn(self.valueconv(x))).view(-1, self.board_size**2 * self.value_channels)
-        v = swish(self.valuelin1(v))
-        v = torch.tanh(self.valuelin2(v))
-        return p, v
-
-
 class RandomModel(nn.Module):
     '''
     outputs 0.5 for every legal move

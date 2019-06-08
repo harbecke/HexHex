@@ -1,25 +1,24 @@
 #!/usr/bin/env python
 
-import torch
-
 import argparse
 from configparser import ConfigParser
 
+import torch
+
 from hex.logic.hexboard import Board, to_move
-from hex.model.hexconvolution import MCTSModel
 from hex.logic.hexgame import MultiHexGame
+from hex.model.hexconvolution import NoMCTSModel
 from hex.utils.logger import logger
-from hex.model.mcts import MCTSSearch
-from hex.utils.utils import dotdict, load_model
+from hex.utils.utils import load_model
 
 
 class SelfPlayGenerator:
-    def __init__(self, model: MCTSModel, mcts_args):
+    def __init__(self, model: NoMCTSModel, args):
         self.model = model
-        self.mcts_args = mcts_args
+        self.args = args
         self.board_size = model.board_size
 
-    def self_play_mcts_game(self):
+    def self_play_game(self):
         """
         Generates data files from MCTS runs.
         yields 3 tensors containing for each move:
@@ -30,12 +29,12 @@ class SelfPlayGenerator:
         all_board_tensors = []
         all_mcts_policies = []
 
-        search = MCTSSearch(self.model, self.mcts_args)
+        search = MCTSSearch(self.model, self.args)
         board = Board(size=self.board_size)
         while not board.winner:
             move_counts, Qs = search.simulate(board)
-            temperature_freeze = len(board.move_history) >= self.mcts_args.temperature_freeze
-            temperature = 0 if temperature_freeze else self.mcts_args.temperature
+            temperature_freeze = len(board.move_history) >= self.args.temperature_freeze
+            temperature = 0 if temperature_freeze else self.args.temperature
             mcts_policy = search.move_probabilities(move_counts, temperature)
             move = search.sample_move(mcts_policy)
 
@@ -53,7 +52,7 @@ class SelfPlayGenerator:
 
     def position_generator(self):
         while True:
-            for board_tensor, mcts_policy, result_tensor in self.self_play_mcts_game():
+            for board_tensor, mcts_policy, result_tensor in self.self_play_game():
                 yield board_tensor, mcts_policy, result_tensor
                 mirror_board = torch.flip(board_tensor, dims=(1, 2)).clone()
                 mirror_policy = torch.flip(mcts_policy, dims=(0,)).clone()
@@ -119,12 +118,9 @@ def get_args(config_file):
     parser.add_argument('--temperature', type=float, default=config.getfloat('CREATE DATA', 'temperature'))
     parser.add_argument('--temperature_decay', type=float, default=config.getfloat('CREATE DATA', 'temperature_decay'))
     parser.add_argument('--board_size', type=int, default=config.getint('CREATE DATA', 'board_size'))
-    parser.add_argument('--c_puct', type=float, default=config.getfloat('CREATE DATA', 'c_puct'))
-    parser.add_argument('--num_mcts_simulations', type=int, default=config.getint('CREATE DATA', 'num_mcts_simulations'))
-    parser.add_argument('--mcts_batch_size', type=int, default=config.getint('CREATE DATA', 'mcts_batch_size'))
-    parser.add_argument('--n_virtual_loss', type=int, default=config.getint('CREATE DATA', 'n_virtual_loss'))
 
     return parser.parse_args()
+
 
 def main(config_file='config.ini'):
     args = get_args(config_file)
@@ -132,16 +128,13 @@ def main(config_file='config.ini'):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, _ = load_model(f'models/{args.model}.pt')
 
-    if model.__class__.__name__ == 'MCTSModel':
-        create_mcts_self_play_data(args, model)
-    else:
-        generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device,
-                            args.batch_size, args.run_name, args.noise,
-                            [float(parameter) for parameter in args.noise_parameters.split(",")], args.temperature,
-                            args.temperature_decay, args.board_size)
+    generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device,
+                        args.batch_size, args.run_name, args.noise,
+                        [float(parameter) for parameter in args.noise_parameters.split(",")], args.temperature,
+                        args.temperature_decay, args.board_size)
 
 
-def create_mcts_self_play_data(args, model):
+def create_self_play_data(args, model):
     logger.info("=== creating data from self play ===")
     self_play_generator = SelfPlayGenerator(model, args)
     position_generator = self_play_generator.position_generator()

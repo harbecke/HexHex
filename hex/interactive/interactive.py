@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-import numpy as np
-from configparser import ConfigParser
 import argparse
+from configparser import ConfigParser
+
 import torch
 
 from hex.interactive.gui import Gui
-from hex.utils.logger import logger
 from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
-from hex.model.mcts import MCTSSearch
-from hex.logic.hexboard import to_move
+from hex.utils.logger import logger
 from hex.utils.utils import load_model
+
 
 def get_args():
     config = ConfigParser()
@@ -25,9 +24,6 @@ def get_args():
     parser.add_argument('--first_move_ai', type=bool, default=config.getboolean('INTERACTIVE', 'first_move_ai'))
     parser.add_argument('--gui_radius', type=int, default=config.getint('INTERACTIVE', 'gui_radius'))
     parser.add_argument('--num_mcts_simulations', type=int, default=config.getint('INTERACTIVE', 'num_mcts_simulations'))
-    parser.add_argument('--mcts_batch_size', type=int, default=config.getint('INTERACTIVE', 'mcts_batch_size'))
-    parser.add_argument('--c_puct', type=float, default=config.getfloat('INTERACTIVE', 'c_puct'))
-    parser.add_argument('--n_virtual_loss', type=int, default=config.getint('INTERACTIVE', 'n_virtual_loss'))
     parser.add_argument('--noise_epsilon', type=float, default=config.getfloat('INTERACTIVE', 'noise_epsilon'))
     parser.add_argument('--noise_spread', type=float, default=config.getfloat('INTERACTIVE', 'noise_spread'))
 
@@ -42,11 +38,10 @@ class InteractiveGame:
         self.model, _ = load_model(f'models/{args.model}.pt')
         self.board = Board(size=self.model.board_size)
         self.gui = Gui(self.board, args.gui_radius)
-        self.mcts_search = MCTSSearch(self.model, args)
         self.args = args
         self.model_type = args.model_type
         self.game = MultiHexGame(boards=(self.board,), models=(self.model,), device=self.device, noise=None, 
-            noise_parameters=None, temperature=args.temperature, temperature_decay=args.temperature_decay) # only for NoMCTS arch
+            noise_parameters=None, temperature=args.temperature, temperature_decay=args.temperature_decay)
 
     def play_human_move(self):
         move = self.get_move()
@@ -58,20 +53,9 @@ class InteractiveGame:
             self.wait_for_gui_exit()
 
     def play_ai_move(self):
-        if self.args.model_type == 'mcts':
-            move_counts, Qs = self.mcts_search.simulate(self.board)
-            temperature_freeze = len(self.board.move_history) >= self.args.temperature_freeze
-            temperature = 0 if temperature_freeze else self.args.temperature
-            move_ratings = self.mcts_search.move_probabilities(move_counts, temperature)
-            move_idx = self.mcts_search.sample_move(move_ratings)
-            print(f'Expected outcome for agent: {Qs[move_idx]}')
-            self.board.set_stone(to_move(move_idx, self.board.size))
-            self.gui.update_board(self.board, field_text=np.array(move_counts, dtype=int))
-
-        else:
-            move_ratings = self.game.batched_single_move(self.model)
-            field_text = [f'{int(100*torch.exp(rating))}' for rating in move_ratings[0]]
-            self.gui.update_board(self.board, field_text=field_text)
+        move_ratings = self.game.batched_single_move(self.model)
+        field_text = [f'{int(100*torch.exp(rating))}' for rating in move_ratings[0]]
+        self.gui.update_board(self.board, field_text=field_text)
 
         if self.board.winner:
             logger.info("agent has won!")
@@ -86,6 +70,7 @@ class InteractiveGame:
             move = self.gui.get_cell()
             if move in self.board.legal_moves:
                 return move
+
 
 def _main():
     logger.info("Starting interactive game")

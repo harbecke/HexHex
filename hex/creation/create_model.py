@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import torch
-from hex.model.hexconvolution import NoMCTSModel, RandomModel, MCTSModel, InceptionModel, NoSwitchModel
+from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel
 
 import argparse
 from configparser import ConfigParser
@@ -20,15 +20,13 @@ def get_args(config_file):
 
     return parser.parse_args(args=[])
 
+
 def create_model(args):
     print("=== creating model ===")
     if args.model_type == 'random':
         model = RandomModel(board_size=args.board_size)
-    elif args.model_type == 'mcts':
-        model = MCTSModel(board_size=args.board_size, layers=args.layers,
-                          intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
     elif args.model_type == 'noswitch':
-        model = NoSwitchModel(board_size=args.board_size, layers=args.layers, 
+        model = NoSwitchModel(board_size=args.board_size, layers=args.layers,
             intermediate_channels=args.intermediate_channels)
     elif args.model_type == 'inception':
         model = InceptionModel(board_size=args.board_size, layers=args.layers, 
@@ -37,6 +35,7 @@ def create_model(args):
         model = NoMCTSModel(board_size=args.board_size, layers=args.layers,
                         intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
     return model
+
 
 def create_model_from_args(args):
     model = create_model(args)
@@ -51,6 +50,7 @@ def create_model_from_args(args):
         'optimizer': False
         }, model_file)
     print(f'wrote {model_file}\n')
+
 
 if __name__ == '__main__':
     args = get_args('config.ini')
