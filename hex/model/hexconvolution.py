@@ -107,6 +107,23 @@ class NoMCTSModel(nn.Module):
         return F.logsigmoid(self.policylin(p) - illegal)
 
 
+class NoSwitchModel(NoMCTSModel):
+    '''
+    same functionality as NoMCTSModel, but switching is illegal
+    '''
+    def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach_conv=1, skip_layer='single'):
+        super(NoSwitchModel, self).__init__(board_size, layers, intermediate_channels=256, policy_channels=2, reach_conv=1, skip_layer='single')
+
+    def forward(self, x):
+        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        illegal = x_sum * torch.exp(torch.tanh(x_sum.sum(dim=1))*10).unsqueeze(1).expand_as(x_sum) - x_sum
+        x = self.conv(x)
+        for skiplayer in self.skiplayers:
+            x = skiplayer(x)
+        p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
+        return F.logsigmoid(self.policylin(p) - illegal)
+
+
 class InceptionModel(nn.Module):
     '''
     model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
