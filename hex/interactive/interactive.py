@@ -23,7 +23,6 @@ def get_args():
     parser.add_argument('--temperature_freeze', type=int, default=config.getint('INTERACTIVE', 'temperature_freeze'))
     parser.add_argument('--first_move_ai', type=bool, default=config.getboolean('INTERACTIVE', 'first_move_ai'))
     parser.add_argument('--gui_radius', type=int, default=config.getint('INTERACTIVE', 'gui_radius'))
-    parser.add_argument('--num_mcts_simulations', type=int, default=config.getint('INTERACTIVE', 'num_mcts_simulations'))
     parser.add_argument('--noise_epsilon', type=float, default=config.getfloat('INTERACTIVE', 'noise_epsilon'))
     parser.add_argument('--noise_spread', type=float, default=config.getfloat('INTERACTIVE', 'noise_spread'))
 
