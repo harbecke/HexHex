@@ -7,3 +7,4 @@ config.ini
 ratings.txt
 *.profile
 game_history.pgn
+Pipfile
