@@ -62,15 +62,19 @@ class RepeatedSelfTrainer:
         return self_play_args.get('run_name')
 
     def prepare_training_data(self):
-        N = self.config.getint('REPEATED SELF TRAINING', 'train_samples_pool_size')
+        """
+        gathers the last n training samples and writes them into a separate file.
+        :return: filename of file with training data
+        """
+        n = self.config.getint('REPEATED SELF TRAINING', 'train_samples_pool_size')
         x, y, z = torch.Tensor(), torch.LongTensor(), torch.Tensor()
         for file in self.data_files[::-1]:
-            x_new,y_new,z_new = torch.load('data/' + file + '_0.pt')
+            x_new, y_new, z_new = torch.load('data/' + file + '_0.pt')
             x, y, z = torch.cat([x, x_new]), torch.cat([y, y_new]), torch.cat([z, z_new])
-            if x.shape[0] >= N:
+            if x.shape[0] >= n:
                 break
-        if x.shape[0] > N:
-            x, y, z = x[:N], y[:N], z[:N]
+        if x.shape[0] > n:
+            x, y, z = x[:n], y[:n], z[:n]
         torch.save((x, y, z), 'data/current_training_data_0.pt')
         return 'current_training_data'
 
