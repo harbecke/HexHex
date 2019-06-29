@@ -3,15 +3,15 @@ import argparse
 import os
 import time
 from configparser import ConfigParser
+
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data.dataset import TensorDataset, ConcatDataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
-from hex.utils.utils import device, load_model, create_optimizer, load_optimizer
-from hex.utils.losses import LQLoss
 from hex.utils.logger import logger
+from hex.utils.utils import device, load_model, create_optimizer, load_optimizer
 
 
 def get_args(config_file):
@@ -35,6 +35,7 @@ def get_args(config_file):
     parser.add_argument('--print_loss_frequency', type=int, default=config.getint('TRAIN', 'print_loss_frequency'))
     return parser.parse_args(args=[])
 
+
 class LossTriple:
     def __init__(self, value_loss, policy_loss, param_loss):
         self.value = value_loss
@@ -44,6 +45,7 @@ class LossTriple:
     def total(self):
         return self.value + self.policy + self.param
 
+
 class TrainingStats:
     def __init__(self):
         self.stats = {
@@ -51,7 +53,6 @@ class TrainingStats:
             'policy': {'train': [], 'val': []},
             'param': {'train': [], 'val': []},
         }
-
 
     def add_batch(self, phase: str, epoch: int, batch_idx: int, loss: LossTriple):
         for type in self.all_loss_types():
@@ -135,7 +136,7 @@ class Training:
                         % (epoch, epoch * len(train_loader), self.stats.last_values_to_string())
                         )
 
-        print('Finished Training\n')
+        logger.debug('Finished Training\n')
         return self.model, self.optimizer
 
     def measure_mean_losses(self, board_states, policies_train, value_train):
@@ -149,7 +150,6 @@ class Training:
         param_loss = self.args.weight_decay * \
                      sum(torch.pow(p, 2).sum() for p in self.model.parameters())
         return param_loss, policy_loss, value_loss
-
 
 
 def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, weight_decay,
@@ -193,30 +193,31 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
                         val_loss = criterion(val_values.view(-1), validation_triple[2])
 
                     duration = int(time.time() - start)
-                    print('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
+                    logger.info('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
                             % (i + 1, len(dataloader), val_loss, loss.item(), l2loss, weighted_param_loss))
 
                     with open(log_file, 'a') as log:
                         log.write(f'{i + 1} {val_loss} {loss.item()} {weighted_param_loss} {duration}\n')
 
                 else:
-                    print('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
+                    logger.info('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
                           % (i + 1, len(dataloader), loss.item(), l2loss, weighted_param_loss))
 
         l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
         weighted_param_loss = weight_decay * l2loss
-        print('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
+        logger.info('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
               % (epoch + 1, running_loss/(i+1), l2loss, weighted_param_loss))
     
-    print('Finished Training\n')
+    logger.debug('Finished Training\n')
     return model, optimizer
 
 
 def train(args):
-    '''
+    """
     loads data and sets criterion and optimizer for train_model
-    '''
-    print("=== training model ===")
+    """
+    logger.info("")
+    logger.info("=== training model ===")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset_list = []
 
@@ -276,7 +277,7 @@ def train(args):
         'intermediate_channels': model_args.intermediate_channels,
         'optimizer': False #trained_optimizer.state_dict()
         }, file_name)
-    print(f'wrote {file_name}')
+    logger.info(f'wrote {file_name}')
 
 
 def train_by_config_file(config_file):

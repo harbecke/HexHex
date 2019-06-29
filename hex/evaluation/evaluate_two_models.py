@@ -8,6 +8,7 @@ import torch
 from hex.logic import hexboard
 from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
+from hex.utils.logger import logger
 from hex.utils.utils import load_model
 from hex.visualization.image import draw_board_image
 
@@ -20,12 +21,12 @@ def play_games(models, device, openings, number_of_games, batch_size, temperatur
         openings = list(hexboard.first_k_moves(board_size, 2))
         number_of_games = len(openings)
 
-    print(f'playing {number_of_games} games')
+    logger.debug(f'playing {number_of_games} games')
 
     time = strftime("%Y-%m-%d_%H-%M-%S", gmtime())
     result = [[0, 0], [0, 0]]
 
-    print(f'    M1 - M2')
+    logger.debug(f'    M1 - M2')
     for starting_model in range(2):
         game_number = 0
 
@@ -56,11 +57,11 @@ def play_games(models, device, openings, number_of_games, batch_size, temperatur
                 game_number += 1
         color_model1 = 'B' if starting_model == 0 else 'W'
         color_model2 = 'W' if starting_model == 0 else 'B'
-        print(f'{color_model1}:{color_model2} {result[starting_model][0]} : {result[starting_model][1]}')
+        logger.debug(f'{color_model1}:{color_model2} {result[starting_model][0]} : {result[starting_model][1]}')
 
     adbc = (result[0][0]*result[1][0] - result[0][1]*result[1][1])
     signed_chi_squared = 4*adbc*abs(adbc)/((result[0][0]+result[1][1]+result[0][1]+result[1][0])*(result[0][0]+result[1][1])*(result[0][1]+result[1][0])+1)
-    print(f'signed_chi_squared = {signed_chi_squared}')
+    logger.debug(f'signed_chi_squared = {signed_chi_squared}')
     return result, signed_chi_squared
 
 
@@ -96,7 +97,6 @@ def evaluate(config_file = 'config.ini'):
             number_of_games=args.number_of_games,
             device=device,
             batch_size=args.batch_size,
-            board_size=args.board_size,
             temperature=args.temperature,
             temperature_decay=args.temperature_decay,
             plot_board=args.plot_board

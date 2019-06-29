@@ -6,6 +6,7 @@ import torch
 from hex.creation import create_data, create_model
 from hex.elo import elo
 from hex.training import train
+from hex.utils.logger import logger
 from hex.utils.utils import dotdict
 from hex.utils.utils import load_model
 
@@ -94,6 +95,8 @@ class RepeatedSelfTrainer:
         train.train(training_args)
 
     def create_all_elo_ratings(self):
+        logger.info("")
+        logger.info("=== Updating ELO ratings ===")
         if len(self.model_names) <= 1:
             return
         args = self.config['ELO']
@@ -107,10 +110,13 @@ class RepeatedSelfTrainer:
         model_with_ratings = list(zip(ratings, self.model_names))
         model_with_ratings.sort(reverse=True)
 
+        output = ['{:6} {}'.format(int(rating), model) for rating, model in model_with_ratings]
+        for line in output:
+            logger.info(line)
+
         with open('ratings.txt', 'w') as file:
-            file.write('ELO\t\tModel\n')
-            for rating, model in model_with_ratings:
-                file.write('{}\t\t{}\n'.format(int(rating), model))
+            file.write('   ELO Model\n')
+            file.write('\n'.join(output))
 
     def create_elo_ratings(self, latest_model):
         # TODO would like to incrementally update elo ratings here

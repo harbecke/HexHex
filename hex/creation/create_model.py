@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
-import torch
-from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel
-
 import argparse
 from configparser import ConfigParser
+
+import torch
+
+from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel
+from hex.utils.logger import logger
+
 
 def get_args(config_file):
     config = ConfigParser()
@@ -22,7 +25,7 @@ def get_args(config_file):
 
 
 def create_model(args):
-    print("=== creating model ===")
+    logger.debug("=== creating model ===")
     if args.model_type == 'random':
         model = RandomModel(board_size=args.board_size)
     elif args.model_type == 'noswitch':
@@ -49,7 +52,7 @@ def create_model_from_args(args):
         'intermediate_channels': args.intermediate_channels,
         'optimizer': False
         }, model_file)
-    print(f'wrote {model_file}\n')
+    logger.info(f'wrote {model_file}\n')
 
 
 if __name__ == '__main__':

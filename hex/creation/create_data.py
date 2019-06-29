@@ -58,7 +58,7 @@ def generate_data_files(file_counter_start, file_counter_end, samples_per_file, 
     generates data files with run_name indexed from file_counter_start to file_counter_end
     samples_per_files number of triples (board, move, target)
     '''
-    print("=== creating data from self play ===")
+    logger.debug("=== creating data from self play ===")
     all_board_states = torch.Tensor()
     all_moves = torch.LongTensor()
     all_targets = torch.Tensor()
@@ -85,13 +85,14 @@ def generate_data_files(file_counter_start, file_counter_end, samples_per_file, 
                     all_targets[:samples_per_file].clone()
                 ),
                 file_name)
-        print(f'wrote {file_name}')
+        logger.info(f'wrote {file_name}')
         file_counter += 1
 
         all_board_states = all_board_states[samples_per_file:]
         all_moves = all_moves[samples_per_file:]
         all_targets = all_targets[samples_per_file:]
-    print("")
+    logger.debug("")
+
 
 def get_args(config_file):
     config = ConfigParser()
@@ -126,6 +127,7 @@ def main(config_file='config.ini'):
 
 
 def create_self_play_data(args, model):
+    logger.info("")
     logger.info("=== creating data from self play ===")
     self_play_generator = SelfPlayGenerator(model, args)
     position_generator = self_play_generator.position_generator()
