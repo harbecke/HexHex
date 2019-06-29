@@ -16,6 +16,7 @@ class RepeatedSelfTrainer:
         self.config.read(config_file)
         self.model_names = []
         self.data_files = []
+        self.tournament_results = None
 
     def repeated_self_training(self):
         model_name = self.create_initial_model()
@@ -96,7 +97,20 @@ class RepeatedSelfTrainer:
         if len(self.model_names) <= 1:
             return
         args = self.config['ELO']
-        elo.output_ratings(self.model_names, args=args)
+        self.tournament_results = elo.add_to_tournament(
+            self.model_names[:-1],
+            self.model_names[-1],
+            args,
+            self.tournament_results
+        )
+        ratings = elo.create_ratings(self.tournament_results)
+        model_with_ratings = list(zip(ratings, self.model_names))
+        model_with_ratings.sort(reverse=True)
+
+        with open('ratings.txt', 'w') as file:
+            file.write('ELO\t\tModel\n')
+            for rating, model in model_with_ratings:
+                file.write('{}\t\t{}\n'.format(int(rating), model))
 
     def create_elo_ratings(self, latest_model):
         # TODO would like to incrementally update elo ratings here
