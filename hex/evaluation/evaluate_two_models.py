@@ -12,7 +12,10 @@ from hex.utils.utils import load_model
 from hex.visualization.image import draw_board_image
 
 
-def play_games(models, device, openings, number_of_games, batch_size, board_size, temperature, temperature_decay, plot_board):
+def play_games(models, device, openings, number_of_games, batch_size, temperature, temperature_decay, plot_board):
+    assert(len(models) == 2)
+    assert(models[0].board_size == models[1].board_size)
+    board_size = models[0].board_size
     if openings:
         openings = list(hexboard.first_k_moves(board_size, 2))
         number_of_games = len(openings)

@@ -5,60 +5,51 @@ from configparser import ConfigParser
 
 import torch
 
-from hex.logic.hexboard import Board, to_move
+from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
-from hex.model.hexconvolution import NoMCTSModel
+from hex.utils import utils
 from hex.utils.logger import logger
 from hex.utils.utils import load_model
 
 
 class SelfPlayGenerator:
-    def __init__(self, model: NoMCTSModel, args):
+    def __init__(self, model, args):
         self.model = model
         self.args = args
         self.board_size = model.board_size
 
     def self_play_game(self):
         """
-        Generates data files from MCTS runs.
+        Generates data points from self play.
         yields 3 tensors containing for each move:
-        - board_tensor
-        - mcts policy
+        - board
+        - move
         - result of game for active player (-1 or 1)
         """
-        all_board_tensors = []
-        all_mcts_policies = []
+        boards = [Board(size=self.board_size) for _ in range(self.args.getint('batch_size'))]
+        multihexgame = MultiHexGame(
+            boards=boards,
+            models=(self.model,),
+            device=utils.device,
+            noise=self.args.get('noise'),
+            noise_parameters=self.args.get('noise_parameters'),
+            temperature=self.args.getfloat('temperature'),
+            temperature_decay=self.args.getfloat('temperature_decay')
+        )
+        board_states, moves, targets = multihexgame.play_moves()
 
-        search = MCTSSearch(self.model, self.args)
-        board = Board(size=self.board_size)
-        while not board.winner:
-            move_counts, Qs = search.simulate(board)
-            temperature_freeze = len(board.move_history) >= self.args.temperature_freeze
-            temperature = 0 if temperature_freeze else self.args.temperature
-            mcts_policy = search.move_probabilities(move_counts, temperature)
-            move = search.sample_move(mcts_policy)
-
-            all_board_tensors.append(board.board_tensor.clone())
-            all_mcts_policies.append(torch.Tensor(mcts_policy).clone())
-
-            board.set_stone(to_move(move, self.board_size))
-
-        result_first_player = 1 if board.winner == [0] else -1
-        current_result = result_first_player
-
-        for board_tensor, mcts_policy in zip(all_board_tensors, all_mcts_policies):
-            yield board_tensor, mcts_policy, torch.Tensor([current_result])
-            current_result = -current_result
+        for board_state, move, target in zip(board_states, moves, targets):
+            yield board_state, move, target
 
     def position_generator(self):
         while True:
-            for board_tensor, mcts_policy, result_tensor in self.self_play_game():
-                yield board_tensor, mcts_policy, result_tensor
-                mirror_board = torch.flip(board_tensor, dims=(1, 2)).clone()
-                mirror_policy = torch.flip(mcts_policy, dims=(0,)).clone()
-                same_result = result_tensor.clone()
-                yield mirror_board, mirror_policy, same_result
-
+            for board_tensor, move_tensor, result_tensor in self.self_play_game():
+                yield board_tensor, move_tensor, result_tensor
+                # TODO implement mirror logic here, for data augmentation
+                # mirror_board = torch.flip(board_tensor, dims=(1, 2)).clone()
+                # mirror_policy = torch.flip(mcts_policy, dims=(0,)).clone()
+                # same_result = result_tensor.clone()
+                # yield mirror_board, mirror_policy, same_result
 
 
 def generate_data_files(file_counter_start, file_counter_end, samples_per_file, model, device, batch_size, run_name,
@@ -75,8 +66,8 @@ def generate_data_files(file_counter_start, file_counter_end, samples_per_file, 
     file_counter = file_counter_start
     while file_counter < file_counter_end:
         while all_board_states.shape[0] < samples_per_file:
-            boards = [Board(size=board_size) for idx in range(batch_size)]
-            multihexgame = MultiHexGame(boards=boards, models=(model,), device=device, noise=noise, 
+            boards = [Board(size=board_size) for _ in range(batch_size)]
+            multihexgame = MultiHexGame(boards=boards, models=(model,), device=device, noise=noise,
                 noise_parameters=noise_parameters, temperature=temperature, temperature_decay=temperature_decay)
             board_states, moves, targets = multihexgame.play_moves()
 
@@ -138,18 +129,18 @@ def create_self_play_data(args, model):
     logger.info("=== creating data from self play ===")
     self_play_generator = SelfPlayGenerator(model, args)
     position_generator = self_play_generator.position_generator()
-    for file_idx in range(args.data_range_min, args.data_range_max):
+    for file_idx in range(args.getint('data_range_min'), args.getint('data_range_max')):
         all_boards_tensor = torch.Tensor()
-        all_mcts_policies = torch.Tensor()
+        all_moves = torch.LongTensor()
         all_results = torch.Tensor()
-        for _ in range(args.samples_per_file):
-            board_tensor, mcts_policy, result = next(position_generator)
+        for _ in range(args.getint('samples_per_file')):
+            board_tensor, move, result = next(position_generator)
             all_boards_tensor = torch.cat((all_boards_tensor, board_tensor.unsqueeze(0)))
-            all_mcts_policies = torch.cat((all_mcts_policies, mcts_policy.unsqueeze(0)))
+            all_moves = torch.cat((all_moves, move.unsqueeze(0)))
             all_results = torch.cat((all_results, result.unsqueeze(0)))
 
-        file_name = f'data/{args.run_name}_{file_idx}.pt'
-        torch.save((all_boards_tensor, all_mcts_policies, all_results), file_name)
+        file_name = f'data/{args.get("run_name")}_{file_idx}.pt'
+        torch.save((all_boards_tensor, all_moves, all_results), file_name)
         logger.info(f'self-play data generation wrote {file_name}')
 
 

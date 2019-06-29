@@ -1,7 +1,7 @@
-import torch
-
-from configparser import ConfigParser
 import csv
+from configparser import ConfigParser
+
+import torch
 
 from hex.evaluation.evaluate_two_models import get_args, play_games
 from hex.utils.utils import load_model
@@ -39,7 +39,6 @@ def multi_evaluate(config_file = 'config.ini'):
                         number_of_games=args.number_of_games,
                         device=device,
                         batch_size=args.batch_size,
-                        board_size=args.board_size,
                         temperature=args.temperature,
                         temperature_decay=args.temperature_decay,
                         plot_board=args.plot_board)[1])

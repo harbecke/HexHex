@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 import itertools
-import torch
 import math
 
-from hex.utils.utils import device, load_model
 from hex.evaluation import evaluate_two_models
+from hex.utils.utils import device, load_model
 
 
 def play_tournament(model_list, args):
-
     num_models = len(model_list)
     models = [load_model(f'models/{model_file}.pt')[0] for model_file in model_list]
     all_results = [[0 for _ in range(num_models)] for _ in range(num_models)]
@@ -17,13 +15,12 @@ def play_tournament(model_list, args):
         result, signed_chi_squared = evaluate_two_models.play_games(
                 models=(models[first_idx], models[second_idx]),
                 device=device,
-                openings=args.openings,
-                number_of_games=args.number_of_games,
-                batch_size=args.batch_size,
-                board_size=args.board_size,
-                temperature=args.temperature,
-                temperature_decay=args.temperature_decay,
-                plot_board=args.plot_board
+                openings=args.getboolean('openings'),
+                number_of_games=args.getint('number_of_games'),
+                batch_size=args.getint('batch_size'),
+                temperature=args.getfloat('temperature'),
+                temperature_decay=args.getfloat('temperature_decay'),
+                plot_board=args.getboolean('plot_board')
         )
         all_results[first_idx][second_idx] = result[0][0] + result[1][0]
         all_results[second_idx][first_idx] = result[0][1] + result[1][1]
@@ -53,7 +50,6 @@ def create_ratings(results, runs=100):
 
 
 def output_ratings(model_list, args, output_file='ratings.txt'):
-    
     tournament = play_tournament(model_list, args)
     ratings = create_ratings(tournament)
     model_with_ratings = list(zip(ratings, model_list))

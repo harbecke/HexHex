@@ -2,3 +2,5 @@ jupyter
 matplotlib
 pygame
 numpy
+image
+torch
