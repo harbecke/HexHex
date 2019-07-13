@@ -24,7 +24,7 @@ class RepeatedSelfTrainer:
         for i in range(100):
             data_file = self.create_data_samples(model_name)
             self.data_files.append(data_file)
-            new_model_name = '%s_%04d' % (self.config.get('REPEATED SELF TRAINING', 'name'), i)
+            new_model_name = '%s_%04d' % (self.config.get('CREATE MODEL', 'model_name'), i)
             data_file = self.prepare_training_data()
             self.train_model(model_name, new_model_name, data_file)
             model_name = new_model_name
@@ -33,14 +33,16 @@ class RepeatedSelfTrainer:
             self.create_all_elo_ratings()
 
     def create_initial_model(self):
+        config = self.config['CREATE MODEL']
         model_creation_args = dotdict({
-            'model_type': self.config.get('REPEATED SELF TRAINING', 'model_type'),
-            'board_size': self.config.getint('REPEATED SELF TRAINING', 'board_size'),
-            'layers': self.config.getint('REPEATED SELF TRAINING', 'layers'),
-            'intermediate_channels': self.config.getint('REPEATED SELF TRAINING', 'intermediate_channels'),
-            'layer_type': self.config.get('REPEATED SELF TRAINING', 'layer_type'),
-            'model_name': self.config.get('REPEATED SELF TRAINING', 'name') + '_initial'
+            'model_type': config.get('model_type'),
+            'board_size': config.getint('board_size'),
+            'layers': config.getint('layers'),
+            'intermediate_channels': config.getint('intermediate_channels'),
+            'layer_type': config.get('layer_type'),
+            'model_name': config.get('model_name') + '_initial'
         })
+        self.model_names += [model_creation_args.model_name]
         create_model.create_model_from_args(model_creation_args)
         return model_creation_args.model_name
 
@@ -50,11 +52,7 @@ class RepeatedSelfTrainer:
         self_play_args = self.config['CREATE DATA']
         self_play_args['data_range_min'] = '0'
         self_play_args['data_range_max'] = '1'
-        self_play_args['samples_per_file'] = self.config.get('REPEATED SELF TRAINING', 'samples_per_model')
         self_play_args['run_name'] = model_name
-        self_play_args['noise_epsilon'] = self.config.get('REPEATED SELF TRAINING', 'noise_epsilon')
-        self_play_args['noise_spread'] = self.config.get('REPEATED SELF TRAINING', 'noise_spread')
-        self_play_args['temperature'] = self.config.get('REPEATED SELF TRAINING', 'temperature')
 
         create_data.create_self_play_data(
                 self_play_args, model
@@ -79,26 +77,30 @@ class RepeatedSelfTrainer:
         return 'current_training_data'
 
     def train_model(self, input_model, output_model, data_file):
+        config = self.config['TRAIN']
         training_args = dotdict({
             'load_model': input_model,
             'save_model': output_model,
             'data': data_file,
             'data_range_min': 0,
             'data_range_max': 1,
-            'batch_size': self.config.getint('TRAIN', 'batch_size'),
-            'optimizer': self.config.get('TRAIN', 'optimizer'),
-            'optimizer_load': self.config.getboolean('TRAIN', 'optimizer_load'),
-            'learning_rate': self.config.getfloat('TRAIN', 'learning_rate'),
+            'batch_size': config.getint('batch_size'),
+            'optimizer': config.get('optimizer'),
+            'optimizer_load': config.getboolean('optimizer_load'),
+            'learning_rate': config.getfloat('learning_rate'),
             'validation_bool': False,
-            'epochs': self.config.getfloat('TRAIN', 'epochs'),
-            'samples_per_epoch': self.config.getint('TRAIN', 'samples_per_epoch'),
-            'weight_decay': self.config.getfloat('TRAIN', 'weight_decay'),
+            'epochs': config.getfloat('epochs'),
+            'samples_per_epoch': config.getint('samples_per_epoch'),
+            'weight_decay': config.getfloat('weight_decay'),
             'validation_split': 0.,
-            'print_loss_frequency': self.config.getint('TRAIN', 'print_loss_frequency')
+            'print_loss_frequency': config.getint('print_loss_frequency')
         })
         train.train(training_args)
 
     def create_all_elo_ratings(self):
+        """
+        Incrementally updates ELO ratings by playing all games between latest model and all other models.
+        """
         logger.info("")
         logger.info("=== Updating ELO ratings ===")
         if len(self.model_names) <= 1:
@@ -121,10 +123,6 @@ class RepeatedSelfTrainer:
         with open('ratings.txt', 'w') as file:
             file.write('   ELO Model\n')
             file.write('\n'.join(output))
-
-    def create_elo_ratings(self, latest_model):
-        # TODO would like to incrementally update elo ratings here
-        pass
 
 
 if __name__ == '__main__':
