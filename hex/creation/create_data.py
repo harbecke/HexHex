@@ -141,6 +141,15 @@ def create_self_play_data(args, model):
             all_moves = torch.cat((all_moves, move.unsqueeze(0)))
             all_results = torch.cat((all_results, result.unsqueeze(0)))
 
+        def k_th_move_idx(k):
+            return [idx for idx in range(all_boards_tensor.shape[0]) if torch.sum(all_boards_tensor[idx, :2]) == k]
+
+        first_move_indices = k_th_move_idx(0)
+        first_move_frequency = torch.zeros([model.board_size ** 2], dtype=torch.int32)
+        for x in first_move_indices:
+            first_move_frequency[all_moves[x].item()] += 1
+        logger.info("First move frequency:\n" + str(first_move_frequency.view(3, 3).numpy()))
+
         file_name = f'data/{args.get("run_name")}_{file_idx}.pt'
         torch.save((all_boards_tensor, all_moves, all_results), file_name)
         logger.info(f'self-play data generation wrote {file_name}')
