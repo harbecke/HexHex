@@ -255,7 +255,7 @@ def train(config):
 
     val_triple = None
     if config.getboolean('validation_bool'):
-        val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{config.get("validation_data")}.pt')
+        val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{model.board_size}_puzzle.pt')
         val_triple = (val_board_tensor.to(device), val_moves_tensor.to(device), val_target_tensor.to(device))
 
     criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)

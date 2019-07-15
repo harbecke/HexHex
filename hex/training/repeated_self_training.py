@@ -30,7 +30,7 @@ class RepeatedSelfTrainer:
             model_name = new_model_name
             self.model_names.append(model_name)
             self.create_all_elo_ratings()
-            win_position.win_count(f'models/{model_name}.pt', self.config)
+            win_position.win_count(f'models/{model_name}.pt', self.config['VS RANDOM'])
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
