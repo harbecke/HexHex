@@ -235,7 +235,6 @@ def train(config):
         sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len * config.getfloat('epochs'))])
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.getint('batch_size'), sampler=sampler,
                                                      num_workers=0)
-        config['epochs'] = '1'
 
     else:
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.getint('batch_size'), shuffle=True,
