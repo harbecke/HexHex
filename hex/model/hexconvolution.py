@@ -79,7 +79,9 @@ class NoMCTSModel(nn.Module):
     model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
     then a specified amount of residual or skip-layers https://en.wikipedia.org/wiki/Residual_neural_network
     then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
-    the last sigmoid function converts all values to probabilities: interpretable as probability to win the game when making this move
+    value range is (-inf, inf) 
+    for training the sigmoid is taken, interpretable as probability to win the game when making this move
+    for data generation and evaluation the softmax is taken to select a move
     '''
     def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach_conv=1, skip_layer='single'):
         super(NoMCTSModel, self).__init__()
@@ -104,7 +106,7 @@ class NoMCTSModel(nn.Module):
         for skiplayer in self.skiplayers:
             x = skiplayer(x)
         p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
-        return F.logsigmoid(self.policylin(p) - illegal)
+        return self.policylin(p) - illegal
 
 
 class NoSwitchModel(NoMCTSModel):
@@ -121,7 +123,7 @@ class NoSwitchModel(NoMCTSModel):
         for skiplayer in self.skiplayers:
             x = skiplayer(x)
         p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
-        return F.logsigmoid(self.policylin(p) - illegal)
+        return self.policylin(p) - illegal
 
 
 class InceptionModel(nn.Module):
@@ -129,7 +131,6 @@ class InceptionModel(nn.Module):
     model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
     then a specified amount of residual or skip-layers https://en.wikipedia.org/wiki/Residual_neural_network
     then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
-    the last sigmoid function converts all values to probabilities: interpretable as probability to win the game when making this move
     '''
     def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach_conv=1):
         super(InceptionnModel, self).__init__()
@@ -149,20 +150,19 @@ class InceptionModel(nn.Module):
         for inceptionlayer in self.inceptionlayers:
             x = inceptionlayer(x)
         p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
-        return F.logsigmoid(self.policylin(p) - illegal)
+        return self.policylin(p) - illegal
 
 
 class RandomModel(nn.Module):
     '''
-    outputs 0.5 for every legal move
-    makes random moves if temperature*temperature_decay > 0
+    outputs negative values for every illegal move, 0 otherwise
+    only makes completely random moves if temperature*temperature_decay > 0
     '''
     def __init__(self, board_size):
         super(RandomModel, self).__init__()
         self.board_size = board_size
 
     def forward(self, x):
-        # returns logits
         x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         return -illegal

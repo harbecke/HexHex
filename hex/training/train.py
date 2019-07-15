@@ -173,7 +173,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
             optimizer.zero_grad()
 
-            outputs = torch.exp(model(board_states))
+            outputs = torch.sigmoid(model(board_states))
             output_values = torch.gather(outputs, 1, moves)
 
             loss = criterion(output_values.view(-1), labels)
@@ -188,7 +188,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
                 if validation_triple is not None:
                     with torch.no_grad():
-                        val_pred_tensor = torch.exp(model(validation_triple[0]))
+                        val_pred_tensor = torch.sigmoid(model(validation_triple[0]))
                         val_values = torch.gather(val_pred_tensor, 1, validation_triple[1])
                         val_loss = criterion(val_values.view(-1), validation_triple[2])
 

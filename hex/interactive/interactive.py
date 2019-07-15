@@ -52,7 +52,7 @@ class InteractiveGame:
 
     def play_ai_move(self):
         move_ratings = self.game.batched_single_move(self.model)
-        field_text = [f'{int(100*torch.exp(rating))}' for rating in move_ratings[0]]
+        field_text = [f'{int(100*torch.sigmoid(rating))}' for rating in move_ratings[0]]
         self.gui.update_board(self.board, field_text=field_text)
 
         if self.board.winner:

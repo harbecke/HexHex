@@ -8,11 +8,11 @@ from hex.utils.utils import zip_list_of_lists_first_dim_reversed
 
 
 def tempered_moves_selection(output_tensor, temperature):
+    #samples with softmax from unnormalized values (if temp>0) and selects move
     if temperature < 10**(-10):
         return output_tensor.argmax(1)
     else:
-        normalized_output_tensor = output_tensor-output_tensor.max(1)[0].unsqueeze(1)
-        temperature_output = normalized_output_tensor*(1/temperature)
+        temperature_output = output_tensor*temperature
         return Categorical(logits=temperature_output).sample()
 
 
