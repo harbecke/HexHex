@@ -25,7 +25,6 @@ def get_args(config_file):
 
 
 def create_model(args):
-    logger.debug("=== creating model ===")
     if args.model_type == 'random':
         model = RandomModel(board_size=args.board_size)
     elif args.model_type == 'noswitch':

@@ -43,7 +43,6 @@ def all_unique(x):
 
 
 def load_model(model_file):
-    logger.debug("=== loading model ===")
     checkpoint = torch.load(model_file, map_location=device)
 
     parser = argparse.ArgumentParser()
