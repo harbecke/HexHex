@@ -162,6 +162,7 @@ class RandomModel(nn.Module):
         self.board_size = board_size
 
     def forward(self, x):
-        double_stones = (x[:,0]*x[:,1]).view(-1,self.board_size**2)
-        stone_bool = (x[:,0]+x[:,1]).view(-1,self.board_size**2)-double_stones
-        return 0.5*(torch.ones_like(stone_bool)-torch.sigmoid(((1000*double_stones+stone_bool).sum(dim=1)-1.5)*200).unsqueeze(1).expand_as(stone_bool)*stone_bool)
+        # returns logits
+        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
+        return -illegal
