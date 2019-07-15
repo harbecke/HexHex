@@ -4,6 +4,8 @@ import itertools
 import math
 from collections import defaultdict
 
+import numpy as np
+
 from hex.evaluation import evaluate_two_models
 from hex.utils.utils import device, load_model
 
@@ -47,10 +49,14 @@ def add_to_tournament(model_list, new_model_name, args, old_results):
 
     new_index = len(model_list)
 
-    models = [load_model(f'models/{model_file}.pt') for model_file in (model_list + [new_model_name])]
-    new_model = models[new_index]
+    sub_model_ids = list(np.random.choice(range(len(model_list)),
+                                          size=min(len(model_list), args.getint('max_num_opponents', fallback=10)),
+                                          replace=False))
+    models = [load_model(f'models/{model_file}.pt') for model_file in model_list]
+    new_model = load_model(f'models/{new_model_name}.pt')
 
-    for old_index, old_model in enumerate(models[:new_index]):
+    for old_index in sub_model_ids:
+        old_model = models[old_index]
         result, signed_chi_squared = evaluate_two_models.play_games(
                 models=(old_model, new_model),
                 device=device,
@@ -73,7 +79,7 @@ def create_ratings(results, runs=100):
 
     num_models = len(results)
     # + 0.001 for numerical reasons
-    results_sum = [sum(results[x][y] + .001 for y in range(num_models)) for x in range(num_models)]
+    results_sum = [sum(results[x][y] + 0.01 for y in range(num_models)) for x in range(num_models)]
     games = 2*sum(results_sum)/num_models
     p_list = results_sum[:]
 
