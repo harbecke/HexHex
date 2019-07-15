@@ -230,7 +230,7 @@ def train(config):
     val_part = int(config.getfloat('validation_split') * total_len)
     train_dataset, val_dataset = torch.utils.data.random_split(concat_dataset, [total_len - val_part, val_part])
 
-    if config.getint('epochs') < 1:
+    if config.getfloat('epochs') < 1:
         concat_len = train_dataset.__len__()
         sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len * config.getfloat('epochs'))])
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.getint('batch_size'), sampler=sampler,
