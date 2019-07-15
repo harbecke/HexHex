@@ -212,7 +212,7 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
     return model, optimizer
 
 
-def train(args):
+def train(config):
     """
     loads data and sets criterion and optimizer for train_model
     """
@@ -221,53 +221,48 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset_list = []
 
-    for idx in range(args.data_range_min, args.data_range_max):
-        board_states, moves, targets = torch.load('data/{}_{}.pt'.format(args.data, idx))
+    for idx in range(config.getint('data_range_min'), config.getint('data_range_max')):
+        board_states, moves, targets = torch.load('data/{}_{}.pt'.format(config.get('data'), idx))
         dataset_list.append(TensorDataset(board_states, moves, targets))
 
     concat_dataset = ConcatDataset(dataset_list)
     total_len = len(concat_dataset)
-    val_part = int(args.validation_split * total_len)
+    val_part = int(config.getfloat('validation_split') * total_len)
     train_dataset, val_dataset = torch.utils.data.random_split(concat_dataset, [total_len - val_part, val_part])
 
-    if args.epochs < 1:
+    if config.getint('epochs') < 1:
         concat_len = train_dataset.__len__()
-        sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len * args.epochs)])
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler,
+        sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len * config.getfloat('epochs'))])
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.getint('batch_size'), sampler=sampler,
                                                      num_workers=0)
-        args.epochs = 1
+        config['epochs'] = '1'
 
     else:
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.getint('batch_size'), shuffle=True,
                                                      num_workers=0)
 
-    model_file = f'models/{args.load_model}.pt'
+    model_file = f'models/{config.get("load_model")}.pt'
     model, model_args = load_model(model_file)
     nn.DataParallel(model).to(device)
 
-    # don't use weight_decay in optimizer for MCTSModel, as the outcome is more predictable if measured in loss directly
-    optimizer_weight_decay = 0 if model.__class__.__name__ == 'MCTSModel' else args.weight_decay
+    optimizer_weight_decay = config.getfloat('weight_decay')
 
-    optimizer = create_optimizer(optimizer_type=args.optimizer, parameters=model.parameters(), 
-        optimizer_weight_decay=optimizer_weight_decay, learning_rate=args.learning_rate)
+    optimizer = create_optimizer(optimizer_type=config.get('optimizer'), parameters=model.parameters(),
+        optimizer_weight_decay=optimizer_weight_decay, learning_rate=config.getfloat('learning_rate'))
 
-    if args.optimizer_load:
+    if config.getboolean('optimizer_load'):
         optimizer = load_optimizer(optimizer, model_file)
 
     val_triple = None
-    if args.validation_bool:
-        val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{args.validation_data}.pt')
+    if config.getboolean('validation_bool'):
+        val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{config.get("validation_data")}.pt')
         val_triple = (val_board_tensor.to(device), val_moves_tensor.to(device), val_target_tensor.to(device))
 
-    if model.__class__.__name__ == 'MCTSModel':
-        training = Training(args, model, optimizer)
-        trained_model, trained_optimizer = training.train_mcts_model(train_dataset, val_dataset)
-    else:
-        criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
-        trained_model, trained_optimizer = train_model(model, args.save_model, train_loader, criterion, optimizer, 
-            int(args.epochs), device, args.weight_decay, args.print_loss_frequency, val_triple)
+    criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
+    trained_model, trained_optimizer = train_model(model, config.get('save_model'), train_loader, criterion, optimizer,
+        int(config.getfloat('epochs')), device, config.getfloat('weight_decay'), config.getint('print_loss_frequency'), val_triple)
 
-    file_name = f'models/{args.save_model}.pt'
+    file_name = f'models/{config.get("save_model")}.pt'
     torch.save({
         'model_state_dict': trained_model.state_dict(),
         'board_size': model_args.board_size,
@@ -278,12 +273,3 @@ def train(args):
         'optimizer': False #trained_optimizer.state_dict()
         }, file_name)
     logger.info(f'wrote {file_name}')
-
-
-def train_by_config_file(config_file):
-    args = get_args(config_file)
-    train(args)
-
-
-if __name__ == "__main__":
-    train_by_config_file('config.ini')

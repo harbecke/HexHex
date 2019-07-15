@@ -79,25 +79,13 @@ class RepeatedSelfTrainer:
 
     def train_model(self, input_model, output_model, data_file):
         config = self.config['TRAIN']
-        training_args = dotdict({
-            'load_model': input_model,
-            'save_model': output_model,
-            'data': data_file,
-            'data_range_min': 0,
-            'data_range_max': 1,
-            'batch_size': config.getint('batch_size'),
-            'optimizer': config.get('optimizer'),
-            'optimizer_load': config.getboolean('optimizer_load'),
-            'learning_rate': config.getfloat('learning_rate'),
-            'validation_bool': config.getboolean('validation_bool'),
-            'validation_data': config.get('validation_data'),
-            'epochs': config.getfloat('epochs'),
-            'samples_per_epoch': config.getint('samples_per_epoch'),
-            'weight_decay': config.getfloat('weight_decay'),
-            'validation_split': 0.,
-            'print_loss_frequency': config.getint('print_loss_frequency')
-        })
-        train.train(training_args)
+        config['load_model'] = input_model
+        config['save_model'] = output_model
+        config['data_range_min'] = '0'
+        config['data_range_max'] = '1'
+        config['validation_split'] = '0'
+        config['data'] = data_file
+        train.train(config)
 
     def create_all_elo_ratings(self):
         """
