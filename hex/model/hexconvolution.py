@@ -165,4 +165,4 @@ class RandomModel(nn.Module):
     def forward(self, x):
         x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
-        return -illegal
+        return torch.rand_like(illegal) - illegal
