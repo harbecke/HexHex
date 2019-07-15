@@ -72,7 +72,8 @@ def create_ratings(results, runs=100):
     # from https://en.wikipedia.org/wiki/Bradley-Terry_model
 
     num_models = len(results)
-    results_sum = [sum(results[x][y] for y in range(num_models)) for x in range(num_models)]
+    # + 0.001 for numerical reasons
+    results_sum = [sum(results[x][y] + .001 for y in range(num_models)) for x in range(num_models)]
     games = 2*sum(results_sum)/num_models
     p_list = results_sum[:]
 
