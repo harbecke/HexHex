@@ -118,7 +118,7 @@ def main(config_file='config.ini'):
     args = get_args(config_file)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model, _ = load_model(f'models/{args.model}.pt')
+    model = load_model(f'models/{args.model}.pt')
 
     generate_data_files(args.data_range_min, args.data_range_max, args.samples_per_file, model, device,
                         args.batch_size, args.run_name, args.noise,

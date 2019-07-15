@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-import sys
-
 import argparse
 import logging
-import torch
+import sys
 from configparser import ConfigParser
 
 from hex.logic import hexboard
@@ -29,7 +27,7 @@ class CliGame:
     def __init__(self, args):
         self.board = None
         self.device = device
-        self.model, _ = load_model(f'models/{args.model}.pt')
+        self.model = load_model(f'models/{args.model}.pt')
         self.args = args
 
 

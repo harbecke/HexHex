@@ -30,8 +30,8 @@ def multi_evaluate(config_file = 'config.ini'):
         for idx2 in range(len(models)):
 
             if idx1 < idx2:
-                model1, _ = load_model(f'models/{args.model1}.pt')
-                model2, _ = load_model(f'models/{args.model2}.pt')
+                model1 = load_model(f'models/{args.model1}.pt')
+                model2 = load_model(f'models/{args.model2}.pt')
                 
                 results[idx1].append(play_games(
                         models=(model1, model2),

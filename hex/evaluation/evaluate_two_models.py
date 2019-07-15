@@ -88,8 +88,8 @@ def evaluate(config_file = 'config.ini'):
     args = get_args(config_file)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model1, _ = load_model(f'models/{args.model1}.pt')
-    model2, _ = load_model(f'models/{args.model2}.pt')
+    model1 = load_model(f'models/{args.model1}.pt')
+    model2 = load_model(f'models/{args.model2}.pt')
 
     play_games(
             models=(model1, model2),

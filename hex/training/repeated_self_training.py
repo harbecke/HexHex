@@ -8,7 +8,6 @@ from hex.elo import elo
 from hex.evaluation import win_position
 from hex.training import train
 from hex.utils.logger import logger
-from hex.utils.utils import dotdict
 from hex.utils.utils import load_model
 
 
@@ -35,20 +34,13 @@ class RepeatedSelfTrainer:
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
-        model_creation_args = dotdict({
-            'model_type': config.get('model_type'),
-            'board_size': config.getint('board_size'),
-            'layers': config.getint('layers'),
-            'intermediate_channels': config.getint('intermediate_channels'),
-            'layer_type': config.get('layer_type'),
-            'model_name': config.get('model_name') + '_initial'
-        })
-        self.model_names += [model_creation_args.model_name]
-        create_model.create_model_from_args(model_creation_args)
-        return model_creation_args.model_name
+        config['model_name'] += '_initial'
+        self.model_names += [config['model_name']]
+        create_model.create_and_store_model(config)
+        return config['model_name']
 
     def create_data_samples(self, model_name):
-        model, _ = load_model(f'models/{model_name}.pt')
+        model = load_model(f'models/{model_name}.pt')
 
         self_play_args = self.config['CREATE DATA']
         self_play_args['data_range_min'] = '0'

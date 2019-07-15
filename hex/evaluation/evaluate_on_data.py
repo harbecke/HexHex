@@ -1,8 +1,8 @@
-import torch
-import torch.nn as nn
-
 import argparse
 from configparser import ConfigParser
+
+import torch
+import torch.nn as nn
 
 from hex.utils.utils import load_model
 
@@ -17,7 +17,7 @@ args = parser.parse_args()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
 
-model, _ = load_model(f'models/{args.model}.pt')
+model = load_model(f'models/{args.model}.pt')
 model = nn.DataParallel(model).to(device)
 
 board_tensor, moves_tensor, target_tensor = torch.load('data/{}.pt'.format(args.data))

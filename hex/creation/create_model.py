@@ -1,59 +1,48 @@
 #!/usr/bin/env python3
 
-import argparse
-from configparser import ConfigParser
-
 import torch
 
 from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel
 from hex.utils.logger import logger
 
 
-def get_args(config_file):
-    config = ConfigParser()
-    config.read(config_file)
-    parser = argparse.ArgumentParser()
+def create_model(config):
+    board_size = config.getint('board_size')
+    model_type = config['model_type']
 
-    parser.add_argument('--board_size', type=int, default=config.getint('CREATE MODEL', 'board_size'))
-    parser.add_argument('--model_type', type=str, default=config.get('CREATE MODEL', 'model_type'))
-    parser.add_argument('--layer_type', type=str, default=config.get('CREATE MODEL', 'layer_type'))
-    parser.add_argument('--layers', type=int, default=config.getint('CREATE MODEL', 'layers'))
-    parser.add_argument('--intermediate_channels', type=int, default=config.getint('CREATE MODEL', 'intermediate_channels'))
-    parser.add_argument('--model_name', type=str, default=config.get('CREATE MODEL', 'model_name'))
-
-    return parser.parse_args(args=[])
-
-
-def create_model(args):
-    if args.model_type == 'random':
-        model = RandomModel(board_size=args.board_size)
-    elif args.model_type == 'noswitch':
-        model = NoSwitchModel(board_size=args.board_size, layers=args.layers,
-            intermediate_channels=args.intermediate_channels)
-    elif args.model_type == 'inception':
-        model = InceptionModel(board_size=args.board_size, layers=args.layers, 
-            intermediate_channels=args.intermediate_channels)
+    if model_type == 'random':
+        model = RandomModel(board_size=board_size)
+    elif model_type == 'noswitch':
+        model = NoSwitchModel(
+            board_size=board_size,
+            layers=config.getint('layers'),
+            intermediate_channels=config.getint('intermediate_channels')
+        )
+    elif model_type == 'inception':
+        model = InceptionModel(
+            board_size=board_size,
+            layers=config.getint('layers'),
+            intermediate_channels=config.getint('intermediate_channels')
+        )
+    elif model_type == 'nomcts':
+        model = NoMCTSModel(
+            board_size=board_size,
+            layers=config.getint('layers'),
+            intermediate_channels=config.getint('intermediate_channels'),
+            skip_layer=config.get('layer_type')
+        )
     else:
-        model = NoMCTSModel(board_size=args.board_size, layers=args.layers,
-                        intermediate_channels=args.intermediate_channels, skip_layer=args.layer_type)
+        logger.error(f"Unknown model_type: {model_type}")
+        exit(1)
     return model
 
 
-def create_model_from_args(args):
-    model = create_model(args)
-    model_file = f'models/{args.model_name}.pt'
+def create_and_store_model(config):
+    model = create_model(config)
+    model_file = f'models/{config.get("model_name")}.pt'
     torch.save({
         'model_state_dict': model.state_dict(),
-        'board_size': args.board_size,
-        'model_type': args.model_type,
-        'layers': args.layers,
-        'layer_type': args.layer_type,
-        'intermediate_channels': args.intermediate_channels,
+        'config': config,
         'optimizer': False
         }, model_file)
     logger.info(f'wrote {model_file}\n')
-
-
-if __name__ == '__main__':
-    args = get_args('config.ini')
-    create_model_from_args(args)

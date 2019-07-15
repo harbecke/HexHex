@@ -26,7 +26,7 @@ class TestModel:
 def win_count(model_name, config):
     logger.info("Determining win count against test model")
 
-    model, args = load_model(model_name)
+    model = load_model(model_name)
     board_size = model.board_size
 
     lose_count = 0

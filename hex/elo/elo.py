@@ -15,7 +15,7 @@ def play_tournament(model_list, args):
     :return: result[first][second] gives the number of games that first has won against second
     """
     num_models = len(model_list)
-    models = [load_model(f'models/{model_file}.pt')[0] for model_file in model_list]
+    models = [load_model(f'models/{model_file}.pt') for model_file in model_list]
     all_results = defaultdict(lambda: defaultdict(int))
 
     for first_idx, second_idx in itertools.combinations(range(num_models), 2):
@@ -47,7 +47,7 @@ def add_to_tournament(model_list, new_model_name, args, old_results):
 
     new_index = len(model_list)
 
-    models = [load_model(f'models/{model_file}.pt')[0] for model_file in (model_list + [new_model_name])]
+    models = [load_model(f'models/{model_file}.pt') for model_file in (model_list + [new_model_name])]
     new_model = models[new_index]
 
     for old_index, old_model in enumerate(models[:new_index]):

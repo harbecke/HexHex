@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from hex.training import train
 from hex.creation import create_data, create_model
 from hex.evaluation import evaluate_two_models
+from hex.training import train
 
 
 def _main(config_file = 'config.ini'):
@@ -11,7 +11,7 @@ def _main(config_file = 'config.ini'):
     should be run as test before every commit
     '''
     args = create_model.get_args(config_file)
-    create_model.create_model_from_args(args)
+    create_model.create_and_store_model(args)
     create_data.main(config_file)
     train.train_by_config_file(config_file)
     evaluate_two_models.evaluate(config_file)

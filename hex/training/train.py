@@ -242,7 +242,7 @@ def train(config):
                                                      num_workers=0)
 
     model_file = f'models/{config.get("load_model")}.pt'
-    model, model_args = load_model(model_file)
+    model = load_model(model_file)
     nn.DataParallel(model).to(device)
 
     optimizer_weight_decay = config.getfloat('weight_decay')
@@ -262,14 +262,8 @@ def train(config):
     trained_model, trained_optimizer = train_model(model, config.get('save_model'), train_loader, criterion, optimizer,
         int(config.getfloat('epochs')), device, config.getfloat('weight_decay'), config.getint('print_loss_frequency'), val_triple)
 
+    checkpoint = torch.load(model_file, map_location=device)
+    checkpoint['model_state_dict'] = trained_model.state_dict()
     file_name = f'models/{config.get("save_model")}.pt'
-    torch.save({
-        'model_state_dict': trained_model.state_dict(),
-        'board_size': model_args.board_size,
-        'model_type': model_args.model_type,
-        'layers': model_args.layers,
-        'layer_type': model_args.layer_type,
-        'intermediate_channels': model_args.intermediate_channels,
-        'optimizer': False #trained_optimizer.state_dict()
-        }, file_name)
+    torch.save(checkpoint, file_name)
     logger.info(f'wrote {file_name}')
