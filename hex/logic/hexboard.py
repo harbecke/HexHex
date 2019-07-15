@@ -1,5 +1,9 @@
 import copy
+
 import torch
+
+from hex.utils.logger import logger
+
 
 def to_move_idx(move, board_size):
     return move[0] * board_size + move[1]
@@ -143,8 +147,8 @@ class Board():
                 self.player = 1-self.player
 
         else:
-            print(f'Illegal Move! {position}')
-            print(self)
+            logger.error(f'Illegal Move! {position}')
+            logger.error(self)
 
     def export_as_FF4(self, filename):
         with open(filename, 'w') as file:
