@@ -3,6 +3,7 @@ import argparse
 import os
 import time
 from configparser import ConfigParser
+import math
 
 import numpy as np
 import torch
@@ -259,7 +260,7 @@ def train(config):
 
     criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
     trained_model, trained_optimizer = train_model(model, config.get('save_model'), train_loader, criterion, optimizer,
-        np.ceil(config.getfloat('epochs')), device, config.getfloat('weight_decay'), config.getint('print_loss_frequency'), val_triple)
+        math.ceil(config.getfloat('epochs')), device, config.getfloat('weight_decay'), config.getint('print_loss_frequency'), val_triple)
 
     checkpoint = torch.load(model_file, map_location=device)
     checkpoint['model_state_dict'] = trained_model.state_dict()
