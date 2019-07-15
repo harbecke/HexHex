@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
-from hex.creation.noise import singh_maddala_onto_output
+from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
 from hex.logic.hexboard import to_move
 from hex.utils.utils import zip_list_of_lists_first_dim_reversed
 
@@ -74,6 +74,9 @@ class MultiHexGame():
         if self.noise == 'singh':
             noise_alpha, noise_beta, noise_lambda = self.noise_parameters
             outputs_tensor = singh_maddala_onto_output(outputs_tensor, noise_alpha, noise_beta, noise_lambda, self.device)
+        if self.noise == 'uniform':
+            noise_probability, = self.noise_parameters
+            outputs_tensor = uniform_noise_onto_output(outputs_tensor, noise_probability)
 
         moves_count = len(self.boards[self.current_boards[0]].made_moves)
         positions1d = tempered_moves_selection(outputs_tensor, self.temperature*self.temperature_decay**moves_count)
