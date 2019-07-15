@@ -27,11 +27,6 @@ def zip_list_of_lists_first_dim_reversed(*iterables):
             return output_list
 
 
-class dotdict(dict):
-    def __getattr__(self, name):
-        return self[name]
-
-
 def all_unique(x):
     """
     Returns whether all elements in the list are unique,
