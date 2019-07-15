@@ -76,7 +76,7 @@ def create_self_play_data(args, model):
 
         with torch.no_grad():
             board = Board(model.board_size)
-            ratings = model(board.board_tensor.unsqueeze(0)).view(board_size, board_size)
+            ratings = model(board.board_tensor.unsqueeze(0).to(utils.device)).view(board_size, board_size)
             with np.printoptions(precision=1, suppress=True):
                 logger.info("First move ratings\n" + str(ratings.numpy()))
 
