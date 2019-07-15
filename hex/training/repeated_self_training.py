@@ -5,6 +5,7 @@ import torch
 
 from hex.creation import create_data, create_model
 from hex.elo import elo
+from hex.evaluation import win_position
 from hex.training import train
 from hex.utils.logger import logger
 from hex.utils.utils import dotdict
@@ -28,9 +29,9 @@ class RepeatedSelfTrainer:
             data_file = self.prepare_training_data()
             self.train_model(model_name, new_model_name, data_file)
             model_name = new_model_name
-            self.create_elo_ratings(model_name)
             self.model_names.append(model_name)
             self.create_all_elo_ratings()
+            win_position.win_count(f'models/{model_name}.pt', self.config)
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
@@ -88,7 +89,8 @@ class RepeatedSelfTrainer:
             'optimizer': config.get('optimizer'),
             'optimizer_load': config.getboolean('optimizer_load'),
             'learning_rate': config.getfloat('learning_rate'),
-            'validation_bool': False,
+            'validation_bool': config.getboolean('validation_bool'),
+            'validation_data': config.get('validation_data'),
             'epochs': config.getfloat('epochs'),
             'samples_per_epoch': config.getint('samples_per_epoch'),
             'weight_decay': config.getfloat('weight_decay'),
