@@ -12,7 +12,7 @@ def tempered_moves_selection(output_tensor, temperature):
     if temperature < 10**(-10):
         return output_tensor.argmax(1)
     else:
-        temperature_output = output_tensor*temperature
+        temperature_output = output_tensor/temperature
         return Categorical(logits=temperature_output).sample()
 
 
