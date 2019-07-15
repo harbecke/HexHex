@@ -34,7 +34,6 @@ class RepeatedSelfTrainer:
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
-        config['model_name'] += '_initial'
         self.model_names += [config['model_name']]
         create_model.create_and_store_model(config)
         return config['model_name']
