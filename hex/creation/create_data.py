@@ -148,7 +148,7 @@ def create_self_play_data(args, model):
         first_move_frequency = torch.zeros([model.board_size ** 2], dtype=torch.int32)
         for x in first_move_indices:
             first_move_frequency[all_moves[x].item()] += 1
-        logger.info("First move frequency:\n" + str(first_move_frequency.view(3, 3).numpy()))
+        logger.info("First move frequency:\n" + str(first_move_frequency.view(model.board_size, model.board_size).numpy()))
 
         file_name = f'data/{args.get("run_name")}_{file_idx}.pt'
         torch.save((all_boards_tensor, all_moves, all_results), file_name)
