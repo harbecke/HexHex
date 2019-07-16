@@ -48,7 +48,6 @@ class InteractiveGame:
 
         if self.board.winner:
             logger.info("Player has won!")
-            self.wait_for_gui_exit()
 
     def play_ai_move(self):
         move_ratings = self.game.batched_single_move(self.model)
@@ -57,7 +56,6 @@ class InteractiveGame:
 
         if self.board.winner:
             logger.info("agent has won!")
-            self.wait_for_gui_exit()
 
     def wait_for_gui_exit(self):
         while True:
@@ -74,13 +72,19 @@ def _main():
     logger.info("Starting interactive game")
 
     args = get_args()
-    interactive = InteractiveGame(args)
-
-    if args.first_move_ai:
-        interactive.play_ai_move()
     while True:
-        interactive.play_human_move()
-        interactive.play_ai_move()
+        interactive = InteractiveGame(args)
+
+        if args.first_move_ai:
+            interactive.play_ai_move()
+        while True:
+            interactive.play_human_move()
+            if interactive.board.winner:
+                break
+            interactive.play_ai_move()
+            if interactive.board.winner:
+                break
+        interactive.gui.get_cell()
 
 
 if __name__ == '__main__':
