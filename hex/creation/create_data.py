@@ -76,9 +76,9 @@ def create_self_play_data(args, model):
 
         with torch.no_grad():
             board = Board(model.board_size)
-            ratings = model(board.board_tensor.unsqueeze(0)).view(board_size, board_size)
+            ratings = model(board.board_tensor.unsqueeze(0).to(utils.device)).view(board_size, board_size)
             with np.printoptions(precision=1, suppress=True):
-                logger.info("First move ratings\n" + str(ratings.numpy()))
+                logger.info("First move ratings\n" + str(ratings.cpu().numpy()))
 
         file_name = f'data/{args.get("run_name")}_{file_idx}.pt'
         torch.save((all_boards_tensor, all_moves, all_results), file_name)

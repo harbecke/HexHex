@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import random
 from configparser import ConfigParser
 from time import gmtime, strftime
 
@@ -19,7 +20,7 @@ def play_games(models, device, openings, number_of_games, batch_size, temperatur
     board_size = models[0].board_size
     if openings:
         openings = list(hexboard.first_k_moves(board_size, 2))
-        number_of_games = len(openings)
+        random.shuffle(openings)
 
     logger.debug(f'playing {number_of_games} games')
 

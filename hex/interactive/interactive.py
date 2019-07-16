@@ -51,8 +51,16 @@ class InteractiveGame:
 
     def play_ai_move(self):
         move_ratings = self.game.batched_single_move(self.model)
-        field_text = [f'{int(100*torch.sigmoid(rating))}' for rating in move_ratings[0]]
-        self.gui.update_board(self.board, field_text=field_text)
+        rating_strings = []
+        for rating in move_ratings[0]:
+            if rating > 99:
+                rating_strings.append('+')
+            elif rating < -99:
+                rating_strings.append('-')
+            else:
+                rating_strings.append("{0:0.1f}".format(rating))
+        #field_text = ["{0:0.1f}".format(rating) for rating in move_ratings[0]]
+        self.gui.update_board(self.board, field_text=rating_strings)
 
         if self.board.winner:
             logger.info("agent has won!")
