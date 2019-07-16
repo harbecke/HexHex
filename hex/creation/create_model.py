@@ -2,7 +2,7 @@
 
 import torch
 
-from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel, RotationWrapperModel, VerticalModel
+from hex.model import hexconvolution
 from hex.utils.logger import logger
 
 
@@ -10,30 +10,24 @@ def create_model(config):
     board_size = config.getint('board_size')
     model_type = config['model_type']
     rotation_model = config.getboolean('rotation_model')
+    vertical_model = config.getboolean('vertical_model')
 
     if model_type == 'random':
-        model = RandomModel(board_size=board_size)
+        model = hexconvolution.RandomModel(board_size=board_size)
     elif model_type == 'noswitch':
-        model = NoSwitchModel(
+        model = hexconvolution.NoSwitchModel(
             board_size=board_size,
             layers=config.getint('layers'),
             intermediate_channels=config.getint('intermediate_channels')
         )
     elif model_type == 'inception':
-        model = InceptionModel(
+        model = hexconvolution.InceptionModel(
             board_size=board_size,
             layers=config.getint('layers'),
             intermediate_channels=config.getint('intermediate_channels')
         )
     elif model_type == 'nomcts':
-        model = NoMCTSModel(
-            board_size=board_size,
-            layers=config.getint('layers'),
-            intermediate_channels=config.getint('intermediate_channels'),
-            skip_layer=config.get('layer_type')
-        )
-    elif model_type == 'vertical':
-        model = VerticalModel(
+        model = hexconvolution.NoMCTSModel(
             board_size=board_size,
             layers=config.getint('layers'),
             intermediate_channels=config.getint('intermediate_channels'),
@@ -44,7 +38,10 @@ def create_model(config):
         exit(1)
 
     if rotation_model == True:
-        model = RotationWrapperModel(model)
+        model = hexconvolution.RotationWrapperModel(model)
+
+    if vertical_model == True:
+        model = hexconvolution.VerticalWrapperModel(model)
 
     return model
 
