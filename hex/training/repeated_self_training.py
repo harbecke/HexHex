@@ -16,7 +16,7 @@ from hex.utils.utils import load_model
 
 
 def load_reference_models(config):
-    reference_model_path = 'reference_model.json'
+    reference_model_path = 'reference_models.json'
     if not os.path.isfile(reference_model_path):
         with open(reference_model_path, 'w') as file:
             file.write("{}")
