@@ -8,3 +8,4 @@ ratings.txt
 *.profile
 game_history.pgn
 Pipfile
+reference_models.json

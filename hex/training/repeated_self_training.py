@@ -8,6 +8,7 @@ import torch
 from hex.creation import create_data, create_model
 from hex.elo import elo
 from hex.evaluation import win_position
+from hex.model.hexconvolution import RandomModel
 from hex.training import train
 from hex.utils.logger import logger
 from hex.utils.utils import load_model
@@ -19,7 +20,10 @@ class RepeatedSelfTrainer:
         self.config.read(config_file)
         self.model_names = []
         self.data_files = []
-        self.tournament_results = None
+        self.tournament_results = defaultdict(lambda: defaultdict(int))
+        with open('reference_models.json') as file:
+            reference_models = json.load(file)
+        self.reference_models = reference_models[str(self.config['CREATE MODEL'].getint('board_size'))]
 
     def repeated_self_training(self):
         model_name = self.create_initial_model()
@@ -32,7 +36,7 @@ class RepeatedSelfTrainer:
             model_name = new_model_name
             self.model_names.append(model_name)
             self.create_all_elo_ratings()
-            win_position.win_count(f'models/{model_name}.pt', self.config['VS RANDOM'])
+            self.measure_win_counts(model_name)
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
@@ -106,6 +110,14 @@ class RepeatedSelfTrainer:
         with open('ratings.txt', 'w') as file:
             file.write('   ELO Model\n')
             file.write('\n'.join(output))
+
+    def measure_win_counts(self, model_name):
+        reference_models = {
+            'random': RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
+        }
+        for model in self.reference_models:
+            reference_models[model] = load_model(f'models/{model}.pt')
+        win_position.win_count(f'models/{model_name}.pt', reference_models, self.config['VS REFERENCE MODELS'])
 
 
 if __name__ == '__main__':

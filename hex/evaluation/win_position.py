@@ -2,9 +2,9 @@ import itertools
 
 import torch
 
+from hex.evaluation import evaluate_two_models
 from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
-from hex.model.hexconvolution import RandomModel
 from hex.utils.logger import logger
 from hex.utils.utils import load_model, device
 
@@ -49,31 +49,36 @@ def win_count_3(model_name):
     logger.info(f"Lost {lose_count} / {game_count} games")
 
 
-def win_count(model_name, config):
+def win_count(model_name, reference_models, config):
     logger.info("Determining win count against test model")
 
     model = load_model(model_name)
     board_size = model.board_size
-    batch_size = config.getint('batch_size')
 
     if board_size == 3:
         win_count_3(model_name)
         return
 
-    lose_count = 0
-    game_count = 0
+    total_lose_count = 0
+    total_game_count = 0
 
-    for _ in range(config.getint('num_games') // 2 // batch_size):
-        for test_model_starts in [True, False]:
-            boards = [Board(board_size) for _ in range(batch_size)]
-            random_model = RandomModel(board_size)
-            models = (random_model, model) if test_model_starts else(model, random_model)
-            game = MultiHexGame(boards, models, device=device, noise=None,
-                                noise_parameters=None, temperature=0, temperature_decay=0)
-            game.play_moves()
-            for board in boards:
-                if board.winner == [1 - int(test_model_starts)]:
-                    lose_count += 1
-                game_count += 1
+    for opponent_name, opponent_model in reference_models.items():
+        result, _ = evaluate_two_models.play_games(
+            models=(model, opponent_model),
+            device=device,
+            openings=config.getboolean('openings', True),
+            number_of_games=config.getint('num_games', 100) // 2,
+            batch_size=config.getint('batch_size', 32),
+            temperature=config.getfloat('temperature', 0),
+            temperature_decay=config.getfloat('temperature_decay', 0),
+            plot_board=config.getboolean('plot_board', False)
+        )
 
-    logger.info(f"Lost {lose_count} / {game_count} games")
+        lose_count = result[0][1] + result[1][1]
+        game_count = sum(result[0]) + sum(result[1])
+
+        total_lose_count += lose_count
+        total_game_count += game_count
+
+        logger.info(f"Lost {lose_count:4} / {game_count:4} games against {opponent_name}")
+    logger.info(f"Lost {total_lose_count:4} / {total_game_count:4} in total")
