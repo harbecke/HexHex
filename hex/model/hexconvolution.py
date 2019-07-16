@@ -192,7 +192,7 @@ class VerticalWrapperModel(nn.Module):
         self.internal_model = model
 
     def forward(self, x):
-        y = torch.zeros(x.size(0), 3, x.size(2), x.size(3))
+        y = torch.zeros(x.size(0), 3, x.size(2), x.size(3)).to(x.device)
         y[:, 0] = x[:, 0] * (1 - x[:, 2]) + torch.transpose(x[:, 1] * x[:, 2], 1, 2)
         y[:, 1] = x[:, 1] * (1 - x[:, 2]) + torch.transpose(x[:, 0] * x[:, 2], 1, 2)
 
