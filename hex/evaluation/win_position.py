@@ -57,7 +57,7 @@ def win_count(model_name, config):
     batch_size = config.getint('batch_size')
 
     if board_size == 3:
-        win_count_3()
+        win_count_3(model_name)
         return
 
     lose_count = 0
