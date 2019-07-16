@@ -78,16 +78,14 @@ def create_ratings(results, runs=100):
     # from https://en.wikipedia.org/wiki/Bradley-Terry_model
 
     num_models = len(results)
-    # + 0.001 for numerical reasons
+    # + 0.01 for numerical reasons
     results_sum = [sum(results[x][y] + 0.01 for y in range(num_models)) for x in range(num_models)]
-    games = 2*sum(results_sum)/num_models
     p_list = results_sum[:]
 
     for _ in range(runs):
-        inverse_p_list = [[1/(p_list[idx1]+p_list[idx2])
+        inverse_p_list = [[(results[idx1][idx2]+results[idx2][idx1])/(p_list[idx1]+p_list[idx2])
                            for idx2 in range(num_models) if idx1 != idx2] for idx1 in range(num_models)]
-        sum_inverse_p_list = [1/sum(i) for i in inverse_p_list]
-        new_p_list = [results_sum[idx]/games*sum_inverse_p_list[idx] for idx in range(num_models)]
+        new_p_list = [results_sum[idx]/sum(inverse_p_list[idx]) for idx in range(num_models)]
         sum_p_list = sum(new_p_list)
         p_list = [p/sum_p_list for p in new_p_list]
 
@@ -95,4 +93,3 @@ def create_ratings(results, runs=100):
     elo_ratings = [math.log10(p/min_value)*400 for p in p_list]
 
     return elo_ratings
-
