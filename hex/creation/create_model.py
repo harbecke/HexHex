@@ -2,7 +2,7 @@
 
 import torch
 
-from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel, RotationWrapperModel
+from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel, RotationWrapperModel, VerticalModel
 from hex.utils.logger import logger
 
 
@@ -27,6 +27,13 @@ def create_model(config):
         )
     elif model_type == 'nomcts':
         model = NoMCTSModel(
+            board_size=board_size,
+            layers=config.getint('layers'),
+            intermediate_channels=config.getint('intermediate_channels'),
+            skip_layer=config.get('layer_type')
+        )
+    elif model_type == 'vertical':
+        model = VerticalModel(
             board_size=board_size,
             layers=config.getint('layers'),
             intermediate_channels=config.getint('intermediate_channels'),

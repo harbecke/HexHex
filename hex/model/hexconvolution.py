@@ -126,6 +126,50 @@ class NoSwitchModel(NoMCTSModel):
         return self.policylin(p) - illegal
 
 
+class VerticalModel(nn.Module):
+    '''
+    model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
+    then a specified amount of residual or skip-layers https://en.wikipedia.org/wiki/Residual_neural_network
+    then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
+    value range is (-inf, inf)
+    for training the sigmoid is taken, interpretable as probability to win the game when making this move
+    for data generation and evaluation the softmax is taken to select a move
+    '''
+
+    def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach_conv=1,
+                 skip_layer='single'):
+        super(VerticalModel, self).__init__()
+        self.board_size = board_size
+        self.policy_channels = policy_channels
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach_conv * 2 + 1, padding=reach_conv)
+        if skip_layer == 'alpha':
+            self.skiplayers = nn.ModuleList([SkipLayerAlpha(intermediate_channels, 1) for idx in range(layers)])
+        elif skip_layer == 'star':
+            self.skiplayers = nn.ModuleList(
+                [SkipLayerStar(board_size, intermediate_channels, 1) for idx in range(layers)])
+        else:
+            self.skiplayers = nn.ModuleList([SkipLayer(intermediate_channels, 1) for idx in range(layers)])
+        self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
+        self.policybn = nn.BatchNorm2d(policy_channels)
+        self.policylin = nn.Linear(board_size ** 2 * policy_channels, board_size ** 2)
+
+    def forward(self, x):
+        # illegal moves are given a huge negative bias, so they are never selected for play
+        y = torch.zeros(x.size(0), 2, x.size(2), x.size(3))
+        y[:, 0] = x[:, 0] * (1 - x[:, 2]) + torch.transpose(x[:, 1] * x[:, 2], 1, 2)
+        y[:, 1] = x[:, 1] * (1 - x[:, 2]) + torch.transpose(x[:, 0] * x[:, 2], 1, 2)
+
+        x_sum = (y[:, 0] + y[:, 1]).view(-1, self.board_size ** 2)
+        illegal = x_sum * torch.exp(torch.tanh(x_sum.sum(dim=1)) * 10).unsqueeze(1).expand_as(x_sum) - x_sum
+        y = self.conv(y)
+        for skiplayer in self.skiplayers:
+            y = skiplayer(y)
+        p = swish(self.policybn(self.policyconv(y))).view(-1, self.board_size ** 2 * self.policy_channels)
+        q = torch.transpose((self.policylin(p) - illegal).view(-1, self.board_size, self.board_size), 1, 2)*x[:, 2]
+        q += (self.policylin(p) - illegal).view(-1, self.board_size, self.board_size)*(1-x[:, 2])
+        return q.view(-1, self.board_size ** 2)
+
+
 class InceptionModel(nn.Module):
     '''
     model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
