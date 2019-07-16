@@ -166,3 +166,16 @@ class RandomModel(nn.Module):
         x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         return torch.rand_like(illegal) - illegal
+
+
+class RotationWrapperModel(nn.Module):
+    def __init__(self, model):
+        super(RotationWrapperModel, self).__init__()
+        self.board_size = model.board_size
+        self.internal_model = model
+
+    def forward(self, x):
+        x_flip = torch.flip(x, [2, 3])
+        y_flip = self.internal_model(x_flip)
+        y = torch.flip(y_flip, [1])
+        return (self.internal_model(x) + y)/2

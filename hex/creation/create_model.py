@@ -2,13 +2,14 @@
 
 import torch
 
-from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel
+from hex.model.hexconvolution import NoMCTSModel, RandomModel, InceptionModel, NoSwitchModel, RotationWrapperModel
 from hex.utils.logger import logger
 
 
 def create_model(config):
     board_size = config.getint('board_size')
     model_type = config['model_type']
+    rotation_model = config.getboolean('rotation_model')
 
     if model_type == 'random':
         model = RandomModel(board_size=board_size)
@@ -34,6 +35,10 @@ def create_model(config):
     else:
         logger.error(f"Unknown model_type: {model_type}")
         exit(1)
+
+    if rotation_model == True:
+        model = RotationWrapperModel(model)
+
     return model
 
 
