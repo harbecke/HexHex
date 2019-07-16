@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import json
+from collections import defaultdict
 from configparser import ConfigParser
 
 import torch
@@ -94,10 +96,10 @@ class RepeatedSelfTrainer:
             self.tournament_results
         )
         ratings = elo.create_ratings(self.tournament_results)
-        model_with_ratings = list(zip(ratings, self.model_names))
-        model_with_ratings.sort(reverse=True)
+        all_model_names = list(ratings.keys())
+        all_model_names.sort(key=lambda name: ratings[name], reverse=True)
 
-        output = ['{:6} {}'.format(int(rating), model) for rating, model in model_with_ratings]
+        output = ['{:6} {}'.format(int(ratings[model]), model) for model in all_model_names]
         for line in output:
             logger.info(line)
 
