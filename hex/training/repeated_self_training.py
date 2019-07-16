@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 from collections import defaultdict
 from configparser import ConfigParser
 
@@ -14,6 +15,21 @@ from hex.utils.logger import logger
 from hex.utils.utils import load_model
 
 
+def load_reference_models(config):
+    reference_model_path = 'reference_models.json'
+    if not os.path.isfile(reference_model_path):
+        with open(reference_model_path, 'w') as file:
+            file.write("{}")
+    with open(reference_model_path) as file:
+        reference_models = json.load(file)
+    board_size_str = str(config['CREATE MODEL'].getint('board_size'))
+    if board_size_str not in reference_models:
+        reference_models[board_size_str] = []
+        with open(reference_model_path, 'w') as file:
+            file.write(json.dumps(reference_models, indent=4))
+    return reference_models[board_size_str]
+
+
 class RepeatedSelfTrainer:
     def __init__(self, config_file):
         self.config = ConfigParser()
@@ -21,9 +37,8 @@ class RepeatedSelfTrainer:
         self.model_names = []
         self.data_files = []
         self.tournament_results = defaultdict(lambda: defaultdict(int))
-        with open('reference_models.json') as file:
-            reference_models = json.load(file)
-        self.reference_models = reference_models[str(self.config['CREATE MODEL'].getint('board_size'))]
+        self.reference_models = load_reference_models(self.config)
+
 
     def repeated_self_training(self):
         model_name = self.create_initial_model()
