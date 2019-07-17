@@ -166,6 +166,10 @@ class NoSwitchWrapperModel(nn.Module):
 
 
 class RotationWrapperModel(nn.Module):
+    '''
+    evaluates input and its 180° rotation with parent model
+    averages both predictions
+    '''
     def __init__(self, model):
         super(RotationWrapperModel, self).__init__()
         self.board_size = model.board_size
@@ -180,7 +184,8 @@ class RotationWrapperModel(nn.Module):
 
 class VerticalWrapperModel(nn.Module):
     '''
-    evaulates only in vertical direction
+    evaulates only in vertical direction with parent model
+    if input is for second player it gets transposed and channels are switched
     '''
 
     def __init__(self, model):
