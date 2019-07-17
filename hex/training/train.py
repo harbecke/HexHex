@@ -69,9 +69,6 @@ class Training:
     def __init__(self, args, model, optimizer):
         self.args = args
         self.model = model
-        self.log_file = os.path.join('logs', args.save_model + '.csv')
-        with open(self.log_file, 'w') as log:
-            log.write('# batch val_loss pred_loss weighted_param_loss duration[s]\n')
         self.device = device
         self.optimizer = optimizer
         self.stats = TrainingStats()
@@ -130,11 +127,6 @@ class Training:
 
 
 def train_model(model, dataloader, optimizer, puzzle_triple, config):
-    log_file = os.path.join('logs', config.get('save_model') + '.csv')
-
-    with open(log_file, 'w') as log:
-        log.write('# batch val_loss pred_loss weighted_param_loss duration[s]\n')
-
     start = time.time()
 
     criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
