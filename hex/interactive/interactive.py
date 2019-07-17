@@ -2,6 +2,7 @@
 import argparse
 from configparser import ConfigParser
 
+import numpy as np
 import torch
 
 from hex.interactive.gui import Gui
@@ -40,6 +41,9 @@ class InteractiveGame:
             noise_parameters=None, temperature=args.temperature, temperature_decay=args.temperature_decay)
 
     def play_human_move(self):
+        ratings = self.model(self.board.board_tensor.unsqueeze(0)).view(self.board.size, self.board.size)
+        with np.printoptions(precision=1, suppress=True):
+            logger.info('I politely recommend the following ratings\n' + str(ratings.detach().numpy()))
         move = self.get_move()
         self.board.set_stone(move)
         self.gui.update_board(self.board)
