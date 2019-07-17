@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-import argparse
 import math
 import os
 import time
-from configparser import ConfigParser
 
 import numpy as np
 import torch
@@ -14,28 +12,6 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from hex.utils.logger import logger
 from hex.utils.summary import writer
 from hex.utils.utils import device, load_model, create_optimizer, load_optimizer
-
-
-def get_args(config_file):
-    config = ConfigParser()
-    config.read(config_file)
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--load_model', type=str, default=config.get('TRAIN', 'load_model'))
-    parser.add_argument('--save_model', type=str, default=config.get('TRAIN', 'save_model'))
-    parser.add_argument('--data', type=str, default=config.get('TRAIN', 'data'))
-    parser.add_argument('--data_range_min', type=int, default=config.getint('TRAIN', 'data_range_min'))
-    parser.add_argument('--data_range_max', type=int, default=config.getint('TRAIN', 'data_range_max'))
-    parser.add_argument('--weight_decay', type=float, default=config.getfloat('TRAIN', 'weight_decay'))
-    parser.add_argument('--batch_size', type=int, default=config.getint('TRAIN', 'batch_size'))
-    parser.add_argument('--epochs', type=float, default=config.getfloat('TRAIN', 'epochs'))
-    parser.add_argument('--optimizer', type=str, default=config.get('TRAIN', 'optimizer'))
-    parser.add_argument('--optimizer_load', type=bool, default=config.getboolean('TRAIN', 'optimizer_load'))
-    parser.add_argument('--learning_rate', type=float, default=config.getfloat('TRAIN', 'learning_rate'))
-    parser.add_argument('--validation_bool', type=bool, default=config.getboolean('TRAIN', 'validation_bool'))
-    parser.add_argument('--validation_data', type=str, default=config.get('TRAIN', 'validation_data'))
-    parser.add_argument('--validation_split', type=float, default=config.getfloat('TRAIN', 'validation_split'))
-    parser.add_argument('--print_loss_frequency', type=int, default=config.getint('TRAIN', 'print_loss_frequency'))
-    return parser.parse_args(args=[])
 
 
 class LossTriple:
