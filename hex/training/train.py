@@ -158,7 +158,6 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
     weight_decay = config.getfloat('weight_decay')
     epochs = math.ceil(config.getfloat('epochs'))
     for epoch in range(epochs):
-
         train_loss_avg = Average()
 
         for i, train_triple in enumerate(train_dataloader):
@@ -176,34 +175,34 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
                     l2loss = measure_weight_loss()
                     weighted_param_loss = weight_decay * l2loss
 
-                    puzzle_loss = float('NaN')
+                    puzzle_loss = Average()
                     if puzzle_triple is not None:
-                        puzzle_loss = measure_loss(puzzle_triple) / len(puzzle_triple[0])
-
-                    val_loss = Average()
-                    for val_triple in val_dataloader:
-                        val_loss.add(measure_loss(val_triple), len(val_triple[0]))
+                        puzzle_loss.add(measure_loss(puzzle_triple), len(puzzle_triple[0]))
 
                     logger.info(
                         f'batch {i + 1:3} / {len(train_dataloader):3} '
-                        f'puzzle_loss: {puzzle_loss:.3f} '
-                        f'val_loss: {val_loss.mean():.3f} '
+                        f'puzzle_loss: {puzzle_loss.mean():.3f} '
                         f'l2_param_loss: {l2loss:.3f} '
                         f'weighted_param_loss: {weighted_param_loss:.3f}'
                     )
-                    writer.add_scalar('train/puzzle_loss', puzzle_loss)
-                    writer.add_scalar('train/val_loss', puzzle_loss)
+                    writer.add_scalar('train/puzzle_loss', puzzle_loss.mean())
                     writer.add_scalar('train/l2_weights', l2loss)
+
+        val_loss = Average()
+        for val_triple in val_dataloader:
+            val_loss.add(measure_loss(val_triple), len(val_triple[0]))
 
         l2loss = measure_weight_loss()
         weighted_param_loss = weight_decay * l2loss
         logger.info(
             f'Epoch {epoch + 1} '
             f'train_loss: {train_loss_avg.mean():.3f} '
+            f'val_loss: {val_loss.mean():.3f} '
             f'l2_param_loss: {l2loss:.3f} '
             f'weighted_param_loss: {weighted_param_loss:.3f}'
         )
         writer.add_scalar('train/train_loss', train_loss_avg.mean())
+        writer.add_scalar('train/val_loss', val_loss.mean())
 
     logger.debug('Finished Training\n')
     return model, optimizer
