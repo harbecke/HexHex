@@ -224,7 +224,9 @@ def train(config):
     concat_dataset = ConcatDataset(dataset_list)
     total_len = len(concat_dataset)
     val_part = config.getint('num_validation_data')
-    train_dataset, val_dataset = torch.utils.data.random_split(concat_dataset, [total_len - val_part, val_part])
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        concat_dataset, [max(0, total_len - val_part), min(val_part, total_len)]
+    )
 
     if config.getfloat('epochs') < 1:
         total_train_sample = len(train_dataset)
