@@ -145,12 +145,21 @@ class Average:
 def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_triple, config):
     criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='sum')(pred, y)+0.2*nn.BCELoss(reduction='sum')(pred, y)
 
-    def measure_loss(data_triple):
-        board_states, moves, labels = data_triple
-        board_states, moves, labels = board_states.to(device), moves.to(device), labels.to(device)
-        outputs = torch.sigmoid(model(board_states))
-        output_values = torch.gather(outputs, 1, moves)
-        return criterion(output_values.view(-1), labels)
+    def measure_loss(data_triple, eval_mode):
+        def _measure_loss_impl(data_triple):
+            board_states, moves, labels = data_triple
+            board_states, moves, labels = board_states.to(device), moves.to(device), labels.to(device)
+            outputs = torch.sigmoid(model(board_states))
+            output_values = torch.gather(outputs, 1, moves)
+            return criterion(output_values.view(-1), labels)
+
+        if eval_mode:
+            model.eval()
+            with torch.no_grad():
+                return _measure_loss_impl(data_triple)
+        else:
+            model.train()
+            return _measure_loss_impl(data_triple)
 
     def measure_weight_loss():
         return sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
@@ -163,7 +172,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
         for i, train_triple in enumerate(train_dataloader):
             optimizer.zero_grad()
 
-            train_loss = measure_loss(train_triple)
+            train_loss = measure_loss(train_triple, eval_mode=False)
             train_loss.backward()
             optimizer.step()
 
@@ -171,26 +180,25 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
 
             print_loss_frequency = config.getint('print_loss_frequency')
             if i % print_loss_frequency == 0:
-                with torch.no_grad():
-                    l2loss = measure_weight_loss()
-                    weighted_param_loss = weight_decay * l2loss
+                l2loss = measure_weight_loss()
+                weighted_param_loss = weight_decay * l2loss
 
-                    puzzle_loss = Average()
-                    if puzzle_triple is not None:
-                        puzzle_loss.add(measure_loss(puzzle_triple), len(puzzle_triple[0]))
+                puzzle_loss = Average()
+                if puzzle_triple is not None:
+                    puzzle_loss.add(measure_loss(puzzle_triple, eval_mode=True), len(puzzle_triple[0]))
 
-                    logger.info(
-                        f'batch {i + 1:3} / {len(train_dataloader):3} '
-                        f'puzzle_loss: {puzzle_loss.mean():.3f} '
-                        f'l2_param_loss: {l2loss:.3f} '
-                        f'weighted_param_loss: {weighted_param_loss:.3f}'
-                    )
-                    writer.add_scalar('train/puzzle_loss', puzzle_loss.mean())
-                    writer.add_scalar('train/l2_weights', l2loss)
+                logger.info(
+                    f'batch {i + 1:3} / {len(train_dataloader):3} '
+                    f'puzzle_loss: {puzzle_loss.mean():.3f} '
+                    f'l2_param_loss: {l2loss:.3f} '
+                    f'weighted_param_loss: {weighted_param_loss:.3f}'
+                )
+                writer.add_scalar('train/puzzle_loss', puzzle_loss.mean())
+                writer.add_scalar('train/l2_weights', l2loss)
 
         val_loss = Average()
         for val_triple in val_dataloader:
-            val_loss.add(measure_loss(val_triple), len(val_triple[0]))
+            val_loss.add(measure_loss(val_triple, eval_mode=True), len(val_triple[0]))
 
         l2loss = measure_weight_loss()
         weighted_param_loss = weight_decay * l2loss
