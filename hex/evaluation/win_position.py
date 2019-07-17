@@ -6,6 +6,7 @@ from hex.evaluation import evaluate_two_models
 from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
 from hex.utils.logger import logger
+from hex.utils.summary import writer
 from hex.utils.utils import load_model, device
 
 
@@ -81,4 +82,6 @@ def win_count(model_name, reference_models, config):
         total_game_count += game_count
 
         logger.info(f"Lost {lose_count:4} / {game_count:4} games against {opponent_name}")
+        lose_rate = lose_count / game_count
+        writer.add_scalar(f'lose_rate/{opponent_name}', lose_rate)
     logger.info(f"Lost {total_lose_count:4} / {total_game_count:4} in total")

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+import math
 import os
 import time
 from configparser import ConfigParser
-import math
 
 import numpy as np
 import torch
@@ -12,6 +12,7 @@ from torch.utils.data.dataset import TensorDataset, ConcatDataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
 from hex.utils.logger import logger
+from hex.utils.summary import writer
 from hex.utils.utils import device, load_model, create_optimizer, load_optimizer
 
 
@@ -196,6 +197,8 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
                     duration = int(time.time() - start)
                     logger.info('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
                             % (i + 1, len(dataloader), val_loss, loss.item(), l2loss, weighted_param_loss))
+                    writer.add_scalar('train/val_loss', val_loss)
+                    writer.add_scalar('train/l2_weights', l2loss)
 
                     with open(log_file, 'a') as log:
                         log.write(f'{i + 1} {val_loss} {loss.item()} {weighted_param_loss} {duration}\n')
@@ -206,9 +209,11 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
         l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
         weighted_param_loss = weight_decay * l2loss
+        pred_loss = running_loss / (i + 1)
         logger.info('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
-              % (epoch + 1, running_loss/(i+1), l2loss, weighted_param_loss))
-    
+              % (epoch + 1, pred_loss, l2loss, weighted_param_loss))
+        writer.add_scalar('train/pred_loss', pred_loss)
+
     logger.debug('Finished Training\n')
     return model, optimizer
 
