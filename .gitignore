@@ -9,3 +9,4 @@ ratings.txt
 game_history.pgn
 Pipfile
 reference_models.json
+runs/
