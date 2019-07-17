@@ -84,8 +84,6 @@ pipenv run python play_cli.py
 
 * playable gui `hex/interactive/interactive.py`
 
-* trained model `models/five_board_wd0.001.pt` for 5x5 board
-
 * puzzle validation set `data/puzzle.pt` for endgame strategy evaluation
 
 * Monte Carlo tree search
