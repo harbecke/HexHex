@@ -38,17 +38,16 @@ pipenv shell
 
 * copy sample_config as initial configuration file `cp sample_config.ini config.ini`
 
-* test installation with `python -m tests.run_example`
-
-* change parameters in config.ini
+* change parameters in `config.ini`
 
 * run scripts
-    - `python -m hex.creation.create_model`
-    - `python -m hex.creation.create_data`
-    - `python -m hex.training.train`
-    - `python -m hex.evaluation.evaluate_two_models`
-    - `python -m hex.interactive.interactive`
-    - `python -m hex.training.star_league.py`
+    - `python -m hex.training.repeated_self_training`
+
+### Visualize Training with Tensorboard
+Training will automatically create log files for tensorboard.
+Those can be viewed with
+
+`python3 -m tensorboard.main --logdir runs/`
 
 ### Loading Into hexgui
 [hexgui](https://github.com/ryanbhayward/hexgui) can be used for interactive play as well.
