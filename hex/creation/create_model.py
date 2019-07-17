@@ -46,9 +46,9 @@ def create_model(config):
     return model
 
 
-def create_and_store_model(config):
+def create_and_store_model(config, name):
     model = create_model(config)
-    model_file = f'models/{config.get("model_name")}.pt'
+    model_file = f'models/{name}.pt'
     torch.save({
         'model_state_dict': model.state_dict(),
         'config': config,

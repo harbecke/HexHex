@@ -14,8 +14,7 @@ def convert_model(model_name):
     for key, val in old_model.items():
         if key != 'model_state_dict':
             config[key] = str(val)
-    config['model_name'] = model_name
-    create_and_store_model(config)
+    create_and_store_model(config, model_name)
     print('=== converted model ===')
     return
 

@@ -35,29 +35,35 @@ class RepeatedSelfTrainer:
         self.config = ConfigParser()
         self.config.read(config_file)
         self.model_names = []
-        self.data_files = []
+        self.start_index = self.config.getint('REPEATED SELF TRAINING', 'start_index', fallback=0)
+        self.end_index = self.start_index + self.config.getint('REPEATED SELF TRAINING', 
+            'num_iterations', fallback=100)
         self.tournament_results = defaultdict(lambda: defaultdict(int))
         self.reference_models = load_reference_models(self.config)
 
+    def get_model_name(self, i):
+        return '%s_%04d' % (self.config.get('CREATE MODEL', 'model_name'), i)
+
+    def get_data_files(self, i):
+        return [self.get_model_name(idx) for idx in range(i)]
+
 
     def repeated_self_training(self):
-        model_name = self.create_initial_model()
-        for i in range(self.config.getint('REPEATED SELF TRAINING', 'num_iterations', fallback=100)):
-            data_file = self.create_data_samples(model_name)
-            self.data_files.append(data_file)
-            new_model_name = '%s_%04d' % (self.config.get('CREATE MODEL', 'model_name'), i)
-            data_file = self.prepare_training_data()
-            self.train_model(model_name, new_model_name, data_file)
-            model_name = new_model_name
-            self.model_names.append(model_name)
+        if self.start_index == 0:
+            self.create_initial_model()
+            self.model_names = [self.get_model_name(0)]
+        for i in range(self.start_index+1, self.end_index+1):
+            self.create_data_samples(self.get_model_name(i-1))
+            data_file = self.prepare_training_data(self.get_data_files(i))
+            self.train_model(self.get_model_name(i-1), self.get_model_name(i), data_file)
+            self.model_names.append(self.get_model_name(i))
             self.create_all_elo_ratings()
-            self.measure_win_counts(model_name)
+            self.measure_win_counts(self.get_model_name(i))
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
-        self.model_names += [config['model_name']]
-        create_model.create_and_store_model(config)
-        return config['model_name']
+        create_model.create_and_store_model(config, self.get_model_name(0))
+        return
 
     def create_data_samples(self, model_name):
         model = load_model(f'models/{model_name}.pt')
@@ -70,16 +76,16 @@ class RepeatedSelfTrainer:
         create_data.create_self_play_data(
                 self_play_args, model
         )
-        return self_play_args.get('run_name')
+        return
 
-    def prepare_training_data(self):
+    def prepare_training_data(self, data_files):
         """
         gathers the last n training samples and writes them into a separate file.
         :return: filename of file with training data
         """
         n = self.config.getint('REPEATED SELF TRAINING', 'train_samples_pool_size')
         x, y, z = torch.Tensor(), torch.LongTensor(), torch.Tensor()
-        for file in self.data_files[::-1]:
+        for file in data_files[::-1]:
             x_new, y_new, z_new = torch.load('data/' + file + '_0.pt')
             x, y, z = torch.cat([x, x_new]), torch.cat([y, y_new]), torch.cat([z, z_new])
             if x.shape[0] >= n:
