@@ -32,12 +32,11 @@ class InteractiveGame:
     allows to play a game against a model
     '''
     def __init__(self, args):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = load_model(f'models/{args.model}.pt')
         self.board = Board(size=self.model.board_size)
         self.gui = Gui(self.board, args.gui_radius)
         self.args = args
-        self.game = MultiHexGame(boards=(self.board,), models=(self.model,), device=self.device, noise=None,
+        self.game = MultiHexGame(boards=(self.board,), models=(self.model,), noise=None,
             noise_parameters=None, temperature=args.temperature, temperature_decay=args.temperature_decay)
 
     def play_human_move(self):

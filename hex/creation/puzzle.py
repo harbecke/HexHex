@@ -6,7 +6,6 @@ from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
 from hex.model.hexconvolution import RandomModel
 from hex.utils.logger import logger
-from hex.utils.utils import device
 
 
 def create_puzzle(config):
@@ -20,8 +19,8 @@ def create_puzzle(config):
     all_moves = torch.LongTensor()
     all_results = torch.Tensor()
     for _ in range(config.getint('num_samples')):
-        multihexgame = MultiHexGame((Board(size=board_size),), (model,), device,
-                                    temperature=1, temperature_decay=1, noise=None, noise_parameters=None)
+        multihexgame = MultiHexGame((Board(size=board_size),), (model,), temperature=1, 
+            temperature_decay=1, noise=None, noise_parameters=None)
         board_states, moves, targets = multihexgame.play_moves()
         all_boards_tensor = torch.cat((all_boards_tensor, board_states[-2:]))
         all_moves = torch.cat((all_moves, moves[-2:]))

@@ -4,7 +4,7 @@ from torch.distributions.categorical import Categorical
 
 from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
 from hex.logic.hexboard import to_move
-from hex.utils.utils import zip_list_of_lists_first_dim_reversed
+from hex.utils.utils import device, zip_list_of_lists_first_dim_reversed
 
 
 def tempered_moves_selection(output_tensor, temperature):
@@ -25,7 +25,7 @@ class MultiHexGame():
     temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
     temperature_decay decays the temperature over time as a power function with base:temperature_decay and exponent:number of moves made
     '''
-    def __init__(self, boards, models, device, noise, noise_parameters, temperature, temperature_decay):
+    def __init__(self, boards, models, noise, noise_parameters, temperature, temperature_decay):
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
@@ -39,7 +39,6 @@ class MultiHexGame():
         self.targets_tensor = None
         self.targets_list = [[] for idx in range(self.batch_size)]
         self.reverse_winner = 1
-        self.device = device
 
     def __repr__(self):
         return ''.join([str(board) for board in self.boards])
@@ -50,7 +49,8 @@ class MultiHexGame():
                 self.batched_single_move(model)
                 if self.current_boards == []:
                     self.positions_tensor = self.positions_tensor.view(-1, 1)
-                    self.targets_tensor = torch.tensor(zip_list_of_lists_first_dim_reversed(*self.targets_list), dtype=torch.float, device=torch.device('cpu'))
+                    self.targets_tensor = torch.tensor(zip_list_of_lists_first_dim_reversed(*self.targets_list), 
+                        dtype=torch.float, device=torch.device('cpu'))
                     return self.output_boards_tensor, self.positions_tensor, self.targets_tensor
                 self.reverse_winner = 1 - self.reverse_winner
 
@@ -66,14 +66,14 @@ class MultiHexGame():
         if self.current_boards == []:
             return
         
-        self.current_boards_tensor = self.current_boards_tensor.to(self.device)
+        self.current_boards_tensor = self.current_boards_tensor.to(device)
 
         with torch.no_grad():
             outputs_tensor = model(self.current_boards_tensor)
 
         if self.noise == 'singh':
             noise_alpha, noise_beta, noise_lambda = self.noise_parameters
-            outputs_tensor = singh_maddala_onto_output(outputs_tensor, noise_alpha, noise_beta, noise_lambda, self.device)
+            outputs_tensor = singh_maddala_onto_output(outputs_tensor, noise_alpha, noise_beta, noise_lambda)
         if self.noise == 'uniform':
             noise_probability, = self.noise_parameters
             outputs_tensor = uniform_noise_onto_output(outputs_tensor, noise_probability)

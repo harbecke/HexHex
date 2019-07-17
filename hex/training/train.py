@@ -222,7 +222,6 @@ def train(config):
     """
     logger.info("")
     logger.info("=== training model ===")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset_list = []
 
     for idx in range(config.getint('data_range_min'), config.getint('data_range_max')):

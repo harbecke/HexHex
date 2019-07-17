@@ -6,7 +6,7 @@ from configparser import ConfigParser
 
 from hex.logic import hexboard
 from hex.logic.hexgame import MultiHexGame
-from hex.utils.utils import device, load_model
+from hex.utils.utils import load_model
 
 logging.basicConfig(level=logging.DEBUG, filename='play_cli.log', filemode='w')
 
@@ -26,7 +26,6 @@ def get_args():
 class CliGame:
     def __init__(self, args):
         self.board = None
-        self.device = device
         self.model = load_model(f'models/{args.model}.pt')
         self.args = args
 
@@ -44,7 +43,6 @@ class CliGame:
             self.game = MultiHexGame(
                     boards=(self.board,),
                     models=(self.model,),
-                    device=self.device,
                     noise=None,
                     noise_parameters=None,
                     temperature=self.args.temperature,

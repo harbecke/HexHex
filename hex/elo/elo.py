@@ -6,7 +6,7 @@ from collections import defaultdict
 import numpy as np
 
 from hex.evaluation import evaluate_two_models
-from hex.utils.utils import device, load_model
+from hex.utils.utils import load_model
 
 
 def add_to_tournament(model_list, new_model_name, args, old_results):
@@ -28,7 +28,6 @@ def add_to_tournament(model_list, new_model_name, args, old_results):
         old_model = load_model(f'models/{old_model_file}.pt')
         result, signed_chi_squared = evaluate_two_models.play_games(
                 models=(old_model, new_model),
-                device=device,
                 openings=args.getboolean('openings'),
                 number_of_games=args.getint('number_of_games'),
                 batch_size=args.getint('batch_size'),

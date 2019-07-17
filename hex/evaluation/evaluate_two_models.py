@@ -14,7 +14,7 @@ from hex.utils.utils import load_model
 from hex.visualization.image import draw_board_image
 
 
-def play_games(models, device, openings, number_of_games, batch_size, temperature, temperature_decay, plot_board):
+def play_games(models, openings, number_of_games, batch_size, temperature, temperature_decay, plot_board):
     assert(len(models) == 2)
     assert(models[0].board_size == models[1].board_size)
     board_size = models[0].board_size
@@ -44,7 +44,6 @@ def play_games(models, device, openings, number_of_games, batch_size, temperatur
                     ordered_models,
                     noise=None,
                     noise_parameters=None,
-                    device=device,
                     temperature=temperature,
                     temperature_decay=temperature_decay,
             )
@@ -88,7 +87,6 @@ def get_args(config_file):
 def evaluate(config_file = 'config.ini'):
     print("=== evaluate two models ===")
     args = get_args(config_file)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model1 = load_model(f'models/{args.model1}.pt')
     model2 = load_model(f'models/{args.model2}.pt')
@@ -97,7 +95,6 @@ def evaluate(config_file = 'config.ini'):
             models=(model1, model2),
             openings=args.openings,
             number_of_games=args.number_of_games,
-            device=device,
             batch_size=args.batch_size,
             temperature=args.temperature,
             temperature_decay=args.temperature_decay,

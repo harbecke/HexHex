@@ -1,8 +1,8 @@
 import torch
 from torch.distributions.pareto import Pareto
+from hex.utils.utils import device
 
-
-def singh_maddala_onto_output(output_tensor, noise_alpha, noise_beta, noise_lambda, device):
+def singh_maddala_onto_output(output_tensor, noise_alpha, noise_beta, noise_lambda):
     '''
     one value of the output_tensor gets increased by a sampled value of singh_maddala
     https://en.wikipedia.org/wiki/Burr_distribution

@@ -26,7 +26,6 @@ class SelfPlayGenerator:
         multihexgame = MultiHexGame(
             boards=boards,
             models=(self.model,),
-            device=utils.device,
             noise=self.args.get('noise'),
             noise_parameters=[float(parameter) for parameter in self.args.get('noise_parameters').split(",")],
             temperature=self.args.getfloat('temperature'),

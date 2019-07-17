@@ -7,7 +7,7 @@ from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
 from hex.utils.logger import logger
 from hex.utils.summary import writer
-from hex.utils.utils import load_model, device
+from hex.utils.utils import load_model
 
 
 class TestModel:
@@ -41,8 +41,8 @@ def win_count_3(model_name):
             board = Board(board_size)
             counter_model = TestModel(xs)
             models = (counter_model, model) if test_model_starts else (model, counter_model)
-            game = MultiHexGame((board,), models, device=device, noise=None,
-                                noise_parameters=None, temperature=0, temperature_decay=0)
+            game = MultiHexGame((board,), models, noise=None, noise_parameters=None, 
+                temperature=0, temperature_decay=0)
             game.play_moves()
             if board.winner == [1 - int(test_model_starts)]:
                 lose_count += 1
@@ -66,7 +66,6 @@ def win_count(model_name, reference_models, config):
     for opponent_name, opponent_model in reference_models.items():
         result, _ = evaluate_two_models.play_games(
             models=(model, opponent_model),
-            device=device,
             openings=config.getboolean('openings', True),
             number_of_games=config.getint('num_games', 100) // 2,
             batch_size=config.getint('batch_size', 32),

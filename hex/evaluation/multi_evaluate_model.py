@@ -37,7 +37,6 @@ def multi_evaluate(config_file = 'config.ini'):
                         models=(model1, model2),
                         openings=args.openings,
                         number_of_games=args.number_of_games,
-                        device=device,
                         batch_size=args.batch_size,
                         temperature=args.temperature,
                         temperature_decay=args.temperature_decay,
