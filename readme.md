@@ -79,11 +79,8 @@ pipenv run python play_cli.py
   * evaluating models against each other
   * ELO rating via `output_ratings` in `hex/elo/elo.py`
   * iterative training loop
+  * puzzle set for endgame evaluation
 
 * config to control plenty of hyperparameters
 
 * playable gui `hex/interactive/interactive.py`
-
-* puzzle validation set `data/puzzle.pt` for endgame strategy evaluation
-
-* Monte Carlo tree search
