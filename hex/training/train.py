@@ -126,67 +126,84 @@ class Training:
         return param_loss, policy_loss, value_loss
 
 
-def train_model(model, dataloader, optimizer, puzzle_triple, config):
-    start = time.time()
+class Average:
+    def __init__(self):
+        self.num_samples = 0
+        self.total = 0.0
 
-    criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
+    def add(self, value, num_samples):
+        self.num_samples += num_samples
+        self.total += value
+
+    def mean(self):
+        try:
+            return self.total / self.num_samples
+        except ZeroDivisionError:
+            return float("NaN")
+
+
+def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_triple, config):
+    criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='sum')(pred, y)+0.2*nn.BCELoss(reduction='sum')(pred, y)
+
+    def measure_loss(data_triple):
+        board_states, moves, labels = data_triple
+        board_states, moves, labels = board_states.to(device), moves.to(device), labels.to(device)
+        outputs = torch.sigmoid(model(board_states))
+        output_values = torch.gather(outputs, 1, moves)
+        return criterion(output_values.view(-1), labels)
+
+    def measure_weight_loss():
+        return sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
+
     weight_decay = config.getfloat('weight_decay')
     epochs = math.ceil(config.getfloat('epochs'))
     for epoch in range(epochs):
 
-        running_loss = 0.0
+        train_loss_avg = Average()
 
-        for i, (board_states, moves, labels) in enumerate(dataloader, 0):
-            board_states, moves, labels = board_states.to(device), moves.to(device), labels.to(device)
-
+        for i, train_triple in enumerate(train_dataloader):
             optimizer.zero_grad()
 
-            outputs = torch.sigmoid(model(board_states))
-            output_values = torch.gather(outputs, 1, moves)
-
-            loss = criterion(output_values.view(-1), labels)
-            loss.backward()
+            train_loss = measure_loss(train_triple)
+            train_loss.backward()
             optimizer.step()
 
-            running_loss += loss.item()
+            train_loss_avg.add(train_loss.item(), len(train_triple[0]))
 
             print_loss_frequency = config.getint('print_loss_frequency')
             if i % print_loss_frequency == 0:
-                l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
-                weighted_param_loss = weight_decay * l2loss
+                with torch.no_grad():
+                    l2loss = measure_weight_loss()
+                    weighted_param_loss = weight_decay * l2loss
 
-                if puzzle_triple is not None:
-                    with torch.no_grad():
-                        puzzle_pred_tensor = torch.sigmoid(model(puzzle_triple[0]))
-                        puzzle_values = torch.gather(puzzle_pred_tensor, 1, puzzle_triple[1])
-                        puzzle_loss = criterion(puzzle_values.view(-1), puzzle_triple[2])
+                    puzzle_loss = float('NaN')
+                    if puzzle_triple is not None:
+                        puzzle_loss = measure_loss(puzzle_triple) / len(puzzle_triple[0])
 
-                    duration = int(time.time() - start)
+                    val_loss = Average()
+                    for val_triple in val_dataloader:
+                        val_loss.add(measure_loss(val_triple), len(val_triple[0]))
+
                     logger.info(
-                        'batch %3d / %3d '
-                        'puzzle_loss: %.3f '
-                        'pred_loss: %.3f '
-                        'l2_param_loss: %.3f '
-                        'weighted_param_loss: %.3f'
-                        % (i + 1, len(dataloader), puzzle_loss, loss.item(), l2loss, weighted_param_loss)
+                        f'batch {i + 1:3} / {len(train_dataloader):3} '
+                        f'puzzle_loss: {puzzle_loss:.3f} '
+                        f'val_loss: {val_loss.mean():.3f} '
+                        f'l2_param_loss: {l2loss:.3f} '
+                        f'weighted_param_loss: {weighted_param_loss:.3f}'
                     )
+                    writer.add_scalar('train/puzzle_loss', puzzle_loss)
                     writer.add_scalar('train/val_loss', puzzle_loss)
                     writer.add_scalar('train/l2_weights', l2loss)
 
-                    with open(log_file, 'a') as log:
-                        log.write(f'{i + 1} {puzzle_loss} {loss.item()} {weighted_param_loss} {duration}\n')
-
-                else:
-                    # TODO: remove this case and generate puzzle data if non-existent
-                    logger.info('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
-                          % (i + 1, len(dataloader), loss.item(), l2loss, weighted_param_loss))
-
-        l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
+        l2loss = measure_weight_loss()
         weighted_param_loss = weight_decay * l2loss
-        pred_loss = running_loss / (i + 1)
-        logger.info('Epoch [%d] pred_loss: %.3f l2_param_loss: %.3f weighted_param_loss: %.3f'
-              % (epoch + 1, pred_loss, l2loss, weighted_param_loss))
-        writer.add_scalar('train/pred_loss', pred_loss)
+        logger.info(
+            f'Epoch {epoch + 1} '
+            f'train_loss: {train_loss_avg.mean():.3f} '
+            f'l2_param_loss: {l2loss:.3f} '
+            f'weighted_param_loss: {weighted_param_loss:.3f}'
+        )
+        writer.add_scalar('train/train_loss', train_loss_avg.mean())
 
     logger.debug('Finished Training\n')
     return model, optimizer
@@ -207,21 +224,18 @@ def train(config):
 
     concat_dataset = ConcatDataset(dataset_list)
     total_len = len(concat_dataset)
-    val_part = int(config.getfloat('validation_split') * total_len)
+    val_part = config.getint('num_validation_data')
     train_dataset, val_dataset = torch.utils.data.random_split(concat_dataset, [total_len - val_part, val_part])
 
     if config.getfloat('epochs') < 1:
-        concat_len = train_dataset.__len__()
-        sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len * config.getfloat('epochs'))])
-        train_loader = torch.utils.data.DataLoader(train_dataset,
-                                                   batch_size=config.getint('batch_size'),
-                                                   sampler=sampler,
-                                                   num_workers=0)
-    else:
-        train_loader = torch.utils.data.DataLoader(train_dataset,
-                                                   batch_size=config.getint('batch_size'),
-                                                   shuffle=True,
-                                                   num_workers=0)
+        total_train_sample = len(train_dataset)
+        num_train_samples = int(total_train_sample * config.getfloat('epochs'))
+        train_dataset, _ = torch.utils.data.random_split(train_dataset,
+                                                         [num_train_samples, total_train_sample - num_train_samples])
+
+    batch_size = config.getint('batch_size')
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size)
 
     model_file = f'models/{config.get("load_model")}.pt'
     model = load_model(model_file)
@@ -244,7 +258,8 @@ def train(config):
         puzzle_triple = torch.load(f'data/{model.board_size}_puzzle.pt', map_location=device)
 
     trained_model, trained_optimizer = train_model(model=model,
-                                                   dataloader=train_loader,
+                                                   train_dataloader=train_loader,
+                                                   val_dataloader=val_loader,
                                                    optimizer=optimizer,
                                                    puzzle_triple=puzzle_triple,
                                                    config=config)
