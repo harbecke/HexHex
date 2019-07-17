@@ -12,7 +12,6 @@ from hex.evaluation import win_position
 from hex.model.hexconvolution import RandomModel
 from hex.training import train
 from hex.utils.logger import logger
-from hex.utils.summary import writer
 from hex.utils.utils import load_model
 
 
@@ -44,7 +43,6 @@ class RepeatedSelfTrainer:
     def repeated_self_training(self):
         model_name = self.create_initial_model()
         for i in range(self.config.getint('REPEATED SELF TRAINING', 'num_iterations', fallback=100)):
-            writer.add_scalar('repeated self training/iteration', i)
             data_file = self.create_data_samples(model_name)
             self.data_files.append(data_file)
             new_model_name = '%s_%04d' % (self.config.get('CREATE MODEL', 'model_name'), i)
