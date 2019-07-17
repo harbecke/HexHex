@@ -9,17 +9,12 @@ from hex.utils.logger import logger
 def create_model(config):
     board_size = config.getint('board_size')
     model_type = config['model_type']
+    switch_model = config.getboolean('switch_model')
     rotation_model = config.getboolean('rotation_model')
     vertical_model = config.getboolean('vertical_model')
 
     if model_type == 'random':
         model = hexconvolution.RandomModel(board_size=board_size)
-    elif model_type == 'noswitch':
-        model = hexconvolution.NoSwitchModel(
-            board_size=board_size,
-            layers=config.getint('layers'),
-            intermediate_channels=config.getint('intermediate_channels')
-        )
     elif model_type == 'inception':
         model = hexconvolution.InceptionModel(
             board_size=board_size,
@@ -36,6 +31,9 @@ def create_model(config):
     else:
         logger.error(f"Unknown model_type: {model_type}")
         exit(1)
+
+    if switch_model == False:
+        model = hexconvolution.NoSwitchWrapperModel(model)
 
     if rotation_model == True:
         model = hexconvolution.RotationWrapperModel(model)
