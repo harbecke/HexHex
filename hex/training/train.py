@@ -125,23 +125,21 @@ class Training:
         policy_loss = torch.mean(torch.sum(-policies_log * policies_train, dim=1) - policies_train_entropy)
         value_loss_fct = nn.MSELoss(reduction='mean')
         value_loss = value_loss_fct(values_out, value_train)
-        param_loss = self.args.weight_decay * \
-                     sum(torch.pow(p, 2).sum() for p in self.model.parameters())
+        param_loss = self.args.weight_decay * sum(torch.pow(p, 2).sum() for p in self.model.parameters())
         return param_loss, policy_loss, value_loss
 
 
-def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs, device, weight_decay,
-                print_loss_frequency, validation_triple):
-    log_file = os.path.join('logs', save_model_path + '.csv')
+def train_model(model, dataloader, optimizer, puzzle_triple, config):
+    log_file = os.path.join('logs', config.get('save_model') + '.csv')
 
     with open(log_file, 'w') as log:
         log.write('# batch val_loss pred_loss weighted_param_loss duration[s]\n')
 
     start = time.time()
 
-    '''
-    trains model with backpropagation, loss criterion is currently binary cross-entropy and optimizer is adadelta
-    '''
+    criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
+    weight_decay = config.getfloat('weight_decay')
+    epochs = math.ceil(config.getfloat('epochs'))
     for epoch in range(epochs):
 
         running_loss = 0.0
@@ -160,26 +158,34 @@ def train_model(model, save_model_path, dataloader, criterion, optimizer, epochs
 
             running_loss += loss.item()
 
+            print_loss_frequency = config.getint('print_loss_frequency')
             if i % print_loss_frequency == 0:
                 l2loss = sum(torch.pow(p, 2).sum() for p in model.parameters() if p.requires_grad)
                 weighted_param_loss = weight_decay * l2loss
 
-                if validation_triple is not None:
+                if puzzle_triple is not None:
                     with torch.no_grad():
-                        val_pred_tensor = torch.sigmoid(model(validation_triple[0]))
-                        val_values = torch.gather(val_pred_tensor, 1, validation_triple[1])
-                        val_loss = criterion(val_values.view(-1), validation_triple[2])
+                        puzzle_pred_tensor = torch.sigmoid(model(puzzle_triple[0]))
+                        puzzle_values = torch.gather(puzzle_pred_tensor, 1, puzzle_triple[1])
+                        puzzle_loss = criterion(puzzle_values.view(-1), puzzle_triple[2])
 
                     duration = int(time.time() - start)
-                    logger.info('batch %3d / %3d val_loss: %.3f  pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
-                            % (i + 1, len(dataloader), val_loss, loss.item(), l2loss, weighted_param_loss))
-                    writer.add_scalar('train/val_loss', val_loss)
+                    logger.info(
+                        'batch %3d / %3d '
+                        'puzzle_loss: %.3f '
+                        'pred_loss: %.3f '
+                        'l2_param_loss: %.3f '
+                        'weighted_param_loss: %.3f'
+                        % (i + 1, len(dataloader), puzzle_loss, loss.item(), l2loss, weighted_param_loss)
+                    )
+                    writer.add_scalar('train/val_loss', puzzle_loss)
                     writer.add_scalar('train/l2_weights', l2loss)
 
                     with open(log_file, 'a') as log:
-                        log.write(f'{i + 1} {val_loss} {loss.item()} {weighted_param_loss} {duration}\n')
+                        log.write(f'{i + 1} {puzzle_loss} {loss.item()} {weighted_param_loss} {duration}\n')
 
                 else:
+                    # TODO: remove this case and generate puzzle data if non-existent
                     logger.info('batch %3d / %3d pred_loss: %.3f  l2_param_loss: %.3f weighted_param_loss: %.3f'
                           % (i + 1, len(dataloader), loss.item(), l2loss, weighted_param_loss))
 
@@ -215,12 +221,15 @@ def train(config):
     if config.getfloat('epochs') < 1:
         concat_len = train_dataset.__len__()
         sampler = SubsetRandomSampler(torch.randperm(concat_len)[:int(concat_len * config.getfloat('epochs'))])
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.getint('batch_size'), sampler=sampler,
-                                                     num_workers=0)
-
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=config.getint('batch_size'),
+                                                   sampler=sampler,
+                                                   num_workers=0)
     else:
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.getint('batch_size'), shuffle=True,
-                                                     num_workers=0)
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=config.getint('batch_size'),
+                                                   shuffle=True,
+                                                   num_workers=0)
 
     model_file = f'models/{config.get("load_model")}.pt'
     model = load_model(model_file)
@@ -228,20 +237,25 @@ def train(config):
 
     optimizer_weight_decay = config.getfloat('weight_decay')
 
-    optimizer = create_optimizer(optimizer_type=config.get('optimizer'), parameters=model.parameters(),
-        optimizer_weight_decay=optimizer_weight_decay, learning_rate=config.getfloat('learning_rate'))
+    optimizer = create_optimizer(
+        optimizer_type=config.get('optimizer'),
+        parameters=model.parameters(),
+        optimizer_weight_decay=optimizer_weight_decay,
+        learning_rate=config.getfloat('learning_rate')
+    )
 
     if config.getboolean('optimizer_load'):
         optimizer = load_optimizer(optimizer, model_file)
 
-    val_triple = None
-    if config.getboolean('validation_bool'):
-        val_board_tensor, val_moves_tensor, val_target_tensor = torch.load(f'data/{model.board_size}_puzzle.pt')
-        val_triple = (val_board_tensor.to(device), val_moves_tensor.to(device), val_target_tensor.to(device))
+    puzzle_triple = None
+    if config.getboolean('use_puzzle', True):
+        puzzle_triple = torch.load(f'data/{model.board_size}_puzzle.pt', map_location=device)
 
-    criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='mean')(pred, y)+0.2*nn.BCELoss(reduction='mean')(pred, y)
-    trained_model, trained_optimizer = train_model(model, config.get('save_model'), train_loader, criterion, optimizer,
-        math.ceil(config.getfloat('epochs')), device, config.getfloat('weight_decay'), config.getint('print_loss_frequency'), val_triple)
+    trained_model, trained_optimizer = train_model(model=model,
+                                                   dataloader=train_loader,
+                                                   optimizer=optimizer,
+                                                   puzzle_triple=puzzle_triple,
+                                                   config=config)
 
     checkpoint = torch.load(model_file, map_location=device)
     checkpoint['model_state_dict'] = trained_model.state_dict()
