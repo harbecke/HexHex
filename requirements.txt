@@ -4,3 +4,5 @@ pygame
 numpy
 image
 torch
+tensorboard
+tensorboardX
