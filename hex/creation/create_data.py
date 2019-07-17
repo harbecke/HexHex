@@ -69,10 +69,18 @@ def create_self_play_data(args, model):
             return [idx for idx in range(all_boards_tensor.shape[0]) if torch.sum(all_boards_tensor[idx, :2]) == k]
 
         first_move_indices = k_th_move_idx(0)
-        first_move_frequency = torch.zeros([board_size ** 2], dtype=torch.int32)
+        first_move_frequency = torch.zeros([board_size ** 2], dtype=torch.float)
+        first_move_win_percentage = torch.zeros([board_size ** 2], dtype=torch.float)
+
         for x in first_move_indices:
             first_move_frequency[all_moves[x].item()] += 1
-        logger.info("First move frequency:\n" + str(first_move_frequency.view(board_size, board_size).numpy()) + '\n')
+            if all_results[x].item() == 1:
+                first_move_win_percentage[all_moves[x].item()] += 1
+        first_move_win_percentage /= first_move_frequency
+
+        with np.printoptions(precision=2, suppress=True):
+            logger.info("First move frequency:\n" + str(first_move_frequency.view(board_size, board_size).numpy()) + '\n')
+            logger.info("First move win percentage:\n" + str(first_move_win_percentage.view(board_size, board_size).numpy()) + '\n')
 
         with torch.no_grad():
             board = Board(model.board_size)
