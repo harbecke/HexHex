@@ -21,6 +21,7 @@ def play_games(models, device, openings, number_of_games, batch_size, temperatur
     if openings:
         openings = list(hexboard.first_k_moves(board_size, 2))
         random.shuffle(openings)
+        number_of_games = min(len(openings), number_of_games)
 
     logger.debug(f'playing {number_of_games} games')
 
