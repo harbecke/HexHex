@@ -55,14 +55,17 @@ def create_self_play_data(args, model):
     self_play_generator = SelfPlayGenerator(model, args)
     position_generator = self_play_generator.position_generator()
     for file_idx in range(args.getint('data_range_min'), args.getint('data_range_max')):
-        all_boards_tensor = torch.Tensor()
-        all_moves = torch.LongTensor()
-        all_results = torch.Tensor()
-        for _ in range(args.getint('samples_per_file')):
+
+        samples_per_file = args.getint('samples_per_file')
+        all_boards_tensor = torch.zeros((samples_per_file, 3, board_size, board_size), dtype=torch.float)
+        all_moves = torch.zeros((samples_per_file, 1), dtype=torch.long)
+        all_results = torch.zeros(samples_per_file, dtype=torch.float)
+
+        for sample_idx in range(samples_per_file):
             board_tensor, move, result = next(position_generator)
-            all_boards_tensor = torch.cat((all_boards_tensor, board_tensor.unsqueeze(0)))
-            all_moves = torch.cat((all_moves, move.unsqueeze(0)))
-            all_results = torch.cat((all_results, result.unsqueeze(0)))
+            all_boards_tensor[sample_idx] = board_tensor
+            all_moves[sample_idx] = move
+            all_results[sample_idx] = result
 
         def k_th_move_idx(k):
             return [idx for idx in range(all_boards_tensor.shape[0]) if torch.sum(all_boards_tensor[idx, :2]) == k]
