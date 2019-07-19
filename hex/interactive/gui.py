@@ -1,7 +1,10 @@
-import pygame
 import math
 
+import pygame
+
 # Define the colors we will use in RGB format
+from hex.utils.logger import logger
+
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
@@ -15,6 +18,7 @@ class Gui:
     def __init__(self, board, radius):
         self.r = radius
         self.size = [int(self.r*(3/2*board.size+1)), int(self.r*(3**(1/2)/2*board.size+1))]
+        self.editor_mode = False # AI will not move in editor mode
 
         pygame.init()
 
@@ -75,7 +79,17 @@ class Gui:
         # This MUST happen after all the other drawing commands.
         pygame.display.flip()
 
-    def get_cell(self):
+    def wait_for_click(self):
+        while True:
+            self.clock.tick(10)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:  # If user clicked close
+                    self.quit()
+                    exit(0)
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    return
+
+    def get_move(self):
         while True:
             # This limits the while loop to a max of 10 times per second.
             # Leave this out and we will use all CPU we can.
@@ -87,3 +101,8 @@ class Gui:
                     exit(0)
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     return self.pixel_to_pos(event.pos)
+                if event.type == pygame.KEYDOWN and event.unicode == 'a':
+                    return 'ai_move'
+                if event.type == pygame.KEYDOWN and event.unicode == 'e':
+                    self.editor_mode = not self.editor_mode
+                    logger.info(f'Editor mode: {self.editor_mode}')

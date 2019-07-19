@@ -3,7 +3,6 @@ import argparse
 from configparser import ConfigParser
 
 import numpy as np
-import torch
 
 from hex.interactive.gui import Gui
 from hex.logic.hexboard import Board
@@ -20,17 +19,17 @@ def get_args():
     parser.add_argument('--model', type=str, default=config.get('INTERACTIVE', 'model'))
     parser.add_argument('--temperature', type=float, default=config.getfloat('INTERACTIVE', 'temperature'))
     parser.add_argument('--temperature_decay', type=float, default=config.getfloat('INTERACTIVE', 'temperature_decay'))
-    parser.add_argument('--first_move_ai', type=bool, default=config.getboolean('INTERACTIVE', 'first_move_ai'))
     parser.add_argument('--gui_radius', type=int, default=config.getint('INTERACTIVE', 'gui_radius'))
     parser.add_argument('--noise_epsilon', type=float, default=config.getfloat('INTERACTIVE', 'noise_epsilon'))
     parser.add_argument('--noise_spread', type=float, default=config.getfloat('INTERACTIVE', 'noise_spread'))
 
     return parser.parse_args()
 
+
 class InteractiveGame:
-    '''
+    """
     allows to play a game against a model
-    '''
+    """
     def __init__(self, args):
         self.model = load_model(f'models/{args.model}.pt')
         self.board = Board(size=self.model.board_size)
@@ -39,16 +38,20 @@ class InteractiveGame:
         self.game = MultiHexGame(boards=(self.board,), models=(self.model,), noise=None,
             noise_parameters=None, temperature=args.temperature, temperature_decay=args.temperature_decay)
 
-    def play_human_move(self):
+    def play_move(self):
         ratings = self.model(self.board.board_tensor.unsqueeze(0)).view(self.board.size, self.board.size)
         with np.printoptions(precision=1, suppress=True):
             logger.info('I politely recommend the following ratings\n' + str(ratings.detach().numpy()))
         move = self.get_move()
-        self.board.set_stone(move)
-        self.gui.update_board(self.board)
-
-        if self.board.winner:
-            logger.info("Player has won!")
+        if move == 'ai_move':
+            self.play_ai_move()
+        else:
+            self.board.set_stone(move)
+            self.gui.update_board(self.board)
+            if self.board.winner:
+                logger.info("Player has won")
+            elif not self.gui.editor_mode:
+                self.play_ai_move()
 
     def play_ai_move(self):
         move_ratings = self.game.batched_single_move(self.model)
@@ -60,40 +63,37 @@ class InteractiveGame:
                 rating_strings.append('-')
             else:
                 rating_strings.append("{0:0.1f}".format(rating))
-        #field_text = ["{0:0.1f}".format(rating) for rating in move_ratings[0]]
         self.gui.update_board(self.board, field_text=rating_strings)
 
         if self.board.winner:
             logger.info("agent has won!")
 
-    def wait_for_gui_exit(self):
-        while True:
-            self.gui.get_cell()
-
     def get_move(self):
         while True:
-            move = self.gui.get_cell()
+            move = self.gui.get_move()
+            if move == 'ai_move':
+                return move
             if move in self.board.legal_moves:
                 return move
 
 
 def _main():
     logger.info("Starting interactive game")
+    logger.info("Press 'e' for editor mode")
+    logger.info("Press 'a' to trigger ai move")
 
     args = get_args()
     while True:
         interactive = InteractiveGame(args)
+        play_game(args, interactive)
+        interactive.gui.wait_for_click()  # wait for click to start new game
 
-        if args.first_move_ai:
-            interactive.play_ai_move()
-        while True:
-            interactive.play_human_move()
-            if interactive.board.winner:
-                break
-            interactive.play_ai_move()
-            if interactive.board.winner:
-                break
-        interactive.gui.get_cell()
+
+def play_game(args, interactive):
+    while True:
+        interactive.play_move()
+        if interactive.board.winner:
+            break
 
 
 if __name__ == '__main__':
