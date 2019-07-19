@@ -102,7 +102,6 @@ class NoMCTSModel(nn.Module):
         #illegal moves are given a huge negative bias, so they are never selected for play
         x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
-        print(illegal)
         x = self.conv(x)
         for skiplayer in self.skiplayers:
             x = skiplayer(x)

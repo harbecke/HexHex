@@ -111,28 +111,29 @@ class Board():
         if type(position) is int:
             position = to_move(position, self.size)
 
-        if self.player:
-            position = (position[1], position[0])
+        logical_position = (position[1], position[0]) if self.player else position
 
-        if position in self.legal_moves:
+        if logical_position in self.legal_moves:
 
             if len(self.made_moves) > 1:
-                self.legal_moves.remove(position)
+                self.legal_moves.remove(logical_position)
 
             elif len(self.made_moves) == 1:
-                if set([position]) == self.made_moves:
+                if set([logical_position]) == self.made_moves:
                     self.switch = True
-                    self.legal_moves.remove(position)
+                    self.legal_moves.remove(logical_position)
+                    self.board_tensor[0][logical_position] = 0.001
                     return
 
                 else:
                     self.legal_moves -= self.made_moves
+                    self.legal_moves.remove(logical_position)
 
-            self.made_moves.update([position])
+            self.made_moves.update([logical_position])
             self.board_tensor[0][position] = 1
             self.connected_sets[self.player], self.winner = update_connected_sets_check_win( \
-                self.connected_sets[self.player], self.player, position, self.size)
-            self.move_history.append((self.player, position))
+                self.connected_sets[self.player], self.player, logical_position, self.size)
+            self.move_history.append((self.player, logical_position))
 
             if self.winner:
                 if self.switch:
@@ -143,10 +144,10 @@ class Board():
             self.board_tensor = torch.transpose(torch.roll(self.board_tensor, 1, 0), 1, 2)
 
         else:
-            logger.error(f'Illegal Move! {position} of type {type(position)}')
+            logger.error(f'Illegal Move! {logical_position} of type {type(logical_position)}')
             logger.error(self)
             logger.error(self.move_history)
-            exit(1)
+            raise SystemExit
 
     def export_as_FF4(self, filename):
         with open(filename, 'w') as file:
