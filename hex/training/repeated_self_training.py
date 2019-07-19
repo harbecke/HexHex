@@ -92,8 +92,10 @@ class RepeatedSelfTrainer:
                 break
         if x.shape[0] > n:
             x, y, z = x[:n], y[:n], z[:n]
-        torch.save((x, y, z), 'data/current_training_data_0.pt')
-        return 'current_training_data'
+        model_name = self.config.get('CREATE MODEL', 'model_name')
+        data_name = model_name + '_current_training'
+        torch.save((x, y, z), f'data/{data_name}_0.pt')
+        return data_name
 
     def train_model(self, input_model, output_model, data_file):
         config = self.config['TRAIN']
