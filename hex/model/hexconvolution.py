@@ -87,7 +87,7 @@ class NoMCTSModel(nn.Module):
         super(NoMCTSModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
-        self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
         if skip_layer=='alpha':
             self.skiplayers = nn.ModuleList([SkipLayerAlpha(intermediate_channels, 1) for idx in range(layers)])
         elif skip_layer=='star':
@@ -102,6 +102,7 @@ class NoMCTSModel(nn.Module):
         #illegal moves are given a huge negative bias, so they are never selected for play
         x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
+        print(illegal)
         x = self.conv(x)
         for skiplayer in self.skiplayers:
             x = skiplayer(x)
@@ -119,7 +120,7 @@ class InceptionModel(nn.Module):
         super(InceptionnModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
-        self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
         self.inceptionlayers = nn.ModuleList([InceptionLayer(intermediate_channels) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
         self.policybn = nn.BatchNorm2d(policy_channels)

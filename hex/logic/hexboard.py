@@ -82,8 +82,7 @@ class Board():
     '''
     def __init__(self, size):
         self.size = size
-        self.board_tensor = torch.zeros([3, self.size, self.size])
-        self.player_tensor = (torch.ones([self.size, self.size]), torch.zeros([self.size, self.size]))
+        self.board_tensor = torch.zeros([2, self.size, self.size])
         self.made_moves = set()
         self.legal_moves = set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
         self.connected_sets = [[], []]
@@ -112,46 +111,42 @@ class Board():
         if type(position) is int:
             position = to_move(position, self.size)
 
-        if len(self.made_moves)==0:
-            self.made_moves.update([position])
-            self.board_tensor[0][position] = 1
-            self.connected_sets[0], self.winner = update_connected_sets_check_win(self.connected_sets[0], 0, position, self.size)
-            self.board_tensor[2] = self.player_tensor[0]
-            self.player = 1
-            self.move_history.append((0, position))
+        if self.player:
+            position = (position[1], position[0])
 
-        elif position in self.legal_moves:
-            if len(self.made_moves)==1:
+        if position in self.legal_moves:
+
+            if len(self.made_moves) > 1:
+                self.legal_moves.remove(position)
+
+            elif len(self.made_moves) == 1:
                 if set([position]) == self.made_moves:
                     self.switch = True
-                    self.board_tensor[1][position] = 0.001
                     self.legal_moves.remove(position)
-                    # ignore move_history, as switch rule is not implemented correctly
-                else:
-                    self.made_moves.update([position])
-                    self.legal_moves -= self.made_moves
-                    self.board_tensor[self.player][position] = 1
-                    self.connected_sets[self.player], self.winner = update_connected_sets_check_win(self.connected_sets[self.player], self.player, position, self.size)
-                    self.board_tensor[2] = self.player_tensor[self.player]
-                    self.move_history.append((self.player, position))
-                    self.player = 1-self.player
+                    return
 
-            else:
-                self.made_moves.update([position])
-                self.legal_moves.remove(position)
-                self.board_tensor[self.player][position] = 1
-                self.connected_sets[self.player], self.winner = update_connected_sets_check_win(self.connected_sets[self.player], self.player, position, self.size)
-                if self.winner:
-                    if self.switch:
-                        self.winner = [[1], [0]][self.winner[0]]
-                    self.legal_moves = set()
-                self.board_tensor[2] = self.player_tensor[self.player]
-                self.move_history.append((self.player, position))
-                self.player = 1-self.player
+                else:
+                    self.legal_moves -= self.made_moves
+
+            self.made_moves.update([position])
+            self.board_tensor[0][position] = 1
+            self.connected_sets[self.player], self.winner = update_connected_sets_check_win( \
+                self.connected_sets[self.player], self.player, position, self.size)
+            self.move_history.append((self.player, position))
+
+            if self.winner:
+                if self.switch:
+                    self.winner = [[1], [0]][self.winner[0]]
+                self.legal_moves = set()
+            
+            self.player = 1-self.player
+            self.board_tensor = torch.transpose(torch.roll(self.board_tensor, 1, 0), 1, 2)
 
         else:
             logger.error(f'Illegal Move! {position} of type {type(position)}')
             logger.error(self)
+            logger.error(self.move_history)
+            exit(1)
 
     def export_as_FF4(self, filename):
         with open(filename, 'w') as file:
