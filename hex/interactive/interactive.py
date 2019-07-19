@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import argparse
 from configparser import ConfigParser
 
 import numpy as np
@@ -11,32 +10,23 @@ from hex.utils.logger import logger
 from hex.utils.utils import load_model
 
 
-def get_args():
-    config = ConfigParser()
-    config.read('config.ini')
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--model', type=str, default=config.get('INTERACTIVE', 'model'))
-    parser.add_argument('--temperature', type=float, default=config.getfloat('INTERACTIVE', 'temperature'))
-    parser.add_argument('--temperature_decay', type=float, default=config.getfloat('INTERACTIVE', 'temperature_decay'))
-    parser.add_argument('--gui_radius', type=int, default=config.getint('INTERACTIVE', 'gui_radius'))
-    parser.add_argument('--noise_epsilon', type=float, default=config.getfloat('INTERACTIVE', 'noise_epsilon'))
-    parser.add_argument('--noise_spread', type=float, default=config.getfloat('INTERACTIVE', 'noise_spread'))
-
-    return parser.parse_args()
-
-
 class InteractiveGame:
     """
     allows to play a game against a model
     """
-    def __init__(self, args):
-        self.model = load_model(f'models/{args.model}.pt')
+    def __init__(self, config):
+        self.config = config['INTERACTIVE']
+        self.model = load_model(f'models/{self.config.get("model")}.pt')
         self.board = Board(size=self.model.board_size)
-        self.gui = Gui(self.board, args.gui_radius)
-        self.args = args
-        self.game = MultiHexGame(boards=(self.board,), models=(self.model,), noise=None,
-            noise_parameters=None, temperature=args.temperature, temperature_decay=args.temperature_decay)
+        self.gui = Gui(self.board, self.config.getint('gui_radius', 50))
+        self.game = MultiHexGame(
+            boards=(self.board,),
+            models=(self.model,),
+            noise=None,
+            noise_parameters=None,
+            temperature=self.config.getfloat('temperature'),
+            temperature_decay=self.config.getfloat('temperature_decay')
+        )
 
     def play_move(self):
         ratings = self.model(self.board.board_tensor.unsqueeze(0)).view(self.board.size, self.board.size)
@@ -82,14 +72,16 @@ def _main():
     logger.info("Press 'e' for editor mode")
     logger.info("Press 'a' to trigger ai move")
 
-    args = get_args()
+    config = ConfigParser()
+    config.read('config.ini')
+
     while True:
-        interactive = InteractiveGame(args)
-        play_game(args, interactive)
+        interactive = InteractiveGame(config)
+        play_game(interactive)
         interactive.gui.wait_for_click()  # wait for click to start new game
 
 
-def play_game(args, interactive):
+def play_game(interactive):
     while True:
         interactive.play_move()
         if interactive.board.winner:
