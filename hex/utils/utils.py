@@ -61,3 +61,19 @@ def load_optimizer(optimizer, model_file):
     checkpoint = torch.load(model_file, map_location=device)
     optimizer.load_state_dict(checkpoint['optimizer'])
     return optimizer
+
+
+class Average:
+    def __init__(self):
+        self.num_samples = 0
+        self.total = 0.0
+
+    def add(self, value, num_samples):
+        self.num_samples += num_samples
+        self.total += value
+
+    def mean(self):
+        try:
+            return self.total / self.num_samples
+        except ZeroDivisionError:
+            return float("NaN")

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import math
-import os
-import time
 
 import numpy as np
 import torch
@@ -11,7 +9,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 from hex.utils.logger import logger
 from hex.utils.summary import writer
-from hex.utils.utils import device, load_model, create_optimizer, load_optimizer
+from hex.utils.utils import device, load_model, create_optimizer, load_optimizer, Average
 
 
 class LossTriple:
@@ -124,22 +122,6 @@ class Training:
         value_loss = value_loss_fct(values_out, value_train)
         param_loss = self.args.weight_decay * sum(torch.pow(p, 2).sum() for p in self.model.parameters())
         return param_loss, policy_loss, value_loss
-
-
-class Average:
-    def __init__(self):
-        self.num_samples = 0
-        self.total = 0.0
-
-    def add(self, value, num_samples):
-        self.num_samples += num_samples
-        self.total += value
-
-    def mean(self):
-        try:
-            return self.total / self.num_samples
-        except ZeroDivisionError:
-            return float("NaN")
 
 
 def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_triple, config):
