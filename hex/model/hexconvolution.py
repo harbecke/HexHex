@@ -56,7 +56,7 @@ class SkipLayerStar(nn.Module):
 
 class InceptionLayer(nn.Module):
     def __init__(self, channels):
-        super(SkipLayerAlpha, self).__init__()
+        super(InceptionLayer, self).__init__()
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
         self.conv3 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
         self.conv5 = nn.Conv2d(channels, channels, kernel_size=5, padding=2)
@@ -116,7 +116,7 @@ class InceptionModel(nn.Module):
     then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
     '''
     def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach_conv=1):
-        super(InceptionnModel, self).__init__()
+        super(InceptionModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
         self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
