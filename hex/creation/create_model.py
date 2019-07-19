@@ -38,9 +38,6 @@ def create_model(config):
     if rotation_model == True:
         model = hexconvolution.RotationWrapperModel(model)
 
-    if vertical_model == True:
-        model = hexconvolution.VerticalWrapperModel(model)
-
     return model
 
 

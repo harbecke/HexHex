@@ -180,24 +180,3 @@ class RotationWrapperModel(nn.Module):
         y_flip = self.internal_model(x_flip)
         y = torch.flip(y_flip, [1])
         return (self.internal_model(x) + y)/2
-
-
-class VerticalWrapperModel(nn.Module):
-    '''
-    evaulates only in vertical direction with parent model
-    if input is for second player it gets transposed and channels are switched
-    '''
-
-    def __init__(self, model):
-        super(VerticalWrapperModel, self).__init__()
-        self.board_size = model.board_size
-        self.internal_model = model
-
-    def forward(self, x):
-        y = torch.zeros(x.size(0), 3, x.size(2), x.size(3)).to(x.device)
-        y[:, 0] = x[:, 0] * (1 - x[:, 2]) + torch.transpose(x[:, 1] * x[:, 2], 1, 2)
-        y[:, 1] = x[:, 1] * (1 - x[:, 2]) + torch.transpose(x[:, 0] * x[:, 2], 1, 2)
-
-        q = torch.transpose((self.internal_model(y)).view(-1, self.board_size, self.board_size), 1, 2)*x[:, 2]
-        q += (self.internal_model(y)).view(-1, self.board_size, self.board_size)*(1-x[:, 2])
-        return q.view(-1, self.board_size**2)
