@@ -150,7 +150,7 @@ class Board():
                 self.player = 1-self.player
 
         else:
-            logger.error(f'Illegal Move! {position}')
+            logger.error(f'Illegal Move! {position} of type {type(position)}')
             logger.error(self)
 
     def export_as_FF4(self, filename):
