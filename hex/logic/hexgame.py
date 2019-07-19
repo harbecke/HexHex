@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
 from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
-from hex.logic.hexboard import to_move
 from hex.utils.utils import device, zip_list_of_lists_first_dim_reversed
 
 
@@ -54,7 +53,6 @@ class MultiHexGame():
                     return self.output_boards_tensor, self.positions_tensor, self.targets_tensor
                 self.reverse_winner = 1 - self.reverse_winner
 
-
     def batched_single_move(self, model):        
         self.current_boards = []
         self.current_boards_tensor = torch.Tensor()
@@ -85,6 +83,6 @@ class MultiHexGame():
         self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
 
         for idx in range(len(self.current_boards)):
-            self.boards[self.current_boards[idx]].set_stone(to_move(positions1d[idx].item(), self.board_size))
+            self.boards[self.current_boards[idx]].set_stone(positions1d[idx].item())
             self.targets_list[self.current_boards[idx]].append(self.reverse_winner)
         return outputs_tensor

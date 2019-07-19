@@ -109,6 +109,9 @@ class Board():
         return self_copy
 
     def set_stone(self, position):
+        if type(position) is int:
+            position = to_move(position, self.size)
+
         if len(self.made_moves)==0:
             self.made_moves.update([position])
             self.board_tensor[0][position] = 1
