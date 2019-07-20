@@ -100,7 +100,7 @@ class NoMCTSModel(nn.Module):
 
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play
-        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         x = self.conv(x)
         for skiplayer in self.skiplayers:
@@ -127,7 +127,7 @@ class InceptionModel(nn.Module):
 
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play
-        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         x = self.conv(x)
         for inceptionlayer in self.inceptionlayers:
@@ -146,7 +146,7 @@ class RandomModel(nn.Module):
         self.board_size = board_size
 
     def forward(self, x):
-        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         return torch.rand_like(illegal) - illegal
 
@@ -161,7 +161,7 @@ class NoSwitchWrapperModel(nn.Module):
         self.internal_model = model
 
     def forward(self, x):
-        illegal = 1000*(x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        illegal = 1000*torch.sum(x, dim=1).view(-1,self.board_size**2)
         return self.internal_model(x)-illegal
 
 
