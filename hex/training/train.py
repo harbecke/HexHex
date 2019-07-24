@@ -140,6 +140,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
             with torch.no_grad():
                 return _measure_loss_impl(data_triple)
         else:
+            torch.enable_grad()
             model.train()
             return _measure_loss_impl(data_triple)
 

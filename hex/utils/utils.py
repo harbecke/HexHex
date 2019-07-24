@@ -40,6 +40,8 @@ def load_model(model_file):
     checkpoint = torch.load(model_file, map_location=device)
     model = create_model(checkpoint['config'])
     model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+    torch.no_grad()
     return model
 
 

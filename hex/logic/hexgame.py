@@ -28,7 +28,7 @@ class MultiHexGame():
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
-        self.models = [nn.DataParallel(model).to(device).eval() for model in models]
+        self.models = [nn.DataParallel(model).to(device) for model in models]
         self.noise = noise
         self.noise_parameters = noise_parameters
         self.temperature = temperature
