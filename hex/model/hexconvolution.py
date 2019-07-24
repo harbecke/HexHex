@@ -87,7 +87,7 @@ class NoMCTSModel(nn.Module):
         super(NoMCTSModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
-        self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
         if skip_layer=='alpha':
             self.skiplayers = nn.ModuleList([SkipLayerAlpha(intermediate_channels, 1) for idx in range(layers)])
         elif skip_layer=='star':
@@ -100,7 +100,7 @@ class NoMCTSModel(nn.Module):
 
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play
-        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         x = self.conv(x)
         for skiplayer in self.skiplayers:
@@ -119,7 +119,7 @@ class InceptionModel(nn.Module):
         super(InceptionModel, self).__init__()
         self.board_size = board_size
         self.policy_channels = policy_channels
-        self.conv = nn.Conv2d(3, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
         self.inceptionlayers = nn.ModuleList([InceptionLayer(intermediate_channels) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
         self.policybn = nn.BatchNorm2d(policy_channels)
@@ -127,7 +127,7 @@ class InceptionModel(nn.Module):
 
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play
-        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         x = self.conv(x)
         for inceptionlayer in self.inceptionlayers:
@@ -146,7 +146,7 @@ class RandomModel(nn.Module):
         self.board_size = board_size
 
     def forward(self, x):
-        x_sum = (x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         return torch.rand_like(illegal) - illegal
 
@@ -161,7 +161,7 @@ class NoSwitchWrapperModel(nn.Module):
         self.internal_model = model
 
     def forward(self, x):
-        illegal = 1000*(x[:,0]+x[:,1]).view(-1,self.board_size**2)
+        illegal = 1000*torch.sum(x, dim=1).view(-1,self.board_size**2)
         return self.internal_model(x)-illegal
 
 
@@ -180,24 +180,3 @@ class RotationWrapperModel(nn.Module):
         y_flip = self.internal_model(x_flip)
         y = torch.flip(y_flip, [1])
         return (self.internal_model(x) + y)/2
-
-
-class VerticalWrapperModel(nn.Module):
-    '''
-    evaulates only in vertical direction with parent model
-    if input is for second player it gets transposed and channels are switched
-    '''
-
-    def __init__(self, model):
-        super(VerticalWrapperModel, self).__init__()
-        self.board_size = model.board_size
-        self.internal_model = model
-
-    def forward(self, x):
-        y = torch.zeros(x.size(0), 3, x.size(2), x.size(3)).to(x.device)
-        y[:, 0] = x[:, 0] * (1 - x[:, 2]) + torch.transpose(x[:, 1] * x[:, 2], 1, 2)
-        y[:, 1] = x[:, 1] * (1 - x[:, 2]) + torch.transpose(x[:, 0] * x[:, 2], 1, 2)
-
-        q = torch.transpose((self.internal_model(y)).view(-1, self.board_size, self.board_size), 1, 2)*x[:, 2]
-        q += (self.internal_model(y)).view(-1, self.board_size, self.board_size)*(1-x[:, 2])
-        return q.view(-1, self.board_size**2)

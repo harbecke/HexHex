@@ -52,26 +52,30 @@ class Gui:
         return [self.r + x * self.r / 2 + y * self.r, self.r + math.sqrt(3) / 2 * x * self.r]
 
     def update_board(self, board, field_text=None):
-        self.board = board
-
         # Clear the screen and set the screen background
         self.screen.fill(WHITE)
 
         for x in range(board.size):
             for y in range(board.size):
-                center = self.get_center([x,y])
+                if board.player:
+                    x_copy, y_copy = y, x
+                else:
+                    x_copy, y_copy = x, y
+
+                center = self.get_center([x, y])
                 angles = [math.pi / 6 + x * math.pi / 3 for x in range(6)]
                 points = [[center[0] + math.cos(angle)*self.r/math.sqrt(3),
                            center[1] + math.sin(angle)*self.r/math.sqrt(3)]
                         for angle in angles]
-                if board.board_tensor[0][x][y] == 1:
+
+                if board.board_tensor[board.player][x_copy][y_copy] == 1:
                     pygame.draw.polygon(self.screen, PLAYER_1, points,0)
-                elif board.board_tensor[1][x][y] == 1:
+                elif board.board_tensor[1-board.player][x_copy][y_copy] == 1:
                     pygame.draw.polygon(self.screen, PLAYER_2, points,0)
                 pygame.draw.polygon(self.screen, BLACK, points,3)
 
                 if field_text is not None:
-                    text = field_text[x * board.size + y]
+                    text = field_text[y_copy * board.size + x_copy]
                     textsurface = self.font.render(f'{text}', True, (0, 0, 0))
                     self.screen.blit(textsurface, (center[0]-self.r/6, center[1] - self.r/6))
 

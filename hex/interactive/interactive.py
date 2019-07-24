@@ -34,12 +34,16 @@ class InteractiveGame:
 
     def play_move(self):
         ratings = self.model(self.board.board_tensor.unsqueeze(0)).view(self.board.size, self.board.size)
+        if self.board.player:
+            ratings = ratings.transpose(0, 1)
         with np.printoptions(precision=1, suppress=True):
             logger.info('I politely recommend the following ratings\n' + str(ratings.detach().numpy()))
         move = self.get_move()
         if move == 'ai_move':
             self.play_ai_move()
         else:
+            if self.board.player:
+                move = (move[1], move[0])
             self.board.set_stone(move)
             self.gui.update_board(self.board)
             if self.board.winner:

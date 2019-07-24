@@ -57,7 +57,7 @@ def create_self_play_data(args, model):
     for file_idx in range(args.getint('data_range_min'), args.getint('data_range_max')):
 
         samples_per_file = args.getint('samples_per_file')
-        all_boards_tensor = torch.zeros((samples_per_file, 3, board_size, board_size), dtype=torch.float)
+        all_boards_tensor = torch.zeros((samples_per_file, 2, board_size, board_size), dtype=torch.float)
         all_moves = torch.zeros((samples_per_file, 1), dtype=torch.long)
         all_results = torch.zeros(samples_per_file, dtype=torch.float)
 

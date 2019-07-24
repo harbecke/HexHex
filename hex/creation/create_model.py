@@ -11,7 +11,6 @@ def create_model(config):
     model_type = config['model_type']
     switch_model = config.getboolean('switch_model')
     rotation_model = config.getboolean('rotation_model')
-    vertical_model = config.getboolean('vertical_model')
 
     if model_type == 'random':
         model = hexconvolution.RandomModel(board_size=board_size)
@@ -37,9 +36,6 @@ def create_model(config):
 
     if rotation_model == True:
         model = hexconvolution.RotationWrapperModel(model)
-
-    if vertical_model == True:
-        model = hexconvolution.VerticalWrapperModel(model)
 
     return model
 
