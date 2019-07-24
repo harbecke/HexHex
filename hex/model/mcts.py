@@ -47,7 +47,7 @@ class Node:
         Q = torch.tensor([q.mean() for q in self.Q]).type(torch.float)
         N = torch.tensor([q.num_samples for q in self.Q]).type(torch.float)
         c_puct = self.config.getfloat('c_puct', 1.25)
-        U = c_puct * torch.sigmoid(self.model_output) * N.sum().sqrt() / (1 + N)
+        U = c_puct * torch.softmax(self.model_output, 0) * N.sum().sqrt() / (1 + N)
         legal_mask = (self.model_output > -900).type(torch.float)
         total = ((Q + U)*legal_mask)
         move = total.argmax()
