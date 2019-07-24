@@ -32,12 +32,15 @@ class InteractiveGame:
                 temperature_decay=self.config.getfloat('temperature_decay')
             )
 
-    def play_move(self):
+    def print_ratings(self):
         ratings = self.model(self.board.board_tensor.unsqueeze(0)).view(self.board.size, self.board.size)
         if self.board.player:
             ratings = ratings.transpose(0, 1)
         with np.printoptions(precision=1, suppress=True):
             logger.info('I politely recommend the following ratings\n' + str(ratings.detach().numpy()))
+
+    def play_move(self):
+        self.print_ratings()
         move = self.get_move()
         if move == 'ai_move':
             self.play_ai_move()
@@ -49,6 +52,7 @@ class InteractiveGame:
             if self.board.winner:
                 logger.info("Player has won")
             elif not self.gui.editor_mode:
+                self.print_ratings()
                 self.play_ai_move()
 
     def play_ai_move(self):
