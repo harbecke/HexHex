@@ -195,6 +195,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
         writer.add_scalar('train/train_loss', train_loss_avg.mean())
         writer.add_scalar('train/val_loss', val_loss.mean())
 
+    writer.close()
     logger.debug('Finished Training\n')
     return model, optimizer
 
