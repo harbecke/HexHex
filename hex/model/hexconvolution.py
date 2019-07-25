@@ -54,24 +54,42 @@ class SkipLayerStar(nn.Module):
         return x + y
 
 
-class InceptionLayer(nn.Module):
-    def __init__(self, channels):
-        super(InceptionLayer, self).__init__()
-        self.conv1 = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
-        self.conv3 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.conv5 = nn.Conv2d(channels, channels, kernel_size=5, padding=2)
-        self.maxpool3 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(channels)
-        self.bn3 = nn.BatchNorm2d(channels)
-        self.bn5 = nn.BatchNorm2d(channels)
-        self.bnpool3 = nn.BatchNorm2d(channels)
+class ActivNormConv2d(nn.Module):
+
+    def __init__(self, in_planes, out_planes, kernel_size=1, padding=0):
+        super(ActivNormConv2d, self).__init__()
+        self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size,
+                              stride=1, padding=padding, bias=False)
+        self.bn = nn.BatchNorm2d(out_planes)
 
     def forward(self, x):
-        x1 = swish(self.bn1(self.conv1(x)))
-        x3 = swish(self.bn3(self.conv3(x)))
-        x5 = swish(self.bn5(self.conv5(x)))
-        xm3 = swish(self.bnpool3(self.maxpool3(x)))
-        return x + x1 + x3 + x5 + xm3
+        x = self.conv(x)
+        x = self.bn(x)
+        return F.relu(x)
+
+
+class InceptionLayer(nn.Module):
+    def __init__(self, channels, reach, scale=1.0):
+        super(InceptionLayer, self).__init__()
+        self.scale = scale
+
+        self.anconv11 = ActivNormConv2d(64*channels, 6*channels)
+
+        self.anconv21 = ActivNormConv2d(64*channels, 6*channels)
+        self.anconv22 = ActivNormConv2d(6*channels, 7*channels, kernel_size=(1, reach*2+1),
+                                        padding=(0, reach))
+        self.anconv23 = ActivNormConv2d(7*channels, 8*channels, kernel_size=(reach*2+1, 1),
+                                        padding=(reach, 0))
+
+        self.conv3 = nn.Conv2d(14*channels, 64*channels, kernel_size=1)
+
+    def forward(self, x):
+        x1 = self.anconv11(x)
+        x2 = self.anconv23(self.anconv22(self.anconv21(x)))
+        out = torch.cat((x1, x2), 1)
+        out = self.conv3(out)
+        out = out * self.scale + x
+        return F.relu(out)
 
 
 class NoMCTSModel(nn.Module):
@@ -112,18 +130,21 @@ class NoMCTSModel(nn.Module):
 class InceptionModel(nn.Module):
     '''
     model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
-    then a specified amount of residual or skip-layers https://en.wikipedia.org/wiki/Residual_neural_network
+    then a specified amount of Inception-ResNet v2 layers
+    the intermediate_channels parameter get multiplied by 64!
     then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
     '''
-    def __init__(self, board_size, layers, intermediate_channels=256, policy_channels=2, reach_conv=1):
+    def __init__(self, board_size, layers, intermediate_channels, reach=1):
         super(InceptionModel, self).__init__()
         self.board_size = board_size
-        self.policy_channels = policy_channels
-        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=reach_conv*2+1, padding=reach_conv)
-        self.inceptionlayers = nn.ModuleList([InceptionLayer(intermediate_channels) for idx in range(layers)])
-        self.policyconv = nn.Conv2d(intermediate_channels, policy_channels, kernel_size=1)
-        self.policybn = nn.BatchNorm2d(policy_channels)
-        self.policylin = nn.Linear(board_size**2 * policy_channels, board_size**2)
+        self.penultimate_channels = int(8*board_size*intermediate_channels**0.5)
+        self.conv = nn.Conv2d(2, 64*intermediate_channels, kernel_size=reach*2+1, padding=reach)
+        self.inceptionlayers = nn.ModuleList([InceptionLayer(channels=intermediate_channels,
+                                                             reach=reach,
+                                                             scale=0.2) for idx in range(layers)])
+        self.policyconv = ActivNormConv2d(64*intermediate_channels, self.penultimate_channels)
+        self.policypool = nn.AvgPool2d(board_size, count_include_pad=False)
+        self.policylin = nn.Linear(self.penultimate_channels, board_size**2)
 
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play
@@ -132,7 +153,7 @@ class InceptionModel(nn.Module):
         x = self.conv(x)
         for inceptionlayer in self.inceptionlayers:
             x = inceptionlayer(x)
-        p = swish(self.policybn(self.policyconv(x))).view(-1, self.board_size**2 * self.policy_channels)
+        p = self.policypool(self.policyconv(x)).view(-1, self.penultimate_channels)
         return self.policylin(p) - illegal
 
 
