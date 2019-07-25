@@ -26,8 +26,7 @@ def create_model(config):
             board_size=board_size,
             layers=config.getint('layers'),
             intermediate_channels=config.getint('intermediate_channels'),
-            skip_layer=config.get('layer_type'),
-            conv_reach=config.getint('reach')
+            skip_layer=config.get('layer_type')
         )
     else:
         logger.error(f"Unknown model_type: {model_type}")
