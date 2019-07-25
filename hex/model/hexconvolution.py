@@ -138,7 +138,7 @@ class InceptionModel(nn.Module):
         super(InceptionModel, self).__init__()
         self.board_size = board_size
         self.penultimate_channels = int(8*board_size*intermediate_channels**0.5)
-        self.conv = nn.Conv2d(2, 64*intermediate_channels, kernel_size=reach*2+1, padding=reach)
+        self.conv = nn.Conv2d(2, 64*intermediate_channels, kernel_size=1)
         self.inceptionlayers = nn.ModuleList([InceptionLayer(channels=intermediate_channels,
                                                              reach=reach,
                                                              scale=0.2) for idx in range(layers)])
@@ -154,7 +154,7 @@ class InceptionModel(nn.Module):
         for inceptionlayer in self.inceptionlayers:
             x = inceptionlayer(x)
         p = self.policypool(self.policyconv(x)).view(-1, self.penultimate_channels)
-        return self.policylin(p) - illegal
+        return self.policylin(F.dropout(p, 0.2)) - illegal
 
 
 class RandomModel(nn.Module):
