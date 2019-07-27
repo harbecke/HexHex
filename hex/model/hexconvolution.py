@@ -18,6 +18,17 @@ class SkipLayer(nn.Module):
         return swish(x + self.bn(self.conv(x)))
 
 
+class SkipLayerBias(nn.Module):
+
+    def __init__(self, channels, reach):
+        super(SkipLayerBias, self).__init__()
+        self.conv = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach, bias=False)
+        self.bn = nn.BatchNorm2d(channels)
+
+    def forward(self, x):
+        return swish(x + self.bn(self.conv(x)))
+
+
 class SkipLayerAlpha(nn.Module):
 
     def __init__(self, channels, reach):
@@ -56,10 +67,10 @@ class SkipLayerStar(nn.Module):
 
 class ActivNormConv2d(nn.Module):
 
-    def __init__(self, in_planes, out_planes, kernel_size=1, padding=0):
+    def __init__(self, in_planes, out_planes, kernel_size=1, padding=0, dilation=1):
         super(ActivNormConv2d, self).__init__()
         self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size,
-                              stride=1, padding=padding, bias=False)
+                              stride=1, padding=padding, dilation=dilation, bias=False)
         self.bn = nn.BatchNorm2d(out_planes)
 
     def forward(self, x):
@@ -72,20 +83,17 @@ class InceptionLayer(nn.Module):
     def __init__(self, channels, reach, scale=1.0):
         super(InceptionLayer, self).__init__()
         self.scale = scale
+        self.conv11 = ActivNormConv2d(channels, channels, kernel_size=(1, 5), padding=(0, 2))
+        self.conv21 = ActivNormConv2d(channels, channels, kernel_size=(5, 1), padding=(2, 0))
 
-        self.anconv11 = ActivNormConv2d(64*channels, 6*channels)
+        self.conv21 = ActivNormConv2d(channels, channels, kernel_size=(5, 1), padding=(2, 0))
+        self.conv22 = ActivNormConv2d(channels, channels, kernel_size=(1, 5), padding=(0, 2))
 
-        self.anconv21 = ActivNormConv2d(64*channels, 6*channels)
-        self.anconv22 = ActivNormConv2d(6*channels, 7*channels, kernel_size=(1, reach*2+1),
-                                        padding=(0, reach))
-        self.anconv23 = ActivNormConv2d(7*channels, 8*channels, kernel_size=(reach*2+1, 1),
-                                        padding=(reach, 0))
-
-        self.conv3 = nn.Conv2d(14*channels, 64*channels, kernel_size=1)
+        self.conv3 = ActivNormConv2d(2*channels, channels, kernel_size=1)
 
     def forward(self, x):
-        x1 = self.anconv11(x)
-        x2 = self.anconv23(self.anconv22(self.anconv21(x)))
+        x1 = self.conv11(self.conv21(x))
+        x2 = self.conv21(self.conv22(x))
         out = torch.cat((x1, x2), 1)
         out = self.conv3(out)
         out = out * self.scale + x
@@ -134,27 +142,22 @@ class InceptionModel(nn.Module):
     the intermediate_channels parameter get multiplied by 64!
     then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
     '''
-    def __init__(self, board_size, layers, intermediate_channels, reach=1):
+    def __init__(self, board_size, layers, intermediate_channels):
         super(InceptionModel, self).__init__()
         self.board_size = board_size
-        self.penultimate_channels = int(8*board_size*intermediate_channels**0.5)
-        self.conv = nn.Conv2d(2, 64*intermediate_channels, kernel_size=1)
-        self.inceptionlayers = nn.ModuleList([InceptionLayer(channels=intermediate_channels,
-                                                             reach=reach,
-                                                             scale=0.2) for idx in range(layers)])
-        self.policyconv = ActivNormConv2d(64*intermediate_channels, self.penultimate_channels)
-        self.policypool = nn.AvgPool2d(board_size, count_include_pad=False)
-        self.policylin = nn.Linear(self.penultimate_channels, board_size**2)
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=board_size, padding=board_size//2)
+        self.skiplayers = nn.ModuleList([SkipLayerBias(intermediate_channels, 1) for idx in range(layers)])
+        self.policyconv = nn.Conv2d(intermediate_channels, 1, kernel_size=board_size, padding=board_size//2, bias=False)
+        self.bias = nn.Parameter(torch.zeros(board_size**2))
 
     def forward(self, x):
         #illegal moves are given a huge negative bias, so they are never selected for play
         x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         x = self.conv(x)
-        for inceptionlayer in self.inceptionlayers:
-            x = inceptionlayer(x)
-        p = self.policypool(self.policyconv(x)).view(-1, self.penultimate_channels)
-        return self.policylin(F.dropout(p, 0.2)) - illegal
+        for skiplayer in self.skiplayers:
+            x = skiplayer(x)
+        return self.policyconv(x).view(-1, self.board_size**2) - illegal + self.bias
 
 
 class RandomModel(nn.Module):
