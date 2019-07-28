@@ -36,10 +36,10 @@ class Node:
             # child node has been chosen before -> go deeper
             if visit_count == 1:
                 # child node has been chosen but not yet expanded and evaluated
-                child = Node(self.board.set_stone_immutable(move), self.config, self.model)
+                correct_position = utils.correct_position1d(move, self.board.size, self.board.player)
+                child = Node(self.board.set_stone_immutable(correct_position), self.config, self.model)
                 self.children[move] = child
             value = 1 - self.children[move].visit()
-
         self.Q[move].add(value, 1)
         return value
 

@@ -36,8 +36,11 @@ def all_unique(x):
     return not any(i in seen or seen.add(i) for i in x)
 
 
-def switch_dimension_position1d(position1d, board_size):
-    return position1d//board_size + (position1d%board_size)*board_size
+def correct_position1d(position1d, board_size, player):
+    if player:
+        return position1d//board_size + (position1d%board_size)*board_size
+    else:
+        return position1d
 
 
 def load_model(model_file):

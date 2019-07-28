@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
 from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
-from hex.utils.utils import device, zip_list_of_lists_first_dim_reversed, switch_dimension_position1d
+from hex.utils.utils import device, zip_list_of_lists_first_dim_reversed, correct_position1d
 
 
 def tempered_moves_selection(output_tensor, temperature):
@@ -83,10 +83,8 @@ class MultiHexGame():
         self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
 
         for idx in range(len(self.current_boards)):
-            if self.boards[self.current_boards[idx]].player:
-                new_position = switch_dimension_position1d(positions1d[idx].item(), self.board_size)
-                self.boards[self.current_boards[idx]].set_stone(new_position)
-            else:
-                self.boards[self.current_boards[idx]].set_stone(positions1d[idx].item())
+            correct_position = correct_position1d(positions1d[idx].item(), self.board_size,
+                self.boards[self.current_boards[idx]].player)
+            self.boards[self.current_boards[idx]].set_stone(correct_position)
             self.targets_list[self.current_boards[idx]].append(self.reverse_winner)
         return outputs_tensor
