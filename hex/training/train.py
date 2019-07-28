@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import copy
 import math
+import os
 
 import numpy as np
 import torch
@@ -7,6 +9,7 @@ import torch.nn as nn
 from torch.utils.data.dataset import TensorDataset, ConcatDataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
+from hex.creation import puzzle
 from hex.utils.logger import logger
 from hex.utils.summary import writer
 from hex.utils.utils import device, load_model, create_optimizer, load_optimizer, Average
@@ -245,9 +248,14 @@ def train(config):
     if config.getboolean('optimizer_load'):
         optimizer = load_optimizer(optimizer, model_file)
 
-    puzzle_triple = None
-    if config.getboolean('use_puzzle', True):
-        puzzle_triple = torch.load(f'data/{model.board_size}_puzzle.pt', map_location=device)
+    puzzle_file = f'data/{model.board_size}_puzzle.pt'
+    if not os.path.exists(puzzle_file):
+        logger.info("Creating missing puzzle file")
+        puzzle_config = copy.deepcopy(config)
+        puzzle_config['board_size'] = str(model.board_size)
+        puzzle.create_puzzle(puzzle_config)
+
+    puzzle_triple = torch.load(puzzle_file, map_location=device)
 
     trained_model, trained_optimizer = train_model(model=model,
                                                    train_dataloader=train_loader,

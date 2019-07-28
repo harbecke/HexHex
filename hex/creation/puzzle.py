@@ -18,7 +18,7 @@ def create_puzzle(config):
     all_boards_tensor = torch.Tensor()
     all_moves = torch.LongTensor()
     all_results = torch.Tensor()
-    for _ in range(config.getint('num_samples')):
+    for _ in range(config.getint('num_samples', 1000)):
         multihexgame = MultiHexGame((Board(size=board_size),), (model,), temperature=1, 
             temperature_decay=1, noise=None, noise_parameters=None)
         board_states, moves, targets = multihexgame.play_moves()
