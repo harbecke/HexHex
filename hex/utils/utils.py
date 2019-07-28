@@ -36,6 +36,10 @@ def all_unique(x):
     return not any(i in seen or seen.add(i) for i in x)
 
 
+def switch_dimension_position1d(position1d, board_size):
+    return position1d//board_size + (position1d%board_size)*board_size
+
+
 def load_model(model_file):
     checkpoint = torch.load(model_file, map_location=device)
     model = create_model(checkpoint['config'])
