@@ -45,8 +45,6 @@ class InteractiveGame:
         if move == 'ai_move':
             self.play_ai_move()
         else:
-            if self.board.player:
-                move = (move[1], move[0])
             self.board.set_stone(move)
             self.gui.update_board(self.board)
             if self.board.winner:

@@ -57,25 +57,21 @@ class Gui:
 
         for x in range(board.size):
             for y in range(board.size):
-                if board.player:
-                    x_copy, y_copy = y, x
-                else:
-                    x_copy, y_copy = x, y
-
                 center = self.get_center([x, y])
                 angles = [math.pi / 6 + x * math.pi / 3 for x in range(6)]
                 points = [[center[0] + math.cos(angle)*self.r/math.sqrt(3),
                            center[1] + math.sin(angle)*self.r/math.sqrt(3)]
                         for angle in angles]
 
-                if board.board_tensor[board.player][x_copy][y_copy] == 1:
+                if board.get_owner((x,y)) == 0:
                     pygame.draw.polygon(self.screen, PLAYER_1, points,0)
-                elif board.board_tensor[1-board.player][x_copy][y_copy] == 1:
+                elif board.get_owner((x,y)) == 1:
                     pygame.draw.polygon(self.screen, PLAYER_2, points,0)
                 pygame.draw.polygon(self.screen, BLACK, points,3)
 
                 if field_text is not None:
-                    text = field_text[y_copy * board.size + x_copy]
+                    field_text_pos = board.player*(x * board.size + y) + (1-board.player)*(y * board.size + x)
+                    text = field_text[field_text_pos]
                     textsurface = self.font.render(f'{text}', True, (0, 0, 0))
                     self.screen.blit(textsurface, (center[0]-self.r/6, center[1] - self.r/6))
 

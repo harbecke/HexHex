@@ -83,6 +83,7 @@ class Board():
     def __init__(self, size):
         self.size = size
         self.board_tensor = torch.zeros([2, self.size, self.size])
+        self.logical_board_tensor = torch.zeros([2, self.size, self.size])
         self.made_moves = set()
         self.legal_moves = set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
         self.connected_sets = [[], []]
@@ -111,43 +112,53 @@ class Board():
         if type(position) is int:
             position = to_move(position, self.size)
 
-        logical_position = (position[1], position[0]) if self.player else position
-
-        if logical_position in self.legal_moves:
+        if position in self.legal_moves:
 
             if len(self.made_moves) > 1:
-                self.legal_moves.remove(logical_position)
+                self.legal_moves.remove(position)
 
             elif len(self.made_moves) == 1:
-                if set([logical_position]) == self.made_moves:
+                if set([position]) == self.made_moves:
                     self.switch = True
-                    self.legal_moves.remove(logical_position)
-                    self.board_tensor[0][logical_position] = 0.001
+                    self.legal_moves.remove(position)
+                    self.logical_board_tensor[1][position] = 0.001
+                    self.board_tensor = torch.transpose(torch.roll(self.logical_board_tensor, 1, 0), 1, 2)
                     return
 
                 else:
                     self.legal_moves -= self.made_moves
-                    self.legal_moves.remove(logical_position)
+                    self.legal_moves.remove(position)
 
-            self.made_moves.update([logical_position])
-            self.board_tensor[0][position] = 1
+            self.made_moves.update([position])
+            self.logical_board_tensor[self.player][position] = 1
             self.connected_sets[self.player], self.winner = update_connected_sets_check_win( \
-                self.connected_sets[self.player], self.player, logical_position, self.size)
-            self.move_history.append((self.player, logical_position))
+                self.connected_sets[self.player], self.player, position, self.size)
+            self.move_history.append((self.player, position))
 
             if self.winner:
                 if self.switch:
                     self.winner = [[1], [0]][self.winner[0]]
                 self.legal_moves = set()
-            
+
             self.player = 1-self.player
-            self.board_tensor = torch.transpose(torch.roll(self.board_tensor, 1, 0), 1, 2)
+            if self.player:
+                self.board_tensor = torch.transpose(torch.roll(self.logical_board_tensor, 1, 0), 1, 2)
+            else:
+                self.board_tensor = self.logical_board_tensor
 
         else:
-            logger.error(f'Illegal Move! {logical_position} of type {type(logical_position)}')
+            logger.error(f'Illegal Move! {position} of type {type(position)}')
             logger.error(self)
             logger.error(self.move_history)
             raise SystemExit
+
+    def get_owner(self, position):
+        if self.logical_board_tensor[0][position].item() == 1:
+            return 0
+        elif self.logical_board_tensor[1][position].item() == 1:
+            return 1
+        else:
+            return None
 
     def export_as_FF4(self, filename):
         with open(filename, 'w') as file:
