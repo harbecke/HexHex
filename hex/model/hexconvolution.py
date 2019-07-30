@@ -20,13 +20,14 @@ class SkipLayer(nn.Module):
 
 class SkipLayerBias(nn.Module):
 
-    def __init__(self, channels, reach):
+    def __init__(self, channels, reach, scale=1):
         super(SkipLayerBias, self).__init__()
         self.conv = nn.Conv2d(channels, channels, kernel_size=reach*2+1, padding=reach, bias=False)
         self.bn = nn.BatchNorm2d(channels)
+        self.scale = scale
 
     def forward(self, x):
-        return swish(x + self.bn(self.conv(x)))
+        return swish(x + self.scale*self.bn(self.conv(x)))
 
 
 class SkipLayerAlpha(nn.Module):
@@ -42,6 +43,21 @@ class SkipLayerAlpha(nn.Module):
         y = F.relu(self.bn1(self.conv1(x)))
         x = x + self.bn2(self.conv2(y))
         return F.relu(x)
+
+
+class SkipLayerFull(nn.Module):
+
+    def __init__(self, channels, scale=1):
+        super(SkipLayerFull, self).__init__()
+        self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(channels)
+        self.bn2 = nn.BatchNorm2d(channels)
+        self.scale = scale
+
+    def forward(self, x):
+        y = self.conv1(swish(self.bn1(x)))
+        return x + self.scale * self.conv2(swish(self.bn2(y)))
 
 
 class SkipLayerStar(nn.Module):
@@ -157,6 +173,34 @@ class InceptionModel(nn.Module):
         x = self.conv(x)
         for skiplayer in self.skiplayers:
             x = skiplayer(x)
+        return self.policyconv(x).view(-1, self.board_size**2) - illegal + self.bias
+
+
+class Conv(nn.Module):
+    '''
+    model consists of a convolutional layer to change the number of channels from (three) input channels to intermediate channels
+    then a specified amount of Inception-ResNet v2 layers
+    the intermediate_channels parameter get multiplied by 64!
+    then policy_channels sum over the different channels and a fully connected layer to get output in shape of the board
+    '''
+    def __init__(self, board_size, layers, intermediate_channels, scale, drop_p):
+        super(Conv, self).__init__()
+        self.board_size = board_size
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=board_size, padding=board_size//2, bias=False)
+        self.skiplayers = nn.ModuleList([SkipLayerFull(intermediate_channels, scale) for idx in range(layers)])
+        self.policyconv = nn.Conv2d(intermediate_channels, 1, kernel_size=board_size, padding=board_size//2, bias=False)
+        self.bias = nn.Parameter(torch.zeros(board_size**2))
+        self.dropout = nn.Dropout2d(p=drop_p)
+
+    def forward(self, x):
+        #illegal moves are given a huge negative bias, so they are never selected for play
+        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
+        illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
+
+        x = self.dropout(self.conv(x))
+        for skiplayer in self.skiplayers:
+            x = skiplayer(x)
+        x = self.dropout(x)
         return self.policyconv(x).view(-1, self.board_size**2) - illegal + self.bias
 
 
