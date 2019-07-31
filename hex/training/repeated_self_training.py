@@ -58,7 +58,7 @@ class RepeatedSelfTrainer:
             self.model_names = [self.get_model_name(0)]
 
         while len(self.current_data[0]) < self.num_data_models * self.samples_per_model:
-            new_data_triple = self.create_data_samples(self.get_model_name(0))
+            new_data_triple = self.create_data_samples(self.get_model_name(self.start_index))
             for idx in range(3):
                 self.current_data[idx] = torch.cat((self.current_data[idx], new_data_triple[idx]),0)
 
