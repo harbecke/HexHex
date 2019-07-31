@@ -203,23 +203,18 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
     return model, optimizer
 
 
-def train(config):
+def train(config, data):
     """
     loads data and sets criterion and optimizer for train_model
     """
     logger.info("")
     logger.info("=== training model ===")
-    dataset_list = []
 
-    for idx in range(config.getint('data_range_min'), config.getint('data_range_max')):
-        board_states, moves, targets = torch.load('data/{}_{}.pt'.format(config.get('data'), idx))
-        dataset_list.append(TensorDataset(board_states, moves, targets))
-
-    concat_dataset = ConcatDataset(dataset_list)
-    total_len = len(concat_dataset)
+    dataset = TensorDataset(data[0], data[1], data[2])
+    total_len = len(dataset)
     val_part = config.getint('num_validation_data')
     train_dataset, val_dataset = torch.utils.data.random_split(
-        concat_dataset, [max(0, total_len - val_part), min(val_part, total_len)]
+        dataset, [max(0, total_len - val_part), min(val_part, total_len)]
     )
 
     if config.getfloat('epochs') < 1:
