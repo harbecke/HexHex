@@ -18,8 +18,7 @@ def create_model(config):
         model = hexconvolution.InceptionModel(
             board_size=board_size,
             layers=config.getint('layers'),
-            intermediate_channels=config.getint('intermediate_channels'),
-            reach=config.getint('reach')
+            intermediate_channels=config.getint('intermediate_channels')
         )
     elif model_type == 'nomcts':
         model = hexconvolution.NoMCTSModel(
@@ -27,6 +26,14 @@ def create_model(config):
             layers=config.getint('layers'),
             intermediate_channels=config.getint('intermediate_channels'),
             skip_layer=config.get('layer_type')
+        )
+    elif model_type == 'conv':
+        model = hexconvolution.Conv(
+            board_size=board_size,
+            layers=config.getint('layers'),
+            intermediate_channels=config.getint('intermediate_channels'),
+            scale=config.getfloat('scale'),
+            drop_p=config.getfloat('dropout')
         )
     else:
         logger.error(f"Unknown model_type: {model_type}")

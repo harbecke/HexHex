@@ -103,6 +103,8 @@ class Gui:
                     return self.pixel_to_pos(event.pos)
                 if event.type == pygame.KEYDOWN and event.unicode == 'a':
                     return 'ai_move'
+                if event.type == pygame.KEYDOWN and event.unicode == 'z':
+                    return 'undo_move'
                 if event.type == pygame.KEYDOWN and event.unicode == 'e':
                     self.editor_mode = not self.editor_mode
                     logger.info(f'Editor mode: {self.editor_mode}')

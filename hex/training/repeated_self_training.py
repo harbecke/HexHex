@@ -34,6 +34,9 @@ class RepeatedSelfTrainer:
     def __init__(self, config_file):
         self.config = ConfigParser()
         self.config.read(config_file)
+        self.num_data_models = self.config.getint('REPEATED SELF TRAINING', 'num_data_models')
+        self.samples_per_model = self.config.getint('CREATE DATA', 'samples_per_model')
+        self.model_name = self.config.get('CREATE MODEL', 'model_name')
         self.model_names = []
         self.start_index = self.config.getint('REPEATED SELF TRAINING', 'start_index', fallback=0)
         self.end_index = self.start_index + self.config.getint('REPEATED SELF TRAINING', 
@@ -42,23 +45,39 @@ class RepeatedSelfTrainer:
         self.reference_models = load_reference_models(self.config)
 
     def get_model_name(self, i):
-        return '%s_%04d' % (self.config.get('CREATE MODEL', 'model_name'), i)
+        return '%s_%04d' % (self.model_name, i)
 
     def get_data_files(self, i):
         return [self.get_model_name(idx) for idx in range(i)]
 
-
     def repeated_self_training(self):
+        self.current_data = list(self.initial_data())
+
         if self.start_index == 0:
             self.create_initial_model()
             self.model_names = [self.get_model_name(0)]
+
+        while len(self.current_data[0]) < self.num_data_models * self.samples_per_model:
+            new_data_triple = self.create_data_samples(self.get_model_name(self.start_index))
+            for idx in range(3):
+                self.current_data[idx] = torch.cat((self.current_data[idx], new_data_triple[idx]),0)
+
+        for idx in range(3):
+            self.current_data[idx] = self.current_data[idx][:self.num_data_models * self.samples_per_model]
+
         for i in range(self.start_index+1, self.end_index+1):
-            self.create_data_samples(self.get_model_name(i-1))
-            data_file = self.prepare_training_data(self.get_data_files(i))
-            self.train_model(self.get_model_name(i-1), self.get_model_name(i), data_file)
+            start = ((i-1) % self.num_data_models)*self.samples_per_model
+            end = start + self.samples_per_model
+            new_data_triple = self.create_data_samples(self.get_model_name(i-1))
+            for idx in range(3):
+                self.current_data[idx][start : end] = new_data_triple[idx]
+            self.train_model(self.get_model_name(i-1), self.get_model_name(i), self.current_data)
             self.model_names.append(self.get_model_name(i))
             self.create_all_elo_ratings()
             self.measure_win_counts(self.get_model_name(i))
+
+        torch.save(self.current_data, f'data/{self.model_name}.pt')
+        logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
@@ -67,45 +86,29 @@ class RepeatedSelfTrainer:
 
     def create_data_samples(self, model_name):
         model = load_model(f'models/{model_name}.pt')
-
         self_play_args = self.config['CREATE DATA']
-        self_play_args['data_range_min'] = '0'
-        self_play_args['data_range_max'] = '1'
-        self_play_args['run_name'] = model_name
+        self_play_args['samples_per_model'] = str(self.samples_per_model)
+        return create_data.create_self_play_data(self_play_args, model)
 
-        create_data.create_self_play_data(
-                self_play_args, model
-        )
-        return
+    def initial_data(self):
+        if self.config.getboolean('REPEATED SELF TRAINING', 'load_initial_data'):
+            logger.info('=== loading initial data ===')
+            logger.info('')
+            return torch.load(f'data/{self.model_name}.pt')
 
-    def prepare_training_data(self, data_files):
-        """
-        gathers the last n training samples and writes them into a separate file.
-        :return: filename of file with training data
-        """
-        n = self.config.getint('REPEATED SELF TRAINING', 'train_samples_pool_size')
-        x, y, z = torch.Tensor(), torch.LongTensor(), torch.Tensor()
-        for file in data_files[::-1]:
-            x_new, y_new, z_new = torch.load('data/' + file + '_0.pt')
-            x, y, z = torch.cat([x, x_new]), torch.cat([y, y_new]), torch.cat([z, z_new])
-            if x.shape[0] >= n:
-                break
-        if x.shape[0] > n:
-            x, y, z = x[:n], y[:n], z[:n]
-        model_name = self.config.get('CREATE MODEL', 'model_name')
-        data_name = model_name + '_current_training'
-        torch.save((x, y, z), f'data/{data_name}_0.pt')
-        return data_name
+        else:
+            logger.info('=== writing initial data ===')
+            logger.info('')
+            model = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
+            self_play_args = self.config['CREATE DATA']
+            self_play_args['samples_per_model'] = str(self.num_data_models * self.samples_per_model)
+            return create_data.create_self_play_data(self_play_args, model)
 
-    def train_model(self, input_model, output_model, data_file):
+    def train_model(self, input_model, output_model, data):
         config = self.config['TRAIN']
         config['load_model'] = input_model
         config['save_model'] = output_model
-        config['data_range_min'] = '0'
-        config['data_range_max'] = '1'
-        config['validation_split'] = '0'
-        config['data'] = data_file
-        train.train(config)
+        train.train(config, data)
 
     def create_all_elo_ratings(self):
         """
