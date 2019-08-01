@@ -16,8 +16,8 @@ class CliGame:
     def __init__(self, config):
         self.config = config['PLAY CLI']
         self.board = None
-        self.model = load_model(f'models/{args.model}.pt')
-        self.args = args
+        self.switch = self.config.getboolean('switch', True)
+        self.model = load_model(f'models/{self.config.get("model")}.pt')
 
 
     def respond(self, line):
@@ -29,7 +29,7 @@ class CliGame:
         if splitted[0] == 'list_commands':
             return 'final_score'
         if splitted[0] == 'boardsize':
-            self.board = hexboard.Board(int(splitted[1]))
+            self.board = hexboard.Board(int(splitted[1]), self.switch)
             self.game = MultiHexGame(
                     boards=(self.board,),
                     models=(self.model,),
