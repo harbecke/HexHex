@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
 from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
+from hex.utils.summary import writer
 from hex.utils.utils import device, zip_list_of_lists_first_dim_reversed, correct_position1d
 
 
@@ -68,6 +69,8 @@ class MultiHexGame():
 
         with torch.no_grad():
             outputs_tensor = model(self.current_boards_tensor)
+            for x in outputs_tensor.max(dim=1)[0]:
+                writer.add_scalar('data/best_move_value', x)
 
         if self.noise == 'singh':
             noise_alpha, noise_beta, noise_lambda = self.noise_parameters
