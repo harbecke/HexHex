@@ -61,7 +61,7 @@ def create_ratings(results, runs=100):
         sum_p_list = sum(new_p_list.values())
         p_list = {p: new_p_list[p]/sum_p_list for p in new_p_list}
 
-    min_value = min(p_list.values())
+    min_value = p_list[list(results.keys())[0]]
     elo_ratings = {p: math.log10(p_list[p]/min_value)*400 for p in p_list}
 
     return elo_ratings

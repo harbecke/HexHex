@@ -12,6 +12,7 @@ from hex.evaluation import win_position
 from hex.model.hexconvolution import RandomModel
 from hex.training import train
 from hex.utils.logger import logger
+from hex.utils.summary import writer
 from hex.utils.utils import load_model
 
 
@@ -126,6 +127,8 @@ class RepeatedSelfTrainer:
             self.tournament_results
         )
         ratings = elo.create_ratings(self.tournament_results)
+        writer.add_scalar('elo', ratings[self.model_names[-1]])
+
         all_model_names = list(ratings.keys())
         all_model_names.sort(key=lambda name: ratings[name], reverse=True)
 
