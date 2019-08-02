@@ -44,7 +44,10 @@ class InteractiveGame:
         self.print_ratings()
         move = self.get_move()
         if move == 'ai_move':
+
             self.play_ai_move()
+        elif move == 'undo_move':
+            self.undo_move()
         else:
             self.board.set_stone(move)
             self.gui.update_board(self.board)
@@ -53,6 +56,10 @@ class InteractiveGame:
             elif not self.gui.editor_mode:
                 self.print_ratings()
                 self.play_ai_move()
+
+    def undo_move(self):
+        self.board.undo_move_board()
+        self.gui.update_board(self.board)
 
     def play_ai_move(self):
         if self.config.get('mode') == 'mcts':
@@ -76,7 +83,7 @@ class InteractiveGame:
     def get_move(self):
         while True:
             move = self.gui.get_move()
-            if move == 'ai_move':
+            if move == 'ai_move' or move == 'undo_move':
                 return move
             if move in self.board.legal_moves:
                 return move
@@ -93,6 +100,7 @@ def _main():
     logger.info("Starting interactive game")
     logger.info("Press 'e' for editor mode")
     logger.info("Press 'a' to trigger ai move")
+    logger.info("Press 'z' to undo last move")
 
     config = ConfigParser()
     config.read('config.ini')

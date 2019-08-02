@@ -93,6 +93,18 @@ class Board():
         self.switch_allowed = switch_allowed
         self.move_history = []
 
+    def override(self, other):
+        self.size = other.size
+        self.board_tensor = other.board_tensor
+        self.logical_board_tensor = other.logical_board_tensor
+        self.made_moves = other.made_moves
+        self.legal_moves = other.legal_moves
+        self.connected_sets = other.connected_sets
+        self.player = other.player
+        self.switch = other.switch
+        self.winner = other.winner
+        self.move_history = other.move_history
+
     def __repr__(self):
         return ('Board\n'+str((self.board_tensor[0]-self.board_tensor[1]).numpy())
             +'\nMade moves\n'+str(self.made_moves)
@@ -175,6 +187,13 @@ class Board():
                 print(f';{stone_color}[{alpha}{numeric}]', file=file)
 
             print(")", file=file)
+
+    def undo_move_board(self):
+        new_board = Board(self.size)
+        for move in self.move_history[:-1]:
+            new_board.set_stone(move[1])
+        self.override(new_board)
+
 
 def all_moves(board_size):
     return [(x, y) for x in range(board_size) for y in range(board_size)]
