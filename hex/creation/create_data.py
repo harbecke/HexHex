@@ -6,6 +6,7 @@ from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
 from hex.utils import utils
 from hex.utils.logger import logger
+from hex.utils.summary import writer
 
 
 class SelfPlayGenerator:
@@ -13,6 +14,7 @@ class SelfPlayGenerator:
         self.model = model
         self.args = args
         self.board_size = model.board_size
+        self.best_move_ratings = []
 
     def self_play_game(self):
         """
@@ -32,6 +34,7 @@ class SelfPlayGenerator:
             temperature_decay=self.args.getfloat('temperature_decay')
         )
         board_states, moves, targets = multihexgame.play_moves()
+        self.best_move_ratings += multihexgame.best_move_ratings
 
         for board_state, move, target in zip(board_states, moves, targets):
             yield board_state, move, target
@@ -89,8 +92,7 @@ def create_self_play_data(args, model):
         with np.printoptions(precision=1, suppress=True):
             logger.info("First move ratings\n" + str(ratings.cpu().numpy()))
 
+    writer.add_histogram('best_move_ratings', torch.cat(self_play_generator.best_move_ratings))
+
     logger.info(f'created self-play data')
     return all_boards_tensor, all_moves, all_results
-    #file_name = f'data/{args.get("run_name")}.pt'
-    #torch.save((all_boards_tensor, all_moves, all_results), file_name)
-    #logger.info(f'self-play data generation wrote {file_name}')

@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
 from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
-from hex.utils.summary import writer
 from hex.utils.utils import device, zip_list_of_lists_first_dim_reversed, correct_position1d
 
 
@@ -39,6 +38,7 @@ class MultiHexGame():
         self.targets_tensor = None
         self.targets_list = [[] for idx in range(self.batch_size)]
         self.reverse_winner = 1
+        self.best_move_ratings = []
 
     def __repr__(self):
         return ''.join([str(board) for board in self.boards])
@@ -69,8 +69,8 @@ class MultiHexGame():
 
         with torch.no_grad():
             outputs_tensor = model(self.current_boards_tensor)
-            for x in outputs_tensor.max(dim=1)[0]:
-                writer.add_scalar('data/best_move_value', x)
+        best_move_ratings = outputs_tensor.max(dim=1)[0]
+        self.best_move_ratings.append(best_move_ratings)
 
         if self.noise == 'singh':
             noise_alpha, noise_beta, noise_lambda = self.noise_parameters
