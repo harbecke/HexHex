@@ -19,7 +19,7 @@ def play_games(models, openings, number_of_games, batch_size, temperature, tempe
     assert(models[0].board_size == models[1].board_size)
     board_size = models[0].board_size
     if openings:
-        openings = list(hexboard.first_k_moves(board_size, 2))
+        openings = list(hexboard.first_k_moves(board_size, 1))
         random.shuffle(openings)
         number_of_games = min(len(openings), number_of_games)
 
@@ -33,7 +33,7 @@ def play_games(models, openings, number_of_games, batch_size, temperature, tempe
         game_number = 0
 
         while game_number < number_of_games:
-            ordered_models = models if starting_model == 0 else models[::-1]
+            ordered_models = models[::-1] if starting_model^openings else models
             if openings:
                 batch_of_openings = openings[game_number:game_number + batch_size]
                 boards = [hexboard.get_opened_board(board_size, opening) for opening in batch_of_openings]
