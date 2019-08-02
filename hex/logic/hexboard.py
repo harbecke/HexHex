@@ -80,7 +80,7 @@ class Board():
     If the second player decides to switch, a stone is set in the second layer that is only information.
     The second player becomes the first player and now plays the first layer and vice-versa.
     '''
-    def __init__(self, size):
+    def __init__(self, size, switch_allowed=True):
         self.size = size
         self.board_tensor = torch.zeros([2, self.size, self.size])
         self.logical_board_tensor = torch.zeros([2, self.size, self.size])
@@ -90,6 +90,7 @@ class Board():
         self.player = 0
         self.switch = False
         self.winner = False
+        self.switch_allowed = switch_allowed
         self.move_history = []
 
     def override(self, other):
@@ -140,6 +141,10 @@ class Board():
                 else:
                     self.legal_moves -= self.made_moves
                     self.legal_moves.remove(position)
+
+            elif len(self.made_moves) == 0 and not self.switch_allowed:
+                self.legal_moves.remove(position)
+                self.logical_board_tensor[1][position] = 0.001
 
             self.made_moves.update([position])
             self.logical_board_tensor[self.player][position] = 1
