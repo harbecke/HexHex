@@ -33,7 +33,7 @@ def play_games(models, openings, number_of_games, batch_size, temperature, tempe
         game_number = 0
 
         while game_number < number_of_games:
-            ordered_models = models[::-1] if starting_model^openings else models
+            ordered_models = models[::-1] if starting_model^bool(openings) else models
             if openings:
                 batch_of_openings = openings[game_number:game_number + batch_size]
                 boards = [hexboard.get_opened_board(board_size, opening) for opening in batch_of_openings]
