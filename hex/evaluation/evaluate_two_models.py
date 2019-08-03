@@ -14,12 +14,13 @@ from hex.utils.utils import load_model
 from hex.visualization.image import draw_board_image
 
 
-def play_games(models, openings, number_of_games, batch_size, temperature, temperature_decay, plot_board):
+def play_games(models, num_opened_moves, number_of_games, batch_size, temperature, temperature_decay, plot_board):
     assert(len(models) == 2)
     assert(models[0].board_size == models[1].board_size)
     board_size = models[0].board_size
-    if openings:
-        openings = list(hexboard.first_k_moves(board_size, 1))
+
+    if num_opened_moves > 0:
+        openings = list(hexboard.first_k_moves(board_size, num_opened_moves))
         random.shuffle(openings)
         number_of_games = min(len(openings), number_of_games)
 
@@ -33,8 +34,8 @@ def play_games(models, openings, number_of_games, batch_size, temperature, tempe
         game_number = 0
 
         while game_number < number_of_games:
-            ordered_models = models[::-1] if starting_model^bool(openings) else models
-            if openings:
+            ordered_models = models[::-1] if starting_model^(num_opened_moves%2) else models
+            if num_opened_moves > 0:
                 batch_of_openings = openings[game_number:game_number + batch_size]
                 boards = [hexboard.get_opened_board(board_size, opening) for opening in batch_of_openings]
             else:
@@ -73,7 +74,7 @@ def get_args(config_file):
 
     parser.add_argument('--model1', type=str, default=config.get('EVALUATE MODELS', 'model1'))
     parser.add_argument('--model2', type=str, default=config.get('EVALUATE MODELS', 'model2'))
-    parser.add_argument('--openings', type=bool, default=config.getboolean('EVALUATE MODELS', 'openings'))
+    parser.add_argument('--num_opened_moves', type=int, default=config.getint('EVALUATE MODELS', 'num_opened_moves'))
     parser.add_argument('--number_of_games', type=int, default=config.getint('EVALUATE MODELS', 'number_of_games'))
     parser.add_argument('--batch_size', type=int, default=config.getint('EVALUATE MODELS', 'batch_size'))
     parser.add_argument('--board_size', type=int, default=config.getint('EVALUATE MODELS', 'board_size'))
@@ -93,7 +94,7 @@ def evaluate(config_file = 'config.ini'):
 
     play_games(
             models=(model1, model2),
-            openings=args.openings,
+            num_opened_moves=args.num_opened_moves,
             number_of_games=args.number_of_games,
             batch_size=args.batch_size,
             temperature=args.temperature,

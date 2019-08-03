@@ -66,7 +66,7 @@ def win_count(model_name, reference_models, config):
     for opponent_name, opponent_model in reference_models.items():
         result, _ = evaluate_two_models.play_games(
             models=(model, opponent_model),
-            openings=config.getboolean('openings', True),
+            num_opened_moves=config.getint('num_opened_moves', 1),
             number_of_games=config.getint('num_games', 100) // 2,
             batch_size=config.getint('batch_size', 32),
             temperature=config.getfloat('temperature', 0),

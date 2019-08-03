@@ -28,7 +28,7 @@ def add_to_tournament(model_list, new_model_name, args, old_results):
         old_model = load_model(f'models/{old_model_file}.pt')
         result, signed_chi_squared = evaluate_two_models.play_games(
                 models=(old_model, new_model),
-                openings=args.getboolean('openings'),
+                num_opened_moves=args.getint('num_opened_moves'),
                 number_of_games=args.getint('number_of_games'),
                 batch_size=args.getint('batch_size'),
                 temperature=args.getfloat('temperature'),
