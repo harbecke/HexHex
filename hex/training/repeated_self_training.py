@@ -52,32 +52,31 @@ class RepeatedSelfTrainer:
         return [self.get_model_name(idx) for idx in range(i)]
 
     def repeated_self_training(self):
-        self.current_data = list(self.initial_data())
+        current_data = list(self.initial_data())
 
         if self.start_index == 0:
             self.create_initial_model()
             self.model_names = [self.get_model_name(0)]
 
-        while len(self.current_data[0]) < self.num_data_models * self.samples_per_model:
+        while len(current_data[0]) < self.num_data_models * self.samples_per_model:
             new_data_triple = self.create_data_samples(self.get_model_name(self.start_index))
             for idx in range(3):
-                self.current_data[idx] = torch.cat((self.current_data[idx], new_data_triple[idx]),0)
+                current_data[idx] = torch.cat((current_data[idx], new_data_triple[idx]),0)
 
-        for idx in range(3):
-            self.current_data[idx] = self.current_data[idx][:self.num_data_models * self.samples_per_model]
+        current_data = [data_part[:self.num_data_models * self.samples_per_model] for data_part in current_data]
 
         for i in range(self.start_index+1, self.end_index+1):
             start = ((i-1) % self.num_data_models)*self.samples_per_model
             end = start + self.samples_per_model
             new_data_triple = self.create_data_samples(self.get_model_name(i-1))
             for idx in range(3):
-                self.current_data[idx][start : end] = new_data_triple[idx]
-            self.train_model(self.get_model_name(i-1), self.get_model_name(i), self.current_data)
+                current_data[idx][start : end] = new_data_triple[idx]
+            self.train_model(self.get_model_name(i-1), self.get_model_name(i), current_data)
             self.model_names.append(self.get_model_name(i))
             self.create_all_elo_ratings()
             self.measure_win_counts(self.get_model_name(i))
 
-        torch.save(self.current_data, f'data/{self.model_name}.pt')
+        torch.save(current_data, f'data/{self.model_name}.pt')
         logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
 
     def create_initial_model(self):
