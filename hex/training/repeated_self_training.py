@@ -57,7 +57,8 @@ class RepeatedSelfTrainer:
 
         if self.start_index == 0:
             self.create_initial_model()
-            self.model_names = [self.get_model_name(0)]
+            self.model_names.append(self.get_model_name(0))
+            self.sorted_model_names = self.model_names[:]
 
         training_data = self.check_enough_data(training_data, self.train_samples * self.num_data_models)
         validation_data = self.check_enough_data(validation_data, self.val_samples * self.num_data_models)
@@ -127,10 +128,11 @@ class RepeatedSelfTrainer:
         logger.info("")
         logger.info("=== Updating ELO ratings ===")
         if len(self.model_names) <= 1:
+            self.sorted_model_names = self.model_names[:]
             return
         args = self.config['ELO']
         self.tournament_results = elo.add_to_tournament(
-            self.model_names[:-1],
+            self.sorted_model_names,
             self.model_names[-1],
             args,
             self.tournament_results
@@ -138,10 +140,10 @@ class RepeatedSelfTrainer:
         ratings = elo.create_ratings(self.tournament_results)
         writer.add_scalar('elo', ratings[self.model_names[-1]])
 
-        all_model_names = list(ratings.keys())
-        all_model_names.sort(key=lambda name: ratings[name], reverse=True)
+        self.sorted_model_names.append(self.model_names[-1])
+        self.sorted_model_names.sort(key=lambda name: ratings[name], reverse=True)
 
-        output = ['{:6} {}'.format(int(ratings[model]), model) for model in all_model_names]
+        output = ['{:6} {}'.format(int(ratings[model]), model) for model in self.sorted_model_names]
         for line in output:
             logger.info(line)
 
