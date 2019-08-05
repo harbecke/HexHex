@@ -203,19 +203,15 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
     return model, optimizer
 
 
-def train(config, data):
+def train(config, training_data, validation_data):
     """
     loads data and sets criterion and optimizer for train_model
     """
     logger.info("")
     logger.info("=== training model ===")
 
-    dataset = TensorDataset(data[0], data[1], data[2])
-    total_len = len(dataset)
-    val_part = config.getint('num_validation_data')
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        dataset, [max(0, total_len - val_part), min(val_part, total_len)]
-    )
+    train_dataset = TensorDataset(training_data[0], training_data[1], training_data[2])
+    val_dataset = TensorDataset(validation_data[0], validation_data[1], validation_data[2])
 
     if config.getfloat('epochs') < 1:
         total_train_sample = len(train_dataset)

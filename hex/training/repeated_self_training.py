@@ -36,7 +36,8 @@ class RepeatedSelfTrainer:
         self.config = ConfigParser()
         self.config.read(config_file)
         self.num_data_models = self.config.getint('REPEATED SELF TRAINING', 'num_data_models')
-        self.samples_per_model = self.config.getint('CREATE DATA', 'samples_per_model')
+        self.train_samples = self.config.getint('CREATE DATA', 'train_samples_per_model')
+        self.val_samples = self.config.getint('CREATE DATA', 'val_samples_per_model')
         self.model_name = self.config.get('CREATE MODEL', 'model_name')
         self.model_names = []
         self.start_index = self.config.getint('REPEATED SELF TRAINING', 'start_index', fallback=0)
@@ -52,31 +53,28 @@ class RepeatedSelfTrainer:
         return [self.get_model_name(idx) for idx in range(i)]
 
     def repeated_self_training(self):
-        current_data = list(self.initial_data())
+        training_data, validation_data = self.initial_data()
 
         if self.start_index == 0:
             self.create_initial_model()
             self.model_names = [self.get_model_name(0)]
 
-        while len(current_data[0]) < self.num_data_models * self.samples_per_model:
-            new_data_triple = self.create_data_samples(self.get_model_name(self.start_index))
-            for idx in range(3):
-                current_data[idx] = torch.cat((current_data[idx], new_data_triple[idx]),0)
-
-        current_data = [data_part[:self.num_data_models * self.samples_per_model] for data_part in current_data]
+        training_data = self.check_enough_data(training_data, self.train_samples * self.num_data_models)
+        validation_data = self.check_enough_data(validation_data, self.val_samples * self.num_data_models)
 
         for i in range(self.start_index+1, self.end_index+1):
-            start = ((i-1) % self.num_data_models)*self.samples_per_model
-            end = start + self.samples_per_model
-            new_data_triple = self.create_data_samples(self.get_model_name(i-1))
+            start = ((i-1) % self.num_data_models)
+            new_train_triple = self.create_data_samples(self.get_model_name(i-1), self.train_samples)
+            new_val_triple = self.create_data_samples(self.get_model_name(i-1), self.val_samples, verbose=False)
             for idx in range(3):
-                current_data[idx][start : end] = new_data_triple[idx]
-            self.train_model(self.get_model_name(i-1), self.get_model_name(i), current_data)
+                training_data[idx][start*self.train_samples : (start+1)* self.train_samples] = new_train_triple[idx]
+                validation_data[idx][start*self.val_samples : (start+1)* self.val_samples] = new_val_triple[idx]
+            self.train_model(self.get_model_name(i-1), self.get_model_name(i), training_data, validation_data)
             self.model_names.append(self.get_model_name(i))
             self.create_all_elo_ratings()
             self.measure_win_counts(self.get_model_name(i))
 
-        torch.save(current_data, f'data/{self.model_name}.pt')
+        torch.save((training_data, validation_data), f'data/{self.model_name}.pt')
         logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
 
     def create_initial_model(self):
@@ -84,11 +82,10 @@ class RepeatedSelfTrainer:
         create_model.create_and_store_model(config, self.get_model_name(0))
         return
 
-    def create_data_samples(self, model_name):
+    def create_data_samples(self, model_name, num_samples, verbose=True):
         model = load_model(f'models/{model_name}.pt')
         self_play_args = self.config['CREATE DATA']
-        self_play_args['samples_per_model'] = str(self.samples_per_model)
-        return create_data.create_self_play_data(self_play_args, model)
+        return create_data.create_self_play_data(self_play_args, model, num_samples, verbose)
 
     def initial_data(self):
         if self.config.getboolean('REPEATED SELF TRAINING', 'load_initial_data'):
@@ -101,14 +98,27 @@ class RepeatedSelfTrainer:
             logger.info('')
             model = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
             self_play_args = self.config['CREATE DATA']
-            self_play_args['samples_per_model'] = str(self.num_data_models * self.samples_per_model)
-            return create_data.create_self_play_data(self_play_args, model)
+            training_data = create_data.create_self_play_data(self_play_args, model,
+                self.num_data_models * self.train_samples, verbose=False)
+            validation_data = create_data.create_self_play_data(self_play_args, model,
+                self.num_data_models * self.val_samples, verbose=False)
+            return training_data, validation_data
 
-    def train_model(self, input_model, output_model, data):
+    def check_enough_data(self, data, amount):
+        if len(data[0]) < amount:
+            new_data_triple = self.create_data_samples(self.get_model_name(self.start_index),
+                amount - len(data[0]), verbose=False)
+            for idx in range(3):
+                data[idx] = torch.cat((data[idx], new_data_triple[idx]), 0)
+            return data
+        else:
+            return [data_part[:amount] for data_part in data]
+
+    def train_model(self, input_model, output_model, training_data, validation_data):
         config = self.config['TRAIN']
         config['load_model'] = input_model
         config['save_model'] = output_model
-        train.train(config, data)
+        train.train(config, training_data, validation_data)
 
     def create_all_elo_ratings(self):
         """
