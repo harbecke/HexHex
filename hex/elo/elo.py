@@ -19,9 +19,7 @@ def add_to_tournament(model_list, new_model_name, args, old_results):
     else:
         new_results = copy.deepcopy(old_results)
 
-    sub_model_names = list(np.random.choice(model_list,
-                                            size=min(len(model_list), args.getint('max_num_opponents', fallback=10)),
-                                            replace=False))
+    sub_model_names = model_list[:args.getint('max_num_opponents', fallback=10)]
     new_model = load_model(f'models/{new_model_name}.pt')
 
     for old_model_file in sub_model_names:
