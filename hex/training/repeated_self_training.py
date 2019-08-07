@@ -57,8 +57,9 @@ class RepeatedSelfTrainer:
 
         if self.start_index == 0:
             self.create_initial_model()
-            self.model_names.append(self.get_model_name(0))
-            self.sorted_model_names = self.model_names[:]
+
+        self.model_names.append(self.get_model_name(self.start_index))
+        self.sorted_model_names = self.model_names[:]
 
         training_data = self.check_enough_data(training_data, self.train_samples * self.num_data_models)
         validation_data = self.check_enough_data(validation_data, self.val_samples * self.num_data_models)
@@ -127,9 +128,7 @@ class RepeatedSelfTrainer:
         """
         logger.info("")
         logger.info("=== Updating ELO ratings ===")
-        if len(self.model_names) <= 1:
-            self.sorted_model_names = self.model_names[:]
-            return
+
         args = self.config['ELO']
         self.tournament_results = elo.add_to_tournament(
             self.sorted_model_names,
