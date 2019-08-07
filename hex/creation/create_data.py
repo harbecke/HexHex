@@ -32,8 +32,10 @@ class SelfPlayGenerator:
             temperature_decay=self.args.getfloat('temperature_decay')
         )
         board_states, moves, targets = multihexgame.play_moves()
+        output_list = list(zip(board_states, moves, targets))
+        np.random.shuffle(output_list)
 
-        for board_state, move, target in zip(board_states, moves, targets):
+        for board_state, move, target in output_list:
             yield board_state, move, target
 
     def position_generator(self):
