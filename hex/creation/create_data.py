@@ -40,11 +40,6 @@ class SelfPlayGenerator:
         while True:
             for board_tensor, move_tensor, result_tensor in self.self_play_game():
                 yield board_tensor, move_tensor, result_tensor
-                # TODO implement mirror logic here, for data augmentation
-                # mirror_board = torch.flip(board_tensor, dims=(1, 2)).clone()
-                # mirror_policy = torch.flip(mcts_policy, dims=(0,)).clone()
-                # same_result = result_tensor.clone()
-                # yield mirror_board, mirror_policy, same_result
 
 
 def create_self_play_data(args, model):
@@ -91,6 +86,3 @@ def create_self_play_data(args, model):
 
     logger.info(f'created self-play data')
     return all_boards_tensor, all_moves, all_results
-    #file_name = f'data/{args.get("run_name")}.pt'
-    #torch.save((all_boards_tensor, all_moves, all_results), file_name)
-    #logger.info(f'self-play data generation wrote {file_name}')
