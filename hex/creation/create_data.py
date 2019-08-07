@@ -32,19 +32,16 @@ class SelfPlayGenerator:
             temperature_decay=self.args.getfloat('temperature_decay')
         )
         board_states, moves, targets = multihexgame.play_moves()
+        output_list = list(zip(board_states, moves, targets))
+        np.random.shuffle(output_list)
 
-        for board_state, move, target in zip(board_states, moves, targets):
+        for board_state, move, target in output_list:
             yield board_state, move, target
 
     def position_generator(self):
         while True:
             for board_tensor, move_tensor, result_tensor in self.self_play_game():
                 yield board_tensor, move_tensor, result_tensor
-                # TODO implement mirror logic here, for data augmentation
-                # mirror_board = torch.flip(board_tensor, dims=(1, 2)).clone()
-                # mirror_policy = torch.flip(mcts_policy, dims=(0,)).clone()
-                # same_result = result_tensor.clone()
-                # yield mirror_board, mirror_policy, same_result
 
 
 def create_self_play_data(args, model, num_samples, verbose=True):
