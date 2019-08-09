@@ -44,7 +44,7 @@ class SelfPlayGenerator:
                 yield board_tensor, move_tensor, result_tensor
 
 
-def create_self_play_data(args, model):
+def create_self_play_data(args, model, num_samples, verbose=True):
     board_size = model.board_size
 
     logger.info("")
@@ -52,39 +52,40 @@ def create_self_play_data(args, model):
     self_play_generator = SelfPlayGenerator(model, args)
     position_generator = self_play_generator.position_generator()
 
-    samples_per_model = args.getint('samples_per_model')
-    all_boards_tensor = torch.zeros((samples_per_model, 2, board_size, board_size), dtype=torch.float)
-    all_moves = torch.zeros((samples_per_model, 1), dtype=torch.long)
-    all_results = torch.zeros(samples_per_model, dtype=torch.float)
+    all_boards_tensor = torch.zeros((num_samples, 2, board_size, board_size), dtype=torch.float)
+    all_moves = torch.zeros((num_samples, 1), dtype=torch.long)
+    all_results = torch.zeros(num_samples, dtype=torch.float)
 
-    for sample_idx in range(samples_per_model):
+    for sample_idx in range(num_samples):
         board_tensor, move, result = next(position_generator)
         all_boards_tensor[sample_idx] = board_tensor
         all_moves[sample_idx] = move
         all_results[sample_idx] = result
 
-    def k_th_move_idx(k):
-        return [idx for idx in range(all_boards_tensor.shape[0]) if torch.sum(all_boards_tensor[idx, :2]) == k]
+    if verbose:
+        def k_th_move_idx(k):
+            return [idx for idx in range(all_boards_tensor.shape[0]) if torch.sum(all_boards_tensor[idx, :2]) == k]
 
-    first_move_indices = k_th_move_idx(0)
-    first_move_frequency = torch.zeros([board_size ** 2], dtype=torch.float)
-    first_move_win_percentage = torch.zeros([board_size ** 2], dtype=torch.float)
+        first_move_indices = k_th_move_idx(0)
+        first_move_frequency = torch.zeros([board_size ** 2], dtype=torch.float)
+        first_move_win_percentage = torch.zeros([board_size ** 2], dtype=torch.float)
 
-    for x in first_move_indices:
-        first_move_frequency[all_moves[x].item()] += 1
-        if all_results[x].item() == 1:
-            first_move_win_percentage[all_moves[x].item()] += 1
-    first_move_win_percentage /= first_move_frequency
+        for x in first_move_indices:
+            first_move_frequency[all_moves[x].item()] += 1
+            if all_results[x].item() == 1:
+                first_move_win_percentage[all_moves[x].item()] += 1
+        first_move_win_percentage /= first_move_frequency
 
-    with np.printoptions(precision=2, suppress=True):
-        logger.info("First move frequency:\n" + str(first_move_frequency.view(board_size, board_size).numpy()) + '\n')
-        logger.info("First move win percentage:\n" + str(first_move_win_percentage.view(board_size, board_size).numpy()) + '\n')
+        with np.printoptions(precision=2, suppress=True):
+            logger.info("First move frequency:\n" + str(first_move_frequency.view(board_size, board_size).numpy()) + '\n')
+            logger.info("First move win percentage:\n" + str(first_move_win_percentage.view(board_size, board_size).numpy()) + '\n')
 
-    with torch.no_grad():
-        board = Board(model.board_size)
-        ratings = model(board.board_tensor.unsqueeze(0).to(utils.device)).view(board_size, board_size)
-        with np.printoptions(precision=1, suppress=True):
-            logger.info("First move ratings\n" + str(ratings.cpu().numpy()))
+        with torch.no_grad():
+            board = Board(model.board_size)
+            ratings = model(board.board_tensor.unsqueeze(0).to(utils.device)).view(board_size, board_size)
+            with np.printoptions(precision=1, suppress=True):
+                logger.info("First move ratings\n" + str(ratings.cpu().numpy()))
 
-    logger.info(f'created self-play data')
-    return all_boards_tensor, all_moves, all_results
+        logger.info(f'created self-play data')
+
+    return [all_boards_tensor, all_moves, all_results]
