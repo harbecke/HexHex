@@ -4,5 +4,5 @@ pygame
 numpy
 image
 torch
-tensorboard
+tb-nightly
 future
