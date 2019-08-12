@@ -5,4 +5,4 @@ numpy
 image
 torch
 tensorboard
-tensorboardX
+future

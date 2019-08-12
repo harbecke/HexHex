@@ -1,4 +1,4 @@
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter(flush_secs=5)
 
