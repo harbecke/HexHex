@@ -32,8 +32,7 @@ def create_model(config):
             board_size=board_size,
             layers=config.getint('layers'),
             intermediate_channels=config.getint('intermediate_channels'),
-            scale=config.getfloat('scale'),
-            drop_p=config.getfloat('dropout')
+            reach=config.getint('reach')
         )
     else:
         logger.error(f"Unknown model_type: {model_type}")
