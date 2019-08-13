@@ -25,6 +25,7 @@ class MultiHexGame():
     temperature_decay decays the temperature over time as a power function with base:temperature_decay and exponent:number of moves made
     '''
     def __init__(self, boards, models, noise, noise_parameters, temperature, temperature_decay):
+        torch.set_num_threads(4)
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
