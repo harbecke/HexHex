@@ -35,8 +35,6 @@ class MultiHexGame():
         self.temperature_decay = temperature_decay
         self.output_boards_tensor = torch.Tensor(device='cpu')
         self.positions_tensor = torch.LongTensor(device='cpu')
-        self.targets_list = [[] for idx in range(self.batch_size)]
-        self.reverse_winner = 1
 
     def __repr__(self):
         return ''.join([str(board) for board in self.boards])
@@ -52,7 +50,6 @@ class MultiHexGame():
                                for board in self.boards]
                     targets = torch.tensor(zip_list_of_lists(*targets), device=torch.device('cpu'))
                     return self.output_boards_tensor, self.positions_tensor, targets
-                self.reverse_winner = 1 - self.reverse_winner
 
     def batched_single_move(self, model):        
         self.current_boards = []
@@ -87,5 +84,4 @@ class MultiHexGame():
             correct_position = correct_position1d(positions1d[idx].item(), self.board_size,
                 self.boards[self.current_boards[idx]].player)
             self.boards[self.current_boards[idx]].set_stone(correct_position)
-            self.targets_list[self.current_boards[idx]].append(self.reverse_winner)
         return outputs_tensor
