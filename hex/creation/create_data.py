@@ -20,7 +20,7 @@ class SelfPlayGenerator:
         yields 3 tensors containing for each move:
         - board
         - move
-        - result of game for active player (-1 or 1)
+        - result of game for active player
         """
         boards = [Board(size=self.board_size) for _ in range(self.args.getint('batch_size'))]
         multihexgame = MultiHexGame(
