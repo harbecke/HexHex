@@ -17,8 +17,8 @@ def _one_pass(iters):
             pass
 
 
-def zip_list_of_lists_first_dim_reversed(*iterables):
-    iters = [reversed(it) for it in iterables]
+def zip_list_of_lists(*iterables):
+    iters = [iter(it) for it in iterables]
     output_list = []
     while True:
         iter_list = list(_one_pass(iters))

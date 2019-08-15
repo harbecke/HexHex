@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
 from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
-from hex.utils.utils import device, zip_list_of_lists_first_dim_reversed, correct_position1d
+from hex.utils.utils import device, zip_list_of_lists, correct_position1d
 
 
 def tempered_moves_selection(output_tensor, temperature):
@@ -35,7 +35,6 @@ class MultiHexGame():
         self.temperature_decay = temperature_decay
         self.output_boards_tensor = torch.Tensor(device='cpu')
         self.positions_tensor = torch.LongTensor(device='cpu')
-        self.targets_tensor = None
         self.targets_list = [[] for idx in range(self.batch_size)]
         self.reverse_winner = 1
 
@@ -48,9 +47,11 @@ class MultiHexGame():
                 self.batched_single_move(model)
                 if self.current_boards == []:
                     self.positions_tensor = self.positions_tensor.view(-1, 1)
-                    self.targets_tensor = torch.tensor(zip_list_of_lists_first_dim_reversed(*self.targets_list), 
-                        dtype=torch.float, device=torch.device('cpu'))
-                    return self.output_boards_tensor, self.positions_tensor, self.targets_tensor
+                    gamma = 1
+                    targets = [[0.5 + 0.5 * (-gamma) ** k for k in reversed(range(len(board.move_history)))]
+                               for board in self.boards]
+                    targets = torch.tensor(zip_list_of_lists(*targets), device=torch.device('cpu'))
+                    return self.output_boards_tensor, self.positions_tensor, targets
                 self.reverse_winner = 1 - self.reverse_winner
 
     def batched_single_move(self, model):        
