@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
 from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
-from hex.utils.utils import device, zip_list_of_lists, correct_position1d
+from hex.utils import utils
 
 
 def tempered_moves_selection(output_tensor, temperature):
@@ -24,17 +24,18 @@ class MultiHexGame():
     temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
     temperature_decay decays the temperature over time as a power function with base:temperature_decay and exponent:number of moves made
     '''
-    def __init__(self, boards, models, noise, noise_parameters, temperature, temperature_decay):
+    def __init__(self, boards, models, noise, noise_parameters, temperature, temperature_decay, target_method='onezero'):
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
-        self.models = [nn.DataParallel(model).to(device) for model in models]
+        self.models = [nn.DataParallel(model).to(utils.device) for model in models]
         self.noise = noise
         self.noise_parameters = noise_parameters
         self.temperature = temperature
         self.temperature_decay = temperature_decay
         self.output_boards_tensor = torch.Tensor(device='cpu')
         self.positions_tensor = torch.LongTensor(device='cpu')
+        self.target_method = target_method
 
     def __repr__(self):
         return ''.join([str(board) for board in self.boards])
@@ -45,10 +46,9 @@ class MultiHexGame():
                 self.batched_single_move(model)
                 if self.current_boards == []:
                     self.positions_tensor = self.positions_tensor.view(-1, 1)
-                    gamma = 1
-                    targets = [[0.5 + 0.5 * (-gamma) ** k for k in reversed(range(len(board.move_history)))]
-                               for board in self.boards]
-                    targets = torch.tensor(zip_list_of_lists(*targets), device=torch.device('cpu'))
+                    target_list = utils.get_target_list(self.boards, self.target_method)
+                    targets = torch.tensor(utils.zip_list_of_lists(*target_list),
+                        device=torch.device('cpu'))
                     return self.output_boards_tensor, self.positions_tensor, targets
 
     def batched_single_move(self, model):        
@@ -62,7 +62,7 @@ class MultiHexGame():
         if self.current_boards == []:
             return
         
-        self.current_boards_tensor = self.current_boards_tensor.to(device)
+        self.current_boards_tensor = self.current_boards_tensor.to(utils.device)
 
         with torch.no_grad():
             outputs_tensor = model(self.current_boards_tensor)
@@ -81,7 +81,7 @@ class MultiHexGame():
         self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
 
         for idx in range(len(self.current_boards)):
-            correct_position = correct_position1d(positions1d[idx].item(), self.board_size,
+            correct_position = utils.correct_position1d(positions1d[idx].item(), self.board_size,
                 self.boards[self.current_boards[idx]].player)
             self.boards[self.current_boards[idx]].set_stone(correct_position)
         return outputs_tensor

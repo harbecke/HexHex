@@ -29,7 +29,8 @@ class SelfPlayGenerator:
             noise=self.args.get('noise'),
             noise_parameters=[float(parameter) for parameter in self.args.get('noise_parameters').split(",")],
             temperature=self.args.getfloat('temperature'),
-            temperature_decay=self.args.getfloat('temperature_decay')
+            temperature_decay=self.args.getfloat('temperature_decay'),
+            target_method=self.args.get('target_method')
         )
         board_states, moves, targets = multihexgame.play_moves()
         output_list = list(zip(board_states, moves, targets))
