@@ -77,6 +77,10 @@ def get_target_list(boards, target_method):
         return ([[0.5 + 0.5 * (-1) ** k for k in reversed(range(len(board.move_history)))]
             for board in boards])
 
+    elif target_method == 'gamma':
+        return ([[0.5 + 0.5 * (-0.999) ** k for k in reversed(range(len(board.move_history)))]
+            for board in boards])
+
     elif target_method == 'sigmoid':
         target_list = []
         for board in boards:
