@@ -20,7 +20,7 @@ class SelfPlayGenerator:
         yields 3 tensors containing for each move:
         - board
         - move
-        - result of game for active player (-1 or 1)
+        - result of game for active player
         """
         boards = [Board(size=self.board_size) for _ in range(self.args.getint('batch_size'))]
         multihexgame = MultiHexGame(
@@ -29,7 +29,8 @@ class SelfPlayGenerator:
             noise=self.args.get('noise'),
             noise_parameters=[float(parameter) for parameter in self.args.get('noise_parameters').split(",")],
             temperature=self.args.getfloat('temperature'),
-            temperature_decay=self.args.getfloat('temperature_decay')
+            temperature_decay=self.args.getfloat('temperature_decay'),
+            target_method=self.args.get('target_method')
         )
         board_states, moves, targets = multihexgame.play_moves()
         output_list = list(zip(board_states, moves, targets))

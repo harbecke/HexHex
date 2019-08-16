@@ -136,6 +136,7 @@ class Board():
                     self.legal_moves.remove(position)
                     self.logical_board_tensor[1][position] = 0.001
                     self.board_tensor = torch.transpose(torch.roll(self.logical_board_tensor, 1, 0), 1, 2)
+                    self.move_history.append((self.player, position))
                     return
 
                 else:

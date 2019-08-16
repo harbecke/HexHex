@@ -17,8 +17,8 @@ def _one_pass(iters):
             pass
 
 
-def zip_list_of_lists_first_dim_reversed(*iterables):
-    iters = [reversed(it) for it in iterables]
+def zip_list_of_lists(*iterables):
+    iters = [iter(it) for it in iterables]
     output_list = []
     while True:
         iter_list = list(_one_pass(iters))
@@ -73,6 +73,24 @@ def load_optimizer(optimizer, model_file):
     checkpoint = torch.load(model_file, map_location=device)
     optimizer.load_state_dict(checkpoint['optimizer'])
     return optimizer
+
+
+def get_target_list(boards, target_method):
+    if target_method == 'onezero':
+        return ([[0.5 + 0.5 * (-1) ** k for k in reversed(range(len(board.move_history)))]
+            for board in boards])
+
+    elif target_method == 'sigmoid':
+        target_list = []
+        for board in boards:
+            normalized_game_len = len(board.move_history) + 2 - 2*board.size
+            target_list.append([torch.sigmoid(torch.tensor((-1)**k * 2 * board.size**2 /
+                normalized_game_len)) for k in reversed(range(len(board.move_history)))])
+        return target_list
+
+    else:
+        logger.error(f"Unknown target_method: {target_method}")
+        raise SystemExit
 
 
 class Average:
