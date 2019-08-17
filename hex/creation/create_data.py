@@ -73,7 +73,7 @@ def create_self_play_data(args, model, num_samples, verbose=True):
 
         for x in first_move_indices:
             first_move_frequency[all_moves[x].item()] += 1
-            if all_results[x].item() == 1:
+            if all_results[x].item() > 0.5:
                 first_move_win_percentage[all_moves[x].item()] += 1
         first_move_win_percentage /= first_move_frequency
 
