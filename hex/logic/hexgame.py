@@ -24,7 +24,7 @@ class MultiHexGame():
     temperature controls move selection from the predictions from 0 (take best prediction) to large positive number (take any move)
     temperature_decay decays the temperature over time as a power function with base:temperature_decay and exponent:number of moves made
     '''
-    def __init__(self, boards, models, noise, noise_parameters, temperature, temperature_decay, target_method='onezero'):
+    def __init__(self, boards, models, noise, noise_parameters, temperature, temperature_decay, gamma=1):
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
@@ -35,7 +35,7 @@ class MultiHexGame():
         self.temperature_decay = temperature_decay
         self.output_boards_tensor = torch.Tensor(device='cpu')
         self.positions_tensor = torch.LongTensor(device='cpu')
-        self.target_method = target_method
+        self.gamma = gamma
 
     def __repr__(self):
         return ''.join([str(board) for board in self.boards])
@@ -46,9 +46,7 @@ class MultiHexGame():
                 self.batched_single_move(model)
                 if self.current_boards == []:
                     self.positions_tensor = self.positions_tensor.view(-1, 1)
-                    target_list = utils.get_target_list(self.boards, self.target_method)
-                    targets = torch.tensor(utils.zip_list_of_lists(*target_list),
-                        device=torch.device('cpu'))
+                    targets = utils.get_targets(self.boards, self.gamma)
                     return self.output_boards_tensor, self.positions_tensor, targets
 
     def batched_single_move(self, model):        
