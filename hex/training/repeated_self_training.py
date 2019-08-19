@@ -76,8 +76,11 @@ class RepeatedSelfTrainer:
             self.create_all_elo_ratings()
             self.measure_win_counts(self.get_model_name(i))
 
-        torch.save((training_data, validation_data), f'data/{self.model_name}.pt')
-        logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
+        if self.config.getboolean('REPEATED SELF TRAINING', 'save_data'):
+            torch.save((training_data, validation_data), f'data/{self.model_name}.pt')
+            logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
+
+        logger.info('=== finished training ===')
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
