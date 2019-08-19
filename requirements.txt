@@ -6,3 +6,4 @@ image
 torch
 tb-nightly
 future
+ax-platform
