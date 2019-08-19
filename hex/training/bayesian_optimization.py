@@ -74,7 +74,8 @@ def main():
         logger.info(best_parameters)
 
         with open("bo_results.p", "wb") as file:
-            pickle.dump((best_parameters, values, experiment, model), file)
+            pickle.dump((best_parameters, values), file)
+        #ax.save(experiment, "bo_results.json")
 
     except KeyboardInterrupt:
         print("Shutdown requested...exiting")
