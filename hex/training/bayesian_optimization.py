@@ -1,22 +1,32 @@
-import multiprocessing
-import time
+#import multiprocessing
+#import time
+import json
+import os
+import pickle
 from ax.service.managed_loop import optimize
 
 from hex.training.repeated_self_training import RepeatedSelfTrainer
+from hex.utils.logger import logger
 
 
 class BayesianOptimization:
+    """
+    runs Bayesian Optimization with given parameters and 20 steps
+    optimizes by ELO value compared to starting model
+    """
     def __init__(self, parameters):
         self.parameters = parameters
 
-    def train_evaluate(self):
+    def train_evaluate(self, parameters):
         trainer = RepeatedSelfTrainer("config.ini")
 
-        for key, value in parameters.items():
-            section = next(parameter["section"] for parameter in self.parameters if parameter["name"] == key)
-            trainer.config[self.parameters[key][section]][key] = str(value)
+        for parameter_name, value in parameters.items():
+            section = next(parameter["section"] for parameter in self.parameters
+                if parameter["name"] == parameter_name)
+            trainer.config[section][parameter_name] = str(value)
 
         trainer.repeated_self_training()
+        #TODO: set possible time limit like
         #p = multiprocessing.Process(target=trainer.repeated_self_training())
         #p.start()
 
@@ -29,25 +39,50 @@ class BayesianOptimization:
             # Terminate
             #p.terminate()
             #p.join()
+
         return trainer.get_best_rating()
 
     def optimizer_run(self):
         best_parameters, values, experiment, model = optimize(
             parameters=self.parameters,
             evaluation_function=self.train_evaluate,
-            objective_name='elo'
+            objective_name='elo',
+            total_trials=20
         )
         return best_parameters, values, experiment, model
 
 
-if __name__ == '__main__':
-    parameters = [
-            {"name": "learning_rate", "type": "range", "bounds": [1e-6, 1e-3], "log_scale": True, "section": "TRAIN"},
-            {"name": "weight_decay", "type": "range", "bounds": [1e-8, 1.0], "log_scale": True, "section": "TRAIN"}
-        ]
-    bo = BayesianOptimization(parameters)
-    best_parameters, values, experiment, model = bo.optimizer_run()
+def main():
+    parameters_path = "bo_parameters.json"
+    if not os.path.isfile(parameters_path):
+        with open(parameters_path, 'w') as file:
+            file.write("[]")
 
-    print(best_parameters)
-    means, covariances = values
-    print(means, covariances)
+    with open("bo_parameters.json") as file:
+        parameters = json.load(file)
+
+    if parameters == []:
+        logger.info(f"parameter list in file {parameters_path} is empty")
+        raise SystemExit
+
+    bo = BayesianOptimization(parameters)
+    try:
+        best_parameters, values, experiment, model = bo.optimizer_run()
+
+        logger.info("=== best parameters are ===")
+        logger.info(best_parameters)
+
+        with open("bo_results.p", "wb") as file:
+            pickle.dump((best_parameters, values, experiment, model), file)
+
+    except KeyboardInterrupt:
+        print("Shutdown requested...exiting")
+
+    except Exception:
+        traceback.print_exc(file=sys.stdout)
+
+    raise SystemExit
+
+
+if __name__ == '__main__':
+    main()
