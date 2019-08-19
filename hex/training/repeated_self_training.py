@@ -154,7 +154,8 @@ class RepeatedSelfTrainer:
             file.write('\n'.join(output))
 
     def get_best_rating(self):
-        return int(self.ratings[self.sorted_model_names[0]])
+        return int(self.ratings[self.sorted_model_names[0]]) if int(self.ratings[self.
+            sorted_model_names[0]]) != 0 else int(self.ratings[self.sorted_model_names[1]])
 
     def measure_win_counts(self, model_name):
         reference_models = {
