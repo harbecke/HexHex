@@ -136,19 +136,22 @@ class RepeatedSelfTrainer:
             args,
             self.tournament_results
         )
-        ratings = elo.create_ratings(self.tournament_results)
-        writer.add_scalar('elo', ratings[self.model_names[-1]])
+        self.ratings = elo.create_ratings(self.tournament_results)
+        writer.add_scalar('elo', self.ratings[self.model_names[-1]])
 
         self.sorted_model_names.append(self.model_names[-1])
-        self.sorted_model_names.sort(key=lambda name: ratings[name], reverse=True)
+        self.sorted_model_names.sort(key=lambda name: self.ratings[name], reverse=True)
 
-        output = ['{:6} {}'.format(int(ratings[model]), model) for model in self.sorted_model_names]
+        output = ['{:6} {}'.format(int(self.ratings[model]), model) for model in self.sorted_model_names]
         for line in output:
             logger.info(line)
 
         with open('ratings.txt', 'w') as file:
             file.write('   ELO Model\n')
             file.write('\n'.join(output))
+
+    def get_best_rating(self):
+        return int(self.ratings[self.sorted_model_names[0]])
 
     def measure_win_counts(self, model_name):
         reference_models = {
