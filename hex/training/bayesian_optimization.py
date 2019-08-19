@@ -78,9 +78,6 @@ def main():
     except KeyboardInterrupt:
         print("Shutdown requested...exiting")
 
-    except Exception:
-        traceback.print_exc(file=sys.stdout)
-
     raise SystemExit
 
 
