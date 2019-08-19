@@ -21,6 +21,7 @@ class BayesianOptimization:
         trainer = RepeatedSelfTrainer("config.ini")
 
         for parameter_name, value in parameters.items():
+            logger.info(f"{parameter_name}: {value}")
             section = next(parameter["section"] for parameter in self.parameters
                 if parameter["name"] == parameter_name)
             trainer.config[section][parameter_name] = str(value)
