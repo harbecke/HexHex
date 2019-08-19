@@ -6,3 +6,4 @@ image
 torch
 tensorboard
 tensorboardX
+ax-platform
