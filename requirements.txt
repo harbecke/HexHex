@@ -4,6 +4,6 @@ pygame
 numpy
 image
 torch
-tensorboard
-tensorboardX
+tb-nightly
+future
 ax-platform

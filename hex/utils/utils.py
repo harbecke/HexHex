@@ -62,7 +62,10 @@ def create_optimizer(optimizer_type, parameters, optimizer_weight_decay, learnin
         return optim.SGD(parameters, lr=learning_rate, momentum=0.9, weight_decay=optimizer_weight_decay)
     elif optimizer_type == 'adam':
         return optim.Adam(parameters, lr=learning_rate, weight_decay=optimizer_weight_decay)
-    logger.error(f'Unknown optimizer {optimizer_type}')
+    elif optimizer_type == 'adamw':
+        return optim.AdamW(parameters, lr=learning_rate, weight_decay=optimizer_weight_decay)
+    else:
+        logger.error(f'Unknown optimizer {optimizer_type}')
 
 
 def load_optimizer(optimizer, model_file):

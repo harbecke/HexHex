@@ -9,11 +9,11 @@ See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
 
 ### Option 1: Manual Installation
 
-* Python 3.7
+* install Python 3.7
 
-* Pytorch (see [here](https://pytorch.org/get-started/locally/) for installation info)
+* install Pytorch 1.2 (see [here](https://pytorch.org/get-started/locally/) for installation info)
 
-* install requirements.txt
+* install requirements.txt `pip install -r requirements.txt`
 
 ### Option 2: Installation with pipenv
 
