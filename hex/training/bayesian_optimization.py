@@ -3,6 +3,7 @@
 import json
 import os
 import pickle
+from configparser import ConfigParser
 from ax.service.managed_loop import optimize
 
 from hex.training.repeated_self_training import RepeatedSelfTrainer
@@ -14,11 +15,12 @@ class BayesianOptimization:
     runs Bayesian Optimization with given parameters and 20 steps
     optimizes by ELO value compared to starting model
     """
-    def __init__(self, parameters):
+    def __init__(self, parameters, config):
         self.parameters = parameters
+        self.config = config
 
     def train_evaluate(self, parameters):
-        trainer = RepeatedSelfTrainer("config.ini")
+        trainer = RepeatedSelfTrainer(self.config)
 
         for parameter_name, value in parameters.items():
             logger.info(f"{parameter_name}: {value}")
@@ -66,7 +68,10 @@ def main():
         logger.info(f"parameter list in file {parameters_path} is empty")
         raise SystemExit
 
-    bo = BayesianOptimization(parameters)
+    config = ConfigParser()
+    config.read('config.ini')
+    bo = BayesianOptimization(parameters, config)
+
     try:
         best_parameters, values, experiment, model = bo.optimizer_run()
 

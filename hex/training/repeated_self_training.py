@@ -32,9 +32,8 @@ def load_reference_models(config):
 
 
 class RepeatedSelfTrainer:
-    def __init__(self, config_file):
-        self.config = ConfigParser()
-        self.config.read(config_file)
+    def __init__(self, config):
+        self.config = config
         self.num_data_models = self.config.getint('REPEATED SELF TRAINING', 'num_data_models')
         self.train_samples = self.config.getint('CREATE DATA', 'train_samples_per_model')
         self.val_samples = self.config.getint('CREATE DATA', 'val_samples_per_model')
@@ -167,5 +166,7 @@ class RepeatedSelfTrainer:
 
 
 if __name__ == '__main__':
-    trainer = RepeatedSelfTrainer('config.ini')
+    config = ConfigParser()
+    config.read('config.ini')
+    trainer = RepeatedSelfTrainer(config)
     trainer.repeated_self_training()
