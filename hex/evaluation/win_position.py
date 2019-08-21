@@ -55,6 +55,7 @@ def win_count(model_name, reference_models, config):
 
     model = load_model(model_name)
     board_size = model.board_size
+    results = defaultdict(lambda: defaultdict(int))
 
     if board_size == 3:
         win_count_3(model_name)
@@ -74,8 +75,11 @@ def win_count(model_name, reference_models, config):
             plot_board=config.getboolean('plot_board', False)
         )
 
-        lose_count = result[0][1] + result[1][1]
-        game_count = sum(result[0]) + sum(result[1])
+        results[model_name][opponent_name] = result[0][0] + result[1][0]
+        results[opponent_name][model_name] = result[0][1] + result[1][1]
+
+        lose_count = results[opponent_name][model_name]
+        game_count = results[model_name][opponent_name] + results[opponent_name][model_name]
 
         total_lose_count += lose_count
         total_game_count += game_count
@@ -83,4 +87,6 @@ def win_count(model_name, reference_models, config):
         logger.info(f"Lost {lose_count:4} / {game_count:4} games against {opponent_name}")
         lose_rate = lose_count / game_count
         writer.add_scalar(f'lose_rate/{opponent_name}', lose_rate)
+
     logger.info(f"Lost {total_lose_count:4} / {total_game_count:4} in total")
+    return results

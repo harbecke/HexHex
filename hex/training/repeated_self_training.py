@@ -163,7 +163,8 @@ class RepeatedSelfTrainer:
                 reference_models["random"] = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
             else:
                 reference_models[model] = load_model(f'models/{model}.pt')
-        win_position.win_count(f'models/{model_name}.pt', reference_models, self.config['VS REFERENCE MODELS'])
+        results = win_position.win_count(f'models/{model_name}.pt', reference_models,
+            self.config['VS REFERENCE MODELS'])
 
 
 if __name__ == '__main__':
