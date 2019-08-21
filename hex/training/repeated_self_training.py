@@ -35,8 +35,8 @@ class RepeatedSelfTrainer:
     def __init__(self, config):
         self.config = config
         self.num_data_models = self.config.getint('REPEATED SELF TRAINING', 'num_data_models')
-        self.train_samples = self.config.getint('CREATE DATA', 'train_samples_per_model')
-        self.val_samples = self.config.getint('CREATE DATA', 'val_samples_per_model')
+        self.train_samples = self.config.getint('CREATE DATA', 'num_train_samples')
+        self.val_samples = self.config.getint('CREATE DATA', 'num_val_samples')
         self.model_name = self.config.get('CREATE MODEL', 'model_name')
         self.model_names = []
         self.start_index = self.config.getint('REPEATED SELF TRAINING', 'start_index', fallback=0)
@@ -53,6 +53,8 @@ class RepeatedSelfTrainer:
 
     def repeated_self_training(self):
         training_data, validation_data = self.initial_data()
+        train_samples_per_model = self.train_samples // self.num_data_models
+        val_samples_per_model = self.val_samples // self.num_data_models
 
         if self.start_index == 0:
             self.create_initial_model()
@@ -60,17 +62,22 @@ class RepeatedSelfTrainer:
         self.model_names.append(self.get_model_name(self.start_index))
         self.sorted_model_names = self.model_names[:]
 
-        training_data = self.check_enough_data(training_data, self.train_samples * self.num_data_models)
-        validation_data = self.check_enough_data(validation_data, self.val_samples * self.num_data_models)
+        training_data = self.check_enough_data(training_data, self.train_samples)
+        validation_data = self.check_enough_data(validation_data, self.val_samples)
 
         for i in range(self.start_index+1, self.end_index+1):
             start = ((i-1) % self.num_data_models)
-            new_train_triple = self.create_data_samples(self.get_model_name(i-1), self.train_samples)
-            new_val_triple = self.create_data_samples(self.get_model_name(i-1), self.val_samples, verbose=False)
+            new_train_triple = self.create_data_samples(self.get_model_name(i-1),
+                self.train_samples_per_model)
+            new_val_triple = self.create_data_samples(self.get_model_name(i-1),
+                self.val_samples_per_model, verbose=False)
             for idx in range(3):
-                training_data[idx][start*self.train_samples : (start+1)* self.train_samples] = new_train_triple[idx]
-                validation_data[idx][start*self.val_samples : (start+1)* self.val_samples] = new_val_triple[idx]
-            self.train_model(self.get_model_name(i-1), self.get_model_name(i), training_data, validation_data)
+                training_data[idx][start*train_samples_per_model : (start+1) * \
+                    train_samples_per_model] = new_train_triple[idx]
+                validation_data[idx][start*val_samples_per_model : (start+1) * \
+                    val_samples_per_model] = new_val_triple[idx]
+            self.train_model(self.get_model_name(i-1), self.get_model_name(i), training_data,
+                validation_data)
             self.model_names.append(self.get_model_name(i))
             self.create_all_elo_ratings()
             self.measure_win_counts(self.get_model_name(i))
@@ -103,9 +110,9 @@ class RepeatedSelfTrainer:
             model = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
             self_play_args = self.config['CREATE DATA']
             training_data = create_data.create_self_play_data(self_play_args, model,
-                self.num_data_models * self.train_samples, verbose=False)
+                self.train_samples, verbose=False)
             validation_data = create_data.create_self_play_data(self_play_args, model,
-                self.num_data_models * self.val_samples, verbose=False)
+                self.val_samples, verbose=False)
             return training_data, validation_data
 
     def check_enough_data(self, data, amount):
