@@ -157,11 +157,13 @@ class RepeatedSelfTrainer:
             sorted_model_names[0]]) != 0 else int(self.ratings[self.sorted_model_names[1]])
 
     def measure_win_counts(self, model_name):
-        reference_models = {
-            'random': RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
-        }
+        reference_models = {}
         for model in self.reference_models:
-            reference_models[model] = load_model(f'models/{model}.pt')
+            if model == "random":
+                reference_models["random"] = RandomModel(self.config.getint('CREATE MODEL',
+                    'board_size'))
+            else:
+                reference_models[model] = load_model(f'models/{model}.pt')
         win_position.win_count(f'models/{model_name}.pt', reference_models, self.config['VS REFERENCE MODELS'])
 
 
