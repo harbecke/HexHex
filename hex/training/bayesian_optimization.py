@@ -31,6 +31,8 @@ class BayesianOptimization:
             trainer.config[section][parameter_name] = str(value)
         trainer.config["REPEATED SELF TRAINING"]["num_iterations"] = \
             str(int(1/trainer.config["TRAIN"].getfloat("epochs")))
+        logger.info(f"num_iterations: {trainer.config['REPEATED SELF TRAINING']
+            .getint('num_iterations')}")
 
         trainer.repeated_self_training()
 
