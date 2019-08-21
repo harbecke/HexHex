@@ -6,7 +6,7 @@ import pickle
 from configparser import ConfigParser
 from ax.service.managed_loop import optimize
 
-from hex.training.repeated_self_training import RepeatedSelfTrainer
+from hex.training.repeated_self_training import RepeatedSelfTrainer, load_reference_models
 from hex.utils.logger import logger
 
 
@@ -18,9 +18,11 @@ class BayesianOptimization:
     def __init__(self, parameters, config):
         self.parameters = parameters
         self.config = config
+        self.reference_models = load_reference_models(config)
 
     def train_evaluate(self, parameters):
         trainer = RepeatedSelfTrainer(self.config)
+        trainer.reference_models = self.reference_models
 
         for parameter_name, value in parameters.items():
             logger.info(f"{parameter_name}: {value}")
