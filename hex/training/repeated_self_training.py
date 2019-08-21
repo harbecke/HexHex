@@ -40,8 +40,6 @@ class RepeatedSelfTrainer:
         self.model_name = self.config.get('CREATE MODEL', 'model_name')
         self.model_names = []
         self.start_index = self.config.getint('REPEATED SELF TRAINING', 'start_index', fallback=0)
-        self.end_index = self.start_index + self.config.getint('REPEATED SELF TRAINING', 
-            'num_iterations', fallback=100)
         self.tournament_results = defaultdict(lambda: defaultdict(int))
         self.reference_results = defaultdict(lambda: defaultdict(int))
         self.reference_models = load_reference_models(self.config)
@@ -66,7 +64,8 @@ class RepeatedSelfTrainer:
         training_data = self.check_enough_data(training_data, self.train_samples)
         validation_data = self.check_enough_data(validation_data, self.val_samples)
 
-        for i in range(self.start_index+1, self.end_index+1):
+        for i in range(self.start_index + 1, self.start_index + 1 + self.config.
+            getint('REPEATED SELF TRAINING', 'num_iterations')):
             start = ((i-1) % self.num_data_models)
             new_train_triple = self.create_data_samples(self.get_model_name(i-1),
                 train_samples_per_model)
