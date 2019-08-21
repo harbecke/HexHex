@@ -69,9 +69,9 @@ class RepeatedSelfTrainer:
         for i in range(self.start_index+1, self.end_index+1):
             start = ((i-1) % self.num_data_models)
             new_train_triple = self.create_data_samples(self.get_model_name(i-1),
-                self.train_samples_per_model)
+                train_samples_per_model)
             new_val_triple = self.create_data_samples(self.get_model_name(i-1),
-                self.val_samples_per_model, verbose=False)
+                val_samples_per_model, verbose=False)
             for idx in range(3):
                 training_data[idx][start*train_samples_per_model : (start+1) * \
                     train_samples_per_model] = new_train_triple[idx]
