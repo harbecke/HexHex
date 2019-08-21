@@ -1,4 +1,5 @@
 import itertools
+from collections import defaultdict
 
 import torch
 
@@ -26,7 +27,7 @@ class TestModel:
 
 
 def win_count_3(model_name):
-    model = load_model(model_name)
+    model = load_model(f'models/{model_name}.pt')
     board_size = model.board_size
 
     lose_count = 0
@@ -53,7 +54,7 @@ def win_count_3(model_name):
 def win_count(model_name, reference_models, config):
     logger.info("Determining win count against test model")
 
-    model = load_model(model_name)
+    model = load_model(f'models/{model_name}.pt')
     board_size = model.board_size
     results = defaultdict(lambda: defaultdict(int))
 

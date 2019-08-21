@@ -13,7 +13,7 @@ from hex.model.hexconvolution import RandomModel
 from hex.training import train
 from hex.utils.logger import logger
 from hex.utils.summary import writer
-from hex.utils.utils import load_model
+from hex.utils.utils import load_model, merge_dicts_of_dicts
 
 
 def load_reference_models(config):
@@ -43,6 +43,7 @@ class RepeatedSelfTrainer:
         self.end_index = self.start_index + self.config.getint('REPEATED SELF TRAINING', 
             'num_iterations', fallback=100)
         self.tournament_results = defaultdict(lambda: defaultdict(int))
+        self.reference_results = defaultdict(lambda: defaultdict(int))
         self.reference_models = load_reference_models(self.config)
 
     def get_model_name(self, i):
@@ -80,6 +81,7 @@ class RepeatedSelfTrainer:
             logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
 
         logger.info('=== finished training ===')
+        logger.info('')
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
@@ -153,8 +155,14 @@ class RepeatedSelfTrainer:
             file.write('\n'.join(output))
 
     def get_best_rating(self):
-        return int(self.ratings[self.sorted_model_names[0]]) if int(self.ratings[self.
-            sorted_model_names[0]]) != 0 else int(self.ratings[self.sorted_model_names[1]])
+        combined_results = merge_dicts_of_dicts(self.reference_results, self.tournament_results)
+        combined_ratings = elo.create_ratings(combined_results)
+        best_trained_model = max(self.model_names[1:], key=lambda name: combined_ratings[name])
+        best_reference_model = max(self.reference_models + self.model_names[0:1],
+            key=lambda name: combined_ratings[name])
+        diff = combined_ratings[best_trained_model] - combined_ratings[best_reference_model]
+        logger.info(f"ELO difference between best trained model and best reference model: {diff:0.2f}")
+        return diff
 
     def measure_win_counts(self, model_name):
         reference_models = {}
@@ -163,8 +171,9 @@ class RepeatedSelfTrainer:
                 reference_models["random"] = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
             else:
                 reference_models[model] = load_model(f'models/{model}.pt')
-        results = win_position.win_count(f'models/{model_name}.pt', reference_models,
+        results = win_position.win_count(model_name, reference_models,
             self.config['VS REFERENCE MODELS'])
+        self.tournament_results = merge_dicts_of_dicts(self.tournament_results, results)
 
 
 if __name__ == '__main__':

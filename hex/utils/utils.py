@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import copy
 
 import torch
 import torch.optim as optim
@@ -79,6 +80,13 @@ def get_targets(boards, gamma):
     target_list = [[0.5 + 0.5 * (-1) ** k * gamma ** (2 * (k//2)) for k in reversed(range(len(
         board.move_history)))] for board in boards]
     return torch.tensor(zip_list_of_lists(*target_list), device=torch.device('cpu'))
+
+
+def merge_dicts_of_dicts(dict1, dict2):
+    output_dict = copy.deepcopy(dict1)
+    for key, sub_dict in dict2.items():
+        output_dict[key].update(sub_dict)
+    return output_dict
 
 
 class Average:
