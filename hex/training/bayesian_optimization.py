@@ -29,21 +29,10 @@ class BayesianOptimization:
             section = next(parameter["section"] for parameter in self.parameters
                 if parameter["name"] == parameter_name)
             trainer.config[section][parameter_name] = str(value)
+        trainer.config["REPEATED SELF TRAINING"]["num_iterations"] = \
+            str(int(1/trainer.config["TRAIN"].getfloat("epochs")))
 
         trainer.repeated_self_training()
-        #TODO: set possible time limit like
-        #p = multiprocessing.Process(target=trainer.repeated_self_training())
-        #p.start()
-
-        # Wait for 10 seconds or until process finishes
-        #p.join(10)
-
-        # If thread is still active
-        #if p.is_alive():
-
-            # Terminate
-            #p.terminate()
-            #p.join()
 
         return trainer.get_best_rating()
 
