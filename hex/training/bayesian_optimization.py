@@ -29,10 +29,10 @@ class BayesianOptimization:
             section = next(parameter["section"] for parameter in self.parameters
                 if parameter["name"] == parameter_name)
             trainer.config[section][parameter_name] = str(value)
+        epochs = trainer.config["TRAIN"].getfloat("epochs")
         trainer.config["REPEATED SELF TRAINING"]["num_iterations"] = \
-            str(int(1/trainer.config["TRAIN"].getfloat("epochs")))
-        logger.info(f"num_iterations: {trainer.config['REPEATED SELF TRAINING']
-            .getint('num_iterations')}")
+            str(int((0.005 + epochs ** 1.5) / (epochs * (epochs ** 1.5 + 0.08))))
+        logger.info(f"num_iterations: {trainer.config['REPEATED SELF TRAINING'].getint('num_iterations')}")
 
         trainer.repeated_self_training()
 
