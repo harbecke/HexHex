@@ -3,6 +3,7 @@ import json
 import os
 import pickle
 from configparser import ConfigParser
+import ax
 from ax.service.managed_loop import optimize
 
 from hex.training.repeated_self_training import RepeatedSelfTrainer, load_reference_models
@@ -48,7 +49,7 @@ class BayesianOptimization:
             parameters=self.parameters,
             evaluation_function=self.train_evaluate,
             objective_name='elo',
-            total_trials=20
+            total_trials=self.config["BAYESIAN OPTIMIZATION"].getint("loop_count")
         )
         return best_parameters, values, experiment, model
 
@@ -76,9 +77,10 @@ def main():
         logger.info("=== best parameters are ===")
         logger.info(best_parameters)
 
-        with open("bo_results.p", "wb") as file:
+        experiment.name = config["CREATE MODEL"].get("model_name")
+        with open(f"bayes_experiments/{experiment.name}_parameters.p", "wb") as file:
             pickle.dump((best_parameters, values), file)
-        #ax.save(experiment, "bo_results.json")
+        ax.save(experiment, f"bayes_experiments/{experiment.name}_experiment.json")
 
     except KeyboardInterrupt:
         print("Shutdown requested...exiting")
