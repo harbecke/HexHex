@@ -1,5 +1,4 @@
-#import multiprocessing
-#import time
+import time
 import json
 import os
 import pickle
@@ -21,20 +20,26 @@ class BayesianOptimization:
         self.reference_models = load_reference_models(config)
 
     def train_evaluate(self, parameters):
+        start_time = time.time()
         trainer = RepeatedSelfTrainer(self.config)
         trainer.reference_models = self.reference_models
 
         for parameter_name, value in parameters.items():
-            logger.info(f"{parameter_name}: {value}")
+            logger.info(f"Bayesian Optimization {parameter_name}: {value}")
             section = next(parameter["section"] for parameter in self.parameters
                 if parameter["name"] == parameter_name)
             trainer.config[section][parameter_name] = str(value)
         epochs = trainer.config["TRAIN"].getfloat("epochs")
-        trainer.config["REPEATED SELF TRAINING"]["num_iterations"] = \
-            str(int((0.005 + epochs ** 1.5) / (epochs * (epochs ** 1.5 + 0.08))))
-        logger.info(f"num_iterations: {trainer.config['REPEATED SELF TRAINING'].getint('num_iterations')}")
 
-        trainer.repeated_self_training()
+        trainer.prepare_rst()
+        loop_idx = self.config.getint('REPEATED SELF TRAINING', 'start_index') + 1
+
+        while True:
+            if time.time() - start_time < self.config["BAYESIAN OPTIMIZATION"].getfloat("loop_time"):
+                trainer.rst_loop(loop_idx)
+                loop_idx += 1
+            else:
+                break
 
         return trainer.get_best_rating()
 
