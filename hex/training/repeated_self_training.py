@@ -50,10 +50,8 @@ class RepeatedSelfTrainer:
     def get_data_files(self, i):
         return [self.get_model_name(idx) for idx in range(i)]
 
-    def repeated_self_training(self):
+    def prepare_rst(self):
         training_data, validation_data = self.initial_data()
-        train_samples_per_model = self.train_samples // self.num_data_models
-        val_samples_per_model = self.val_samples // self.num_data_models
 
         if self.start_index == 0:
             self.create_initial_model()
@@ -61,26 +59,34 @@ class RepeatedSelfTrainer:
         self.model_names.append(self.get_model_name(self.start_index))
         self.sorted_model_names = self.model_names[:]
 
-        training_data = self.check_enough_data(training_data, self.train_samples)
-        validation_data = self.check_enough_data(validation_data, self.val_samples)
+        self.training_data = self.check_enough_data(training_data, self.train_samples)
+        self.validation_data = self.check_enough_data(validation_data, self.val_samples)
+
+    def rst_loop(self, i):
+        train_samples_per_model = self.train_samples // self.num_data_models
+        val_samples_per_model = self.val_samples // self.num_data_models
+        start = ((i-1) % self.num_data_models)
+        new_train_triple = self.create_data_samples(self.get_model_name(i-1),
+            train_samples_per_model)
+        new_val_triple = self.create_data_samples(self.get_model_name(i-1),
+            val_samples_per_model, verbose=False)
+        for idx in range(3):
+            self.training_data[idx][start*train_samples_per_model : (start+1) * \
+                train_samples_per_model] = new_train_triple[idx]
+            self.validation_data[idx][start*val_samples_per_model : (start+1) * \
+                val_samples_per_model] = new_val_triple[idx]
+        self.train_model(self.get_model_name(i-1), self.get_model_name(i), self.training_data,
+            self.validation_data)
+        self.model_names.append(self.get_model_name(i))
+        self.create_all_elo_ratings()
+        self.measure_win_counts(self.get_model_name(i))
+
+    def repeated_self_training(self):
+        self.prepare_rst()
 
         for i in range(self.start_index + 1, self.start_index + 1 + self.config.
             getint('REPEATED SELF TRAINING', 'num_iterations')):
-            start = ((i-1) % self.num_data_models)
-            new_train_triple = self.create_data_samples(self.get_model_name(i-1),
-                train_samples_per_model)
-            new_val_triple = self.create_data_samples(self.get_model_name(i-1),
-                val_samples_per_model, verbose=False)
-            for idx in range(3):
-                training_data[idx][start*train_samples_per_model : (start+1) * \
-                    train_samples_per_model] = new_train_triple[idx]
-                validation_data[idx][start*val_samples_per_model : (start+1) * \
-                    val_samples_per_model] = new_val_triple[idx]
-            self.train_model(self.get_model_name(i-1), self.get_model_name(i), training_data,
-                validation_data)
-            self.model_names.append(self.get_model_name(i))
-            self.create_all_elo_ratings()
-            self.measure_win_counts(self.get_model_name(i))
+            self.rst_loop(i)
 
         if self.config.getboolean('REPEATED SELF TRAINING', 'save_data'):
             torch.save((training_data, validation_data), f'data/{self.model_name}.pt')
