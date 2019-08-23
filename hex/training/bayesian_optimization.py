@@ -75,8 +75,11 @@ def bayesian_optimization():
         noise=config["BAYESIAN OPTIMIZATION"].getfloat("noise")
         )
 
+    skopt.dump(res_gp, f"bayes_experiments/{config['CREATE MODEL'].get('model_name')}.p",
+        store_objective=False)
+
     logger.info("=== best parameters are ===")
-    logger.info(res_gp.x, res_gp.fun)
+    logger.info((res_gp.x, res_gp.fun))
 
 
 if __name__ == '__main__':
