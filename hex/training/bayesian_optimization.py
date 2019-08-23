@@ -16,7 +16,7 @@ def parameter_dict_to_named_arg(pdict):
             prior = "log-uniform" if pdict.get("log_scale") else "uniform"
             return skopt.utils.Real(low=low, high=high, prior=prior, name=pdict["name"])
         elif type(low) == int:
-            return skopt.utils.Int(low=low, high=high, name=pdict["name"])
+            return skopt.utils.Integer(low=low, high=high, name=pdict["name"])
     else:
         logger.info(f"=== parameter {pdict['name']} doesn't match (known) types ===")
         raise SystemExit
@@ -53,7 +53,6 @@ def bayesian_optimization():
             section = next(parameter["section"] for parameter in parameters
                 if parameter["name"] == parameter_name)
             trainer.config[section][parameter_name] = str(value)
-        epochs = trainer.config["TRAIN"].getfloat("epochs")
 
         trainer.prepare_rst()
         loop_idx = config.getint('REPEATED SELF TRAINING', 'start_index') + 1
