@@ -3,58 +3,28 @@ import json
 import os
 import pickle
 from configparser import ConfigParser
-import ax
-from ax.service.managed_loop import optimize
+import skopt
 
 from hex.training.repeated_self_training import RepeatedSelfTrainer, load_reference_models
 from hex.utils.logger import logger
 
 
-class BayesianOptimization:
-    """
-    runs Bayesian Optimization with given parameters and 20 steps
-    optimizes by ELO value compared to starting model
-    """
-    def __init__(self, parameters, config):
-        self.parameters = parameters
-        self.config = config
-        self.reference_models = load_reference_models(config)
+def parameter_dict_to_named_arg(pdict):
+    low, high = pdict["bounds"]
+    if type(low) == type(high):
+        if type(low) == float:
+            prior = "log-uniform" if pdict.get("log_scale") else "uniform"
+            return skopt.utils.Real(low=low, high=high, prior=prior, name=pdict["name"])
+        elif type(low) == int:
+            return skopt.utils.Int(low=low, high=high, name=pdict["name"])
+    else:
+        logger.info(f"=== parameter {pdict['name']} doesn't match (known) types ===")
+        raise SystemExit
 
-    def train_evaluate(self, parameters):
-        start_time = time.time()
-        trainer = RepeatedSelfTrainer(self.config)
-        trainer.reference_models = self.reference_models
+def bayesian_optimization():
+    #runs Bayesian Optimization with given parameters and "loop_count" steps
+    #optimizes by ELO value compared to starting and reference models
 
-        for parameter_name, value in parameters.items():
-            logger.info(f"Bayesian Optimization {parameter_name}: {value}")
-            section = next(parameter["section"] for parameter in self.parameters
-                if parameter["name"] == parameter_name)
-            trainer.config[section][parameter_name] = str(value)
-        epochs = trainer.config["TRAIN"].getfloat("epochs")
-
-        trainer.prepare_rst()
-        loop_idx = self.config.getint('REPEATED SELF TRAINING', 'start_index') + 1
-
-        while True:
-            if time.time() - start_time < self.config["BAYESIAN OPTIMIZATION"].getfloat("loop_time"):
-                trainer.rst_loop(loop_idx)
-                loop_idx += 1
-            else:
-                break
-
-        return trainer.get_best_rating()
-
-    def optimizer_run(self):
-        best_parameters, values, experiment, model = optimize(
-            parameters=self.parameters,
-            evaluation_function=self.train_evaluate,
-            objective_name='elo',
-            total_trials=self.config["BAYESIAN OPTIMIZATION"].getint("loop_count")
-        )
-        return best_parameters, values, experiment, model
-
-
-def main():
     parameters_path = "bo_parameters.json"
     if not os.path.isfile(parameters_path):
         with open(parameters_path, 'w') as file:
@@ -69,24 +39,48 @@ def main():
 
     config = ConfigParser()
     config.read('config.ini')
-    bo = BayesianOptimization(parameters, config)
+    reference_models = load_reference_models(config)
+    space = [parameter_dict_to_named_arg(pdict) for pdict in parameters]
 
-    try:
-        best_parameters, values, experiment, model = bo.optimizer_run()
+    @skopt.utils.use_named_args(space)
+    def train_evaluate(**params):
+        trainer = RepeatedSelfTrainer(config)
+        trainer.reference_models = reference_models
 
-        logger.info("=== best parameters are ===")
-        logger.info(best_parameters)
+        start_time = time.time()
+        for parameter_name, value in params.items():
+            logger.info(f"Bayesian Optimization {parameter_name}: {value}")
+            section = next(parameter["section"] for parameter in parameters
+                if parameter["name"] == parameter_name)
+            trainer.config[section][parameter_name] = str(value)
+        epochs = trainer.config["TRAIN"].getfloat("epochs")
 
-        experiment.name = config["CREATE MODEL"].get("model_name")
-        with open(f"bayes_experiments/{experiment.name}_parameters.p", "wb") as file:
-            pickle.dump((best_parameters, values), file)
-        ax.save(experiment, f"bayes_experiments/{experiment.name}_experiment.json")
+        trainer.prepare_rst()
+        loop_idx = config.getint('REPEATED SELF TRAINING', 'start_index') + 1
 
-    except KeyboardInterrupt:
-        print("Shutdown requested...exiting")
+        while True:
+            if time.time() - start_time < config["BAYESIAN OPTIMIZATION"].getfloat("loop_time"):
+                trainer.rst_loop(loop_idx)
+                loop_idx += 1
+            else:
+                break
 
-    raise SystemExit
+        return -trainer.get_best_rating()
+
+    res_gp = skopt.gp_minimize(
+        func=train_evaluate,
+        dimensions=space,
+        n_calls=config["BAYESIAN OPTIMIZATION"].getint("loop_count"),
+        n_random_starts=config["BAYESIAN OPTIMIZATION"].getint("random_count"),
+        noise=config["BAYESIAN OPTIMIZATION"].getfloat("noise")
+        )
+
+    skopt.dump(res_gp, f"bayes_experiments/{config['CREATE MODEL'].get('model_name')}.p",
+        store_objective=False)
+
+    logger.info("=== best parameters are ===")
+    logger.info((res_gp.x, res_gp.fun))
 
 
 if __name__ == '__main__':
-    main()
+    bayesian_optimization()
