@@ -3,9 +3,7 @@ import json
 import os
 import pickle
 from configparser import ConfigParser
-from skopt import gp_minimize
-from skopt.space import Real, Integer
-from skopt.utils import use_named_args
+import skopt
 
 from hex.training.repeated_self_training import RepeatedSelfTrainer, load_reference_models
 from hex.utils.logger import logger
@@ -16,9 +14,9 @@ def parameter_dict_to_named_arg(pdict):
     if type(low) == type(high):
         if type(low) == float:
             prior = "log-uniform" if pdict.get("log_scale") else "uniform"
-            return Real(low=low, high=high, prior=prior, name=pdict["name"])
+            return skopt.utils.Real(low=low, high=high, prior=prior, name=pdict["name"])
         elif type(low) == int:
-            return Int(low=low, high=high, name=pdict["name"])
+            return skopt.utils.Int(low=low, high=high, name=pdict["name"])
     else:
         logger.info(f"=== parameter {pdict['name']} doesn't match (known) types ===")
         raise SystemExit
@@ -44,7 +42,7 @@ def bayesian_optimization():
     reference_models = load_reference_models(config)
     space = [parameter_dict_to_named_arg(pdict) for pdict in parameters]
 
-    @use_named_args(space)
+    @skopt.utils.use_named_args(space)
     def train_evaluate(**params):
         trainer = RepeatedSelfTrainer(config)
         trainer.reference_models = reference_models
@@ -67,9 +65,9 @@ def bayesian_optimization():
             else:
                 break
 
-        return trainer.get_best_rating()
+        return -trainer.get_best_rating()
 
-    res_gp = gp_minimize(
+    res_gp = skopt.gp_minimize(
         func=train_evaluate,
         dimensions=space,
         n_calls=config["BAYESIAN OPTIMIZATION"].getint("loop_count"),
