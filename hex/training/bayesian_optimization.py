@@ -10,15 +10,16 @@ from hex.utils.logger import logger
 
 
 def parameter_dict_to_named_arg(pdict):
-    low, high = pdict["bounds"]
-    if type(low) == type(high):
-        if type(low) == float:
-            prior = "log-uniform" if pdict.get("log_scale") else "uniform"
-            return skopt.utils.Real(low=low, high=high, prior=prior, name=pdict["name"])
-        elif type(low) == int:
-            return skopt.utils.Integer(low=low, high=high, name=pdict["name"])
+    bounds = pdict["bounds"]
+    if all(isinstance(x, float) for x in bounds):
+        prior = "log-uniform" if pdict.get("log_scale") else "uniform"
+        return skopt.utils.Real(low=bounds[0], high=bounds[1], prior=prior, name=pdict["name"])
+    elif all(isinstance(x, int) for x in bounds):
+        return skopt.utils.Integer(low=bounds[0], high=bounds[1], name=pdict["name"])
+    elif all(isinstance(x, str) for x in bounds):
+        return skopt.utils.Categorical(categories=bounds, name=pdict["name"])
     else:
-        logger.info(f"=== parameter {pdict['name']} doesn't match (known) types ===")
+        logger.info(f"=== parameter {pdict['name']} doesn't match types ===")
         raise SystemExit
 
 def bayesian_optimization():
