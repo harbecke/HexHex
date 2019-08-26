@@ -50,10 +50,11 @@ def bayesian_optimization():
 
         start_time = time.time()
         for parameter_name, value in params.items():
-            logger.info(f"Bayesian Optimization {parameter_name}: {value}")
-            section = next(parameter["section"] for parameter in parameters
-                if parameter["name"] == parameter_name)
+            section, convert = next((parameter["section"], parameter.get("convert_to_int", False))
+                for parameter in parameters if parameter["name"] == parameter_name)
+            value = int(value) if convert else value
             trainer.config[section][parameter_name] = str(value)
+            logger.info(f"Bayesian Optimization {parameter_name}: {value}")
 
         trainer.prepare_rst()
         loop_idx = config.getint('REPEATED SELF TRAINING', 'start_index') + 1
