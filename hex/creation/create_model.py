@@ -8,7 +8,6 @@ from hex.utils.logger import logger
 
 def create_model(config):
     board_size = config.getint('board_size')
-    model_type = config['model_type']
     switch_model = config.getboolean('switch_model')
     rotation_model = config.getboolean('rotation_model')
 
