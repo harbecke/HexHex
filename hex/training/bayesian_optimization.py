@@ -2,6 +2,7 @@ import time
 import json
 import os
 from configparser import ConfigParser
+import copy
 import skopt
 
 from hex.training.repeated_self_training import RepeatedSelfTrainer, load_reference_models
@@ -44,16 +45,18 @@ def bayesian_optimization():
 
     @skopt.utils.use_named_args(space)
     def train_evaluate(**params):
-        trainer = RepeatedSelfTrainer(config)
-        trainer.reference_models = reference_models
-
         start_time = time.time()
+        current_config = copy.deepcopy(config)
+
         for parameter_name, value in params.items():
             section, convert = next((parameter["section"], parameter.get("convert_to_int", False))
                 for parameter in parameters if parameter["name"] == parameter_name)
             value = int(value) if convert else value
-            trainer.config[section][parameter_name] = str(value)
+            current_config[section][parameter_name] = str(value)
             logger.info(f"Bayesian Optimization {parameter_name}: {value}")
+
+        trainer = RepeatedSelfTrainer(current_config)
+        trainer.reference_models = reference_models
 
         trainer.prepare_rst()
         loop_idx = config.getint('REPEATED SELF TRAINING', 'start_index') + 1
