@@ -1,7 +1,6 @@
 import time
 import json
 import os
-import pickle
 from configparser import ConfigParser
 import skopt
 
