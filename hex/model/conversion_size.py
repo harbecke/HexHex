@@ -23,6 +23,8 @@ def convert_boardsize_of_model(model_name, new_bs):
         }, f'models/{new_bs}_{model_name}.pt')
         print('=== converted model size ===')
         print(f'wrote models/{new_bs}_{model_name}.pt')
+    else:
+        print('=== model type is not "conv" ===')
     return
 
 if __name__ == '__main__':

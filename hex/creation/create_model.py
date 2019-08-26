@@ -12,31 +12,12 @@ def create_model(config):
     switch_model = config.getboolean('switch_model')
     rotation_model = config.getboolean('rotation_model')
 
-    if model_type == 'random':
-        model = hexconvolution.RandomModel(board_size=board_size)
-    elif model_type == 'inception':
-        model = hexconvolution.InceptionModel(
-            board_size=board_size,
-            layers=config.getint('layers'),
-            intermediate_channels=config.getint('intermediate_channels')
+    model = hexconvolution.Conv(
+        board_size=board_size,
+        layers=config.getint('layers'),
+        intermediate_channels=config.getint('intermediate_channels'),
+        reach=config.getint('reach')
         )
-    elif model_type == 'nomcts':
-        model = hexconvolution.NoMCTSModel(
-            board_size=board_size,
-            layers=config.getint('layers'),
-            intermediate_channels=config.getint('intermediate_channels'),
-            skip_layer=config.get('layer_type')
-        )
-    elif model_type == 'conv':
-        model = hexconvolution.Conv(
-            board_size=board_size,
-            layers=config.getint('layers'),
-            intermediate_channels=config.getint('intermediate_channels'),
-            reach=config.getint('reach')
-        )
-    else:
-        logger.error(f"Unknown model_type: {model_type}")
-        exit(1)
 
     if switch_model == False:
         model = hexconvolution.NoSwitchWrapperModel(model)
