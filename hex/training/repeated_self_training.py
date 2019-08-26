@@ -41,7 +41,6 @@ class RepeatedSelfTrainer:
         self.model_names = []
         self.start_index = self.config.getint('REPEATED SELF TRAINING', 'start_index', fallback=0)
         self.tournament_results = defaultdict(lambda: defaultdict(int))
-        self.reference_results = defaultdict(lambda: defaultdict(int))
         self.reference_models = load_reference_models(self.config)
 
     def get_model_name(self, i):
@@ -152,13 +151,13 @@ class RepeatedSelfTrainer:
             args,
             self.tournament_results
         )
-        self.ratings = elo.create_ratings(self.tournament_results)
-        writer.add_scalar('elo', self.ratings[self.model_names[-1]])
+        ratings = elo.create_ratings(self.tournament_results)
+        writer.add_scalar('elo', ratings[self.model_names[-1]])
 
         self.sorted_model_names.append(self.model_names[-1])
-        self.sorted_model_names.sort(key=lambda name: self.ratings[name], reverse=True)
+        self.sorted_model_names.sort(key=lambda name: ratings[name], reverse=True)
 
-        output = ['{:6} {}'.format(int(self.ratings[model]), model) for model in self.sorted_model_names]
+        output = ['{:6} {}'.format(int(ratings[model]), model) for model in self.sorted_model_names]
         for line in output:
             logger.info(line)
 
@@ -167,12 +166,19 @@ class RepeatedSelfTrainer:
             file.write('\n'.join(output))
 
     def get_best_rating(self):
-        combined_results = merge_dicts_of_dicts(self.reference_results, self.tournament_results)
-        combined_ratings = elo.create_ratings(combined_results)
-        best_trained_model = max(self.model_names[1:], key=lambda name: combined_ratings[name])
+        args = self.config['ELO']
+        for reference_idx in range(len(self.reference_models[1:])):
+            self.tournament_results = elo.add_to_tournament(
+                self.reference_models[:reference_idx],
+                self.reference_models[reference_idx],
+                args,
+                self.tournament_results
+            )
+        ratings = elo.create_ratings(self.tournament_results)
+        best_trained_model = max(self.model_names[1:], key=lambda name: ratings[name])
         best_reference_model = max(self.reference_models + self.model_names[0:1],
-            key=lambda name: combined_ratings[name])
-        diff = combined_ratings[best_trained_model] - combined_ratings[best_reference_model]
+            key=lambda name: ratings[name])
+        diff = ratings[best_trained_model] - ratings[best_reference_model]
         logger.info(f"ELO difference between best trained model and best reference model: {diff:0.2f}")
         return diff
 
