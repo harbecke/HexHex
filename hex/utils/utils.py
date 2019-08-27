@@ -67,6 +67,7 @@ def create_optimizer(optimizer_type, parameters, optimizer_weight_decay, learnin
         return optim.AdamW(parameters, lr=learning_rate, weight_decay=optimizer_weight_decay)
     else:
         logger.error(f'Unknown optimizer {optimizer_type}')
+        raise SystemExit
 
 
 def load_optimizer(optimizer, model_file):
