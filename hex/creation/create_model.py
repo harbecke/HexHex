@@ -32,7 +32,6 @@ def create_and_store_model(config, name):
     model_file = f'models/{name}.pt'
     torch.save({
         'model_state_dict': model.state_dict(),
-        'config': config,
-        'optimizer': False
+        'config': config
         }, model_file)
     logger.info(f'wrote {model_file}\n')

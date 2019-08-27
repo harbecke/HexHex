@@ -236,9 +236,6 @@ def train(config, training_data, validation_data):
         learning_rate=config.getfloat('learning_rate')
     )
 
-    if config.getboolean('optimizer_load'):
-        optimizer = load_optimizer(optimizer, model_file)
-
     puzzle_file = f'data/{model.board_size}_puzzle.pt'
     if not os.path.exists(puzzle_file):
         logger.info("")
