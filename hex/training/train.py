@@ -66,67 +66,6 @@ class TrainingStats:
         )
 
 
-class Training:
-    def __init__(self, args, model, optimizer):
-        self.args = args
-        self.model = model
-        self.device = device
-        self.optimizer = optimizer
-        self.stats = TrainingStats()
-
-    def train_mcts_model(self, train_dataset, val_dataset):
-        mean_epoch_loss_history = {'train': [], 'val': []}
-        for epoch in range(int(self.args.epochs)):
-            sampler = SubsetRandomSampler(torch.randperm(len(train_dataset))[:self.args.samples_per_epoch])
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.args.batch_size, sampler=sampler)
-            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.args.batch_size)
-            dataloaders = {'train': train_loader, 'val': val_loader}
-
-            for phase in ['val', 'train']: # run validation first, s.t. loss values are from the same network
-                for i, (board_states, policies_train, value_train) in enumerate(dataloaders[phase], 0):
-                    board_states, policies_train, value_train \
-                        = board_states.to(self.device), policies_train.to(self.device), value_train.to(self.device)
-
-                    self.optimizer.zero_grad()
-                    with torch.set_grad_enabled(phase == 'train'):
-                        param_loss, policy_loss, value_loss = self.measure_mean_losses(
-                                board_states,
-                                policies_train,
-                                value_train
-                        )
-
-                        loss = policy_loss + value_loss + param_loss
-
-                        loss_triple = LossTriple(value_loss.item(), policy_loss.item(), param_loss.item())
-                        self.stats.add_batch(phase, epoch, i, loss_triple)
-
-                        if phase == 'train':
-                            loss.backward()
-                            self.optimizer.step()
-
-                # mean_epoch_loss_history[phase].append(
-                #         {key: value / len(dataloaders[phase].dataset) for key, value in running_losses.items()}
-                # )
-
-            logger.info('Epoch [%3d] mini-batches [%8d] %s'
-                        % (epoch, epoch * len(train_loader), self.stats.last_values_to_string())
-                        )
-
-        logger.debug('Finished Training\n')
-        return self.model, self.optimizer
-
-    def measure_mean_losses(self, board_states, policies_train, value_train):
-        policies_log, values_out = self.model(board_states)
-        policies_train_entropy = torch.distributions.Categorical(probs=policies_train).entropy()
-        # this calculated cross entropy as policy output is log(p)
-        # subtracting policies_train_entropy, s.t. policy_loss == 0 if both policies are equal
-        policy_loss = torch.mean(torch.sum(-policies_log * policies_train, dim=1) - policies_train_entropy)
-        value_loss_fct = nn.MSELoss(reduction='mean')
-        value_loss = value_loss_fct(values_out, value_train)
-        param_loss = self.args.weight_decay * sum(torch.pow(p, 2).sum() for p in self.model.parameters())
-        return param_loss, policy_loss, value_loss
-
-
 def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_triple, config):
     criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='sum')(pred, y)+0.2*nn.BCELoss(reduction='sum')(pred, y)
 
