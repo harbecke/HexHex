@@ -21,7 +21,7 @@ class InteractiveGame:
         self.switch_allowed = self.config.getboolean('switch', True)
         self.board = Board(size=self.model.board_size, switch_allowed=self.switch_allowed)
         self.gui = Gui(self.board, self.config.getint('gui_radius', 50),
-            self.config.getboolean('dark_mode'))
+            self.config.getboolean('dark_mode', False))
         if self.config.get('mode') == 'mcts':
             self.game = mcts.Game(self.model, config['INTERACTIVE'])
         else:
