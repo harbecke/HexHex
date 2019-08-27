@@ -8,15 +8,20 @@ from hex.utils.logger import logger
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
-PLAYER_1 = (251, 41, 67) # strawberry
-PLAYER_2 = (6, 154, 243) # azure
-
+STRAWBERRY = (251, 41, 67)
+AZURE = (6, 154, 243)
+BURGUNDY = (97, 0, 35)
+ROYAL_BLUE = (5, 4, 170)
 
 class Gui:
-    def __init__(self, board, radius):
+    def __init__(self, board, radius, dark_mode=False):
         self.r = radius
         self.size = [int(self.r*(3/2*board.size+1)), int(self.r*(3**(1/2)/2*board.size+1))]
         self.editor_mode = False # AI will not move in editor mode
+        self.BACKGROUND = BLACK if dark_mode else WHITE
+        self.LINES = WHITE if dark_mode else BLACK
+        self.PLAYER_1 = BURGUNDY if dark_mode else STRAWBERRY
+        self.PLAYER_2 = ROYAL_BLUE if dark_mode else AZURE
 
         pygame.init()
 
@@ -29,7 +34,7 @@ class Gui:
         self.board = board
         self.update_board(board)
         pygame.font.init()
-        self.font = pygame.font.SysFont(pygame.font.get_default_font(), 25)
+        self.font = pygame.font.SysFont(pygame.font.get_default_font(), int(radius/2))
 
     def quit(self):
         # Be IDLE friendly
@@ -51,7 +56,7 @@ class Gui:
 
     def update_board(self, board, field_text=None):
         # Clear the screen and set the screen background
-        self.screen.fill(WHITE)
+        self.screen.fill(self.BACKGROUND)
 
         for x in range(board.size):
             for y in range(board.size):
@@ -62,16 +67,19 @@ class Gui:
                         for angle in angles]
 
                 if board.get_owner((x,y)) == 0:
-                    pygame.draw.polygon(self.screen, PLAYER_1, points,0)
+                    pygame.draw.polygon(self.screen, self.PLAYER_1, points,0)
                 elif board.get_owner((x,y)) == 1:
-                    pygame.draw.polygon(self.screen, PLAYER_2, points,0)
-                pygame.draw.polygon(self.screen, BLACK, points,3)
+                    pygame.draw.polygon(self.screen, self.PLAYER_2, points,0)
+                pygame.draw.polygon(self.screen, self.LINES, points,3)
 
                 if field_text is not None:
-                    field_text_pos = board.player*(x * board.size + y) + (1-board.player)*(y * board.size + x)
+                    field_text_pos = board.player * (x * board.size + y) + \
+                        (1 - board.player) * (y * board.size + x)
                     text = field_text[field_text_pos]
-                    textsurface = self.font.render(f'{text}', True, (0, 0, 0))
-                    self.screen.blit(textsurface, (center[0]-self.r/6, center[1] - self.r/6))
+                    textsurface = self.font.render(f'{text}', True, self.LINES)
+                    text_size = self.font.size(text)
+                    self.screen.blit(textsurface, (center[0] - text_size[0] // 2,
+                        center[1] - text_size[1] // 2))
 
         # Go ahead and update the screen with what we've drawn.
         # This MUST happen after all the other drawing commands.
