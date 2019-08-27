@@ -7,11 +7,9 @@ from hex.utils.logger import logger
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-BLUE = (0, 0, 255)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-PLAYER_1 = RED  # (123, 52, 123)
-PLAYER_2 = BLUE  # (255, 255, 128)
+
+PLAYER_1 = (251, 41, 67) # strawberry
+PLAYER_2 = (6, 154, 243) # azure
 
 
 class Gui:
