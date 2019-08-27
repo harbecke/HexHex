@@ -92,7 +92,6 @@ class RepeatedSelfTrainer:
             logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
 
         logger.info('=== finished training ===')
-        logger.info('')
 
     def create_initial_model(self):
         config = self.config['CREATE MODEL']
@@ -106,13 +105,13 @@ class RepeatedSelfTrainer:
 
     def initial_data(self):
         if self.config.getboolean('REPEATED SELF TRAINING', 'load_initial_data'):
+            logger.info("")
             logger.info('=== loading initial data ===')
-            logger.info('')
             return torch.load(f'data/{self.model_name}.pt')
 
         else:
-            logger.info('=== writing initial data ===')
-            logger.info('')
+            logger.info("")
+            logger.info('=== creating random initial data ===')
             model = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
             self_play_args = self.config['CREATE DATA']
             training_data = create_data.create_self_play_data(self_play_args, model,
@@ -142,7 +141,7 @@ class RepeatedSelfTrainer:
         Incrementally updates ELO ratings by playing all games between latest model and all other models.
         """
         logger.info("")
-        logger.info("=== Updating ELO ratings ===")
+        logger.info("=== updating ELO ratings ===")
 
         args = self.config['ELO']
         self.tournament_results = elo.add_to_tournament(

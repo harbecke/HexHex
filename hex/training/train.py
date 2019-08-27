@@ -199,7 +199,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
         writer.add_scalar('train/val_loss', val_loss.mean())
 
     writer.close()
-    logger.debug('Finished Training\n')
+    logger.debug('=== finished training ===\n')
     return model, optimizer
 
 
@@ -241,7 +241,8 @@ def train(config, training_data, validation_data):
 
     puzzle_file = f'data/{model.board_size}_puzzle.pt'
     if not os.path.exists(puzzle_file):
-        logger.info("Creating missing puzzle file")
+        logger.info("")
+        logger.info("=== creating missing puzzle file ===")
         puzzle_config = copy.deepcopy(config)
         puzzle_config['board_size'] = str(model.board_size)
         puzzle.create_puzzle(puzzle_config)

@@ -19,7 +19,7 @@ def parameter_dict_to_named_arg(pdict):
     elif all(isinstance(x, str) for x in bounds):
         return skopt.utils.Categorical(categories=bounds, name=pdict["name"])
     else:
-        logger.info(f"=== parameter {pdict['name']} doesn't match types ===")
+        logger.info(f"parameter {pdict['name']} doesn't match types")
         raise SystemExit
 
 def bayesian_optimization():
@@ -45,6 +45,9 @@ def bayesian_optimization():
 
     @skopt.utils.use_named_args(space)
     def train_evaluate(**params):
+        logger.info("")
+        logger.info("=== starting new Bayesian Optimization run ===")
+
         start_time = time.time()
         current_config = copy.deepcopy(config)
 
@@ -53,7 +56,7 @@ def bayesian_optimization():
                 for parameter in parameters if parameter["name"] == parameter_name)
             value = int(value) if convert else value
             current_config[section][parameter_name] = str(value)
-            logger.info(f"Bayesian Optimization {parameter_name}: {value}")
+            logger.info(f"new run {parameter_name}: {value}")
 
         trainer = RepeatedSelfTrainer(current_config)
         trainer.reference_models = reference_models
@@ -81,8 +84,11 @@ def bayesian_optimization():
     skopt.dump(res_gp, f"bayes_experiments/{config['CREATE MODEL'].get('model_name')}.p",
         store_objective=False)
 
-    logger.info("=== best parameters are ===")
-    logger.info((res_gp.x, res_gp.fun))
+    logger.info("")
+    logger.info("=== returning best parameters ===")
+    for parameter_dict, best_value in zip(parameters, res_gp.x):
+        logger.info(f"best run {parameter_dict['name']}: {best_value}")
+    logger.info(f"best run ELO difference: {-res_gp.fun}")
 
 
 if __name__ == '__main__':

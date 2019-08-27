@@ -87,6 +87,6 @@ def create_self_play_data(args, model, num_samples, verbose=True):
             with np.printoptions(precision=1, suppress=True):
                 logger.info("First move ratings\n" + str(ratings.cpu().numpy()))
 
-        logger.info(f'created self-play data')
+        logger.info(f'=== created self-play data ===')
 
     return [all_boards_tensor, all_moves, all_results]
