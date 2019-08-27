@@ -19,7 +19,7 @@ def parameter_dict_to_named_arg(pdict):
     elif all(isinstance(x, str) for x in bounds):
         return skopt.utils.Categorical(categories=bounds, name=pdict["name"])
     else:
-        logger.info(f"parameter {pdict['name']} doesn't match types")
+        logger.error(f"parameter {pdict['name']} doesn't match types")
         raise SystemExit
 
 def bayesian_optimization():
@@ -35,7 +35,7 @@ def bayesian_optimization():
         parameters = json.load(file)
 
     if parameters == []:
-        logger.info(f"parameter list in file {parameters_path} is empty")
+        logger.error(f"parameter list in file {parameters_path} is empty")
         raise SystemExit
 
     config = ConfigParser()
