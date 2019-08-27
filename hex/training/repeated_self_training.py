@@ -166,7 +166,7 @@ class RepeatedSelfTrainer:
 
     def get_best_rating(self):
         args = self.config['ELO']
-        for reference_idx in range(len(self.reference_models[1:])):
+        for reference_idx in range(1, len(self.reference_models)):
             self.tournament_results = elo.add_to_tournament(
                 self.reference_models[:reference_idx],
                 self.reference_models[reference_idx],
