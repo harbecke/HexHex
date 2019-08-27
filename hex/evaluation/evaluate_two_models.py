@@ -1,13 +1,9 @@
 #!/usr/bin/env python
-import argparse
 import random
 from configparser import ConfigParser
 from time import gmtime, strftime
 
-import torch
-
 from hex.logic import hexboard
-from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
 from hex.utils.logger import logger
 from hex.utils.utils import load_model
@@ -39,7 +35,7 @@ def play_games(models, num_opened_moves, number_of_games, batch_size, temperatur
                 batch_of_openings = openings[game_number:game_number + batch_size]
                 boards = [hexboard.get_opened_board(board_size, opening) for opening in batch_of_openings]
             else:
-                boards = [Board(size=board_size) for idx in range(batch_size)]
+                boards = [hexboard.Board(size=board_size) for idx in range(batch_size)]
             multihexgame = MultiHexGame(
                     boards,
                     ordered_models,
@@ -62,45 +58,31 @@ def play_games(models, num_opened_moves, number_of_games, batch_size, temperatur
         logger.debug(f'{color_model1}:{color_model2} {result[starting_model][0]} : {result[starting_model][1]}')
 
     adbc = (result[0][0]*result[1][0] - result[0][1]*result[1][1])
-    signed_chi_squared = 4*adbc*abs(adbc)/((result[0][0]+result[1][1]+result[0][1]+result[1][0])*(result[0][0]+result[1][1])*(result[0][1]+result[1][0])+1)
+    signed_chi_squared = 4*adbc*abs(adbc)/((result[0][0]+result[1][1]+result[0][1]+result[1][0])*\
+        (result[0][0]+result[1][1])*(result[0][1]+result[1][0])+1)
     logger.debug(f'signed_chi_squared = {signed_chi_squared}')
     return result, signed_chi_squared
 
 
-def get_args(config_file):
+def evaluate(config_file):
+    logger.info("")
+    logger.info("=== evaluating two models ===")
     config = ConfigParser()
     config.read(config_file)
-    parser = argparse.ArgumentParser()
 
-    parser.add_argument('--model1', type=str, default=config.get('EVALUATE MODELS', 'model1'))
-    parser.add_argument('--model2', type=str, default=config.get('EVALUATE MODELS', 'model2'))
-    parser.add_argument('--num_opened_moves', type=int, default=config.getint('EVALUATE MODELS', 'num_opened_moves'))
-    parser.add_argument('--number_of_games', type=int, default=config.getint('EVALUATE MODELS', 'number_of_games'))
-    parser.add_argument('--batch_size', type=int, default=config.getint('EVALUATE MODELS', 'batch_size'))
-    parser.add_argument('--temperature', type=float, default=config.getfloat('EVALUATE MODELS', 'temperature'))
-    parser.add_argument('--temperature_decay', type=float, default=config.getfloat('EVALUATE MODELS', 'temperature_decay'))
-    parser.add_argument('--plot_board', type=bool, default=config.getboolean('EVALUATE MODELS', 'plot_board'))
-
-    return parser.parse_args(args=[])
-
-
-def evaluate(config_file = 'config.ini'):
-    print("=== evaluate two models ===")
-    args = get_args(config_file)
-
-    model1 = load_model(f'models/{args.model1}.pt')
-    model2 = load_model(f'models/{args.model2}.pt')
+    model1 = load_model(f"models/{config.get('EVALUATE MODELS', 'model1')}.pt")
+    model2 = load_model(f"models/{config.get('EVALUATE MODELS', 'model2')}.pt")
 
     play_games(
             models=(model1, model2),
-            num_opened_moves=args.num_opened_moves,
-            number_of_games=args.number_of_games,
-            batch_size=args.batch_size,
-            temperature=args.temperature,
-            temperature_decay=args.temperature_decay,
-            plot_board=args.plot_board
+            num_opened_moves=config.getint('EVALUATE MODELS', 'num_opened_moves'),
+            number_of_games=config.getint('EVALUATE MODELS', 'number_of_games'),
+            batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
+            temperature=config.getfloat('EVALUATE MODELS', 'temperature'),
+            temperature_decay=config.getfloat('EVALUATE MODELS', 'temperature_decay'),
+            plot_board=config.getboolean('EVALUATE MODELS', 'plot_board')
         )
 
 
 if __name__ == '__main__':
-    evaluate()
+    evaluate('config.ini')
