@@ -1,4 +1,4 @@
-# HexHex v0.6
+# HexHex
 
 AlphaGo Zero adaptation of Hex. [Image of intend](https://user-images.githubusercontent.com/33026629/32346749-47b65b36-c049-11e7-9bac-08bc42cf9dae.png)
 
@@ -27,27 +27,30 @@ pipenv install -r requirements.txt --skip-lock
 
 # activate virtual environment
 pipenv shell 
-
-# create model, training data, train model, and evaluate
-./tests/run_example.py
 ```
 
 ### Execution
 
-* run all scripts from root directory
+* copy `sample_files` into root directory `cp sample_files/* .`
 
-* copy sample_config as initial configuration file `cp sample_config.ini config.ini`
+* run scripts  from root directory
+    - `python -m hex.training.repeated_self_training` for training a model with parameters in `config.ini`
+    - `python -m hex.training.bayesian_optimization` for Bayesian optimization of parameters and ranges specified in `bo_parameters.json`
+    - `python -m hex.interactive.interactive` for playing against a trained model in a gui
 
-* change parameters in `config.ini`
-
-* run scripts
-    - `python -m hex.training.repeated_self_training`
+* both scripts use reference models from `reference_models.json`
+    - insert "random" for the dict of your current board size for a random reference model
+    - insert "{your_model_name}" for an already trained model as reference model
 
 ### Visualize Training with Tensorboard
 Training will automatically create log files for tensorboard.
 Those can be viewed with
 
 `python3 -m tensorboard.main --logdir runs/`
+
+### Visualize Bayesian optimization with jupyter
+Bayesian optimization will automatically create a pickle file in `data/bayes_experiments`.
+Run jupyter notebook, insert the correct name in the second cell and run the cells.
 
 ### Loading Into hexgui
 [hexgui](https://github.com/ryanbhayward/hexgui) can be used for interactive play as well.
@@ -72,15 +75,15 @@ pipenv run python play_cli.py
   * these are probabilities of how likely that stone wins the game
   * loss function is bewteen prediction of selected stone and outcome of game
 
-* scripts for
-  * creating models with hyperparameters
-  * batch-wise self-play to generate datasets
-  * training and validating models
-  * evaluating models against each other
-  * ELO rating via `output_ratings` in `hex/elo/elo.py`
-  * iterative training loop
-  * puzzle set for endgame evaluation
+* creating models with hyperparameters
+* batch-wise self-play to generate datasets
+* training and validating models
+* evaluating models against each other
+* ELO rating via `output_ratings` in `hex/elo/elo.py`
+* iterative training loop
+* puzzle set for endgame evaluation
 
 * config to control plenty of hyperparameters
+* Bayesian optimization to tune hyperparameters
 
-* playable gui `hex/interactive/interactive.py`
+* playable gui
