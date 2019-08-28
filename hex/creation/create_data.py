@@ -66,7 +66,8 @@ def create_self_play_data(args, model, num_samples, verbose=True):
 
     if verbose:
         def k_th_move_idx(k):
-            return [idx for idx in range(all_boards_tensor.shape[0]) if torch.sum(all_boards_tensor[idx, :2]) == k]
+            return [idx for idx in range(all_boards_tensor.shape[0]) if np.ceil(torch.sum(
+                all_boards_tensor[idx])) == k]
 
         first_move_indices = k_th_move_idx(0)
         first_move_frequency = torch.zeros([board_size ** 2], dtype=torch.float)
