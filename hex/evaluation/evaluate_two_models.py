@@ -50,7 +50,7 @@ def play_games(models, num_opened_moves, number_of_games, batch_size, temperatur
                 result[starting_model][winning_model] += 1
                 if plot_board:
                     draw_board_image(board.board_tensor,
-                        f'images/{time}_{starting_model}_{game_number:04d}.png')
+                        f'data/images/{time}_{starting_model}_{game_number:04d}.png')
                     board.export_as_FF4(f'images/{time}_{starting_model}_{game_number:04d}.txt')
                 game_number += 1
         color_model1 = 'B' if starting_model == 0 else 'W'
