@@ -10,7 +10,7 @@ from hex.utils.utils import load_model
 from hex.visualization.image import draw_board_image
 
 
-def play_games(models, num_opened_moves, number_of_games, batch_size, temperature, temperature_decay, plot_board):
+def play_games(models, num_opened_moves, number_of_games, batch_size, temperature, temperature_decay, plot_board, verbose=False):
     assert(len(models) == 2)
     assert(models[0].board_size == models[1].board_size)
     board_size = models[0].board_size
@@ -55,7 +55,10 @@ def play_games(models, num_opened_moves, number_of_games, batch_size, temperatur
                 game_number += 1
         color_model1 = 'B' if starting_model == 0 else 'W'
         color_model2 = 'W' if starting_model == 0 else 'B'
-        logger.debug(f'{color_model1}:{color_model2} {result[starting_model][0]} : {result[starting_model][1]}')
+        if verbose:
+            logger.info(f'{color_model1}:{color_model2} {result[starting_model][0]} : {result[starting_model][1]}')
+        else:
+            logger.debug(f'{color_model1}:{color_model2} {result[starting_model][0]} : {result[starting_model][1]}')
 
     adbc = (result[0][0]*result[1][0] - result[0][1]*result[1][1])
     signed_chi_squared = 4*adbc*abs(adbc)/((result[0][0]+result[1][1]+result[0][1]+result[1][0])*\
@@ -80,7 +83,8 @@ def evaluate(config_file):
             batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
             temperature=config.getfloat('EVALUATE MODELS', 'temperature'),
             temperature_decay=config.getfloat('EVALUATE MODELS', 'temperature_decay'),
-            plot_board=config.getboolean('EVALUATE MODELS', 'plot_board')
+            plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'),
+            verbose=True
         )
 
 
