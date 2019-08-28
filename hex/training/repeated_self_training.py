@@ -78,7 +78,7 @@ class RepeatedSelfTrainer:
             self.validation_data)
         self.model_names.append(self.get_model_name(i))
         self.create_all_elo_ratings()
-        self.measure_win_counts(self.get_model_name(i))
+        self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True)
 
     def repeated_self_training(self):
         self.prepare_rst()
@@ -165,14 +165,9 @@ class RepeatedSelfTrainer:
             file.write('\n'.join(output))
 
     def get_best_rating(self):
-        args = self.config['ELO']
         for reference_idx in range(1, len(self.reference_models)):
-            self.tournament_results = elo.add_to_tournament(
-                self.reference_models[:reference_idx],
-                self.reference_models[reference_idx],
-                args,
-                self.tournament_results
-            )
+            self.measure_win_counts(self.reference_models[reference_idx],
+                self.reference_models[:reference_idx], verbose=False)
         ratings = elo.create_ratings(self.tournament_results)
         best_trained_model = max(self.model_names[1:], key=lambda name: ratings[name])
         best_reference_model = max(self.reference_models + self.model_names[0:1],
@@ -181,15 +176,15 @@ class RepeatedSelfTrainer:
         logger.info(f"ELO difference between best trained model and best reference model: {diff:0.2f}")
         return diff
 
-    def measure_win_counts(self, model_name):
+    def measure_win_counts(self, model_name, reference_model_names, verbose):
         reference_models = {}
-        for model in self.reference_models:
+        for model in reference_model_names:
             if model == "random":
                 reference_models["random"] = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
             else:
                 reference_models[model] = load_model(f'models/{model}.pt')
         results = win_position.win_count(model_name, reference_models,
-            self.config['VS REFERENCE MODELS'])
+            self.config['VS REFERENCE MODELS'], verbose)
         self.tournament_results = merge_dicts_of_dicts(self.tournament_results, results)
 
 

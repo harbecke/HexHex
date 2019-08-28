@@ -51,8 +51,9 @@ def win_count_3(model_name):
     logger.info(f"Lost {lose_count} / {game_count} games")
 
 
-def win_count(model_name, reference_models, config):
-    logger.info("Determining win count against test model")
+def win_count(model_name, reference_models, config, verbose):
+    if verbose:
+        logger.info("Determining win count against test model")
 
     model = load_model(f'models/{model_name}.pt')
     board_size = model.board_size
@@ -82,12 +83,14 @@ def win_count(model_name, reference_models, config):
         lose_count = results[opponent_name][model_name]
         game_count = results[model_name][opponent_name] + results[opponent_name][model_name]
 
-        total_lose_count += lose_count
-        total_game_count += game_count
+        if verbose:
+            total_lose_count += lose_count
+            total_game_count += game_count
 
-        logger.info(f"Lost {lose_count:4} / {game_count:4} games against {opponent_name}")
-        lose_rate = lose_count / game_count
-        writer.add_scalar(f'lose_rate/{opponent_name}', lose_rate)
+            logger.info(f"Lost {lose_count:4} / {game_count:4} games against {opponent_name}")
+            lose_rate = lose_count / game_count
+            writer.add_scalar(f'lose_rate/{opponent_name}', lose_rate)
 
-    logger.info(f"Lost {total_lose_count:4} / {total_game_count:4} in total")
+    if verbose:
+        logger.info(f"Lost {total_lose_count:4} / {total_game_count:4} in total")
     return results
