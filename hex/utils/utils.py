@@ -28,15 +28,6 @@ def zip_list_of_lists(*iterables):
             return output_list
 
 
-def all_unique(x):
-    """
-    Returns whether all elements in the list are unique,
-    i.e. if no element appears twice or more often.
-    """
-    seen = set()
-    return not any(i in seen or seen.add(i) for i in x)
-
-
 def correct_position1d(position1d, board_size, player):
     if player:
         return position1d//board_size + (position1d%board_size)*board_size
