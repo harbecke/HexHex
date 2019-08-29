@@ -12,7 +12,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from hex.creation import puzzle
 from hex.utils.logger import logger
 from hex.utils.summary import writer
-from hex.utils.utils import device, load_model, create_optimizer, load_optimizer, Average
+from hex.utils.utils import device, load_model, create_optimizer, Average
 
 
 class LossTriple:
@@ -166,13 +166,12 @@ def train(config, training_data, validation_data):
     model = load_model(model_file)
     nn.DataParallel(model).to(device)
 
-    optimizer_weight_decay = config.getfloat('weight_decay')
-
     optimizer = create_optimizer(
         optimizer_type=config.get('optimizer'),
         parameters=model.parameters(),
-        optimizer_weight_decay=optimizer_weight_decay,
-        learning_rate=config.getfloat('learning_rate')
+        learning_rate=config.getfloat('learning_rate'),
+        momentum=config.getfloat('momentum'),
+        weight_decay=config.getfloat('weight_decay')
     )
 
     puzzle_file = f'data/{model.board_size}_puzzle.pt'

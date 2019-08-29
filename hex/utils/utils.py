@@ -53,28 +53,21 @@ def load_model(model_file):
     return model
 
 
-def create_optimizer(optimizer_type, parameters, optimizer_weight_decay, learning_rate):
+def create_optimizer(optimizer_type, parameters, learning_rate, momentum, weight_decay):
     logger.debug("=== creating optimizer ===")
     if optimizer_type == 'adadelta':
-        return optim.Adadelta(parameters, weight_decay=optimizer_weight_decay)
+        return optim.Adadelta(parameters, weight_decay=weight_decay)
     elif optimizer_type == 'rmsprop':
-        return optim.RMSprop(parameters, lr=learning_rate, weight_decay=optimizer_weight_decay)
+        return optim.RMSprop(parameters, lr=learning_rate, momentum=0.9, weight_decay=weight_decay)
     elif optimizer_type == 'sgd':
-        return optim.SGD(parameters, lr=learning_rate, momentum=0.9, weight_decay=optimizer_weight_decay)
+        return optim.SGD(parameters, lr=learning_rate, momentum=0.9, weight_decay=weight_decay)
     elif optimizer_type == 'adam':
-        return optim.Adam(parameters, lr=learning_rate, weight_decay=optimizer_weight_decay)
+        return optim.Adam(parameters, lr=learning_rate, weight_decay=weight_decay)
     elif optimizer_type == 'adamw':
-        return optim.AdamW(parameters, lr=learning_rate, weight_decay=optimizer_weight_decay)
+        return optim.AdamW(parameters, lr=learning_rate, weight_decay=weight_decay)
     else:
         logger.error(f'Unknown optimizer {optimizer_type}')
         raise SystemExit
-
-
-def load_optimizer(optimizer, model_file):
-    logger.debug("=== loading optimizer ===")
-    checkpoint = torch.load(model_file, map_location=device)
-    optimizer.load_state_dict(checkpoint['optimizer'])
-    return optimizer
 
 
 def get_targets(boards, gamma):
