@@ -33,7 +33,7 @@ pipenv shell
 
 * copy `sample_files` into root directory `cp sample_files/* .`
 
-* run scripts  from root directory
+* run scripts and notebooks from root directory
     - `python -m hex.training.repeated_self_training` for training a model with parameters in `config.ini`
     - `python -m hex.training.bayesian_optimization` for Bayesian optimization of parameters and ranges specified in `bo_parameters.json`
     - `python -m hex.interactive.interactive` for playing against a trained model in a gui
