@@ -93,8 +93,6 @@ def bayesian_optimization():
         noise=config["BAYESIAN OPTIMIZATION"].getfloat("noise")
         )
 
-    skopt.dump(res_gp, dump_filename, store_objective=False)
-
     logger.info("")
     logger.info("=== returning best parameters ===")
     for parameter_dict, best_value in zip(parameters, res_gp.x):
