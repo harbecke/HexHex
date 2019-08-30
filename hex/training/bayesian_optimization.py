@@ -73,13 +73,22 @@ def bayesian_optimization():
 
         return -trainer.get_best_rating()
 
-    dump_filename = f"bayes_experiments/{config['CREATE MODEL'].get('model_name')}.p"
+    dump_filename = f"data/bayes_experiments/{config['CREATE MODEL'].get('model_name')}.p"
     checkpoint_callback = skopt.callbacks.CheckpointSaver(dump_filename, store_objective=False)
+
+    if config["BAYESIAN OPTIMIZATION"].getboolean('continue_from_save'):
+        res = skopt.load(dump_filename)
+        x0, y0 = res.x_iters, res.func_vals
+    else:
+        x0, y0 = None, None
+
     res_gp = skopt.gp_minimize(
         func=train_evaluate,
         dimensions=space,
         n_calls=config["BAYESIAN OPTIMIZATION"].getint("loop_count"),
         n_random_starts=config["BAYESIAN OPTIMIZATION"].getint("random_count"),
+        x0 = x0,
+        y0 = y0,
         callback=checkpoint_callback,
         noise=config["BAYESIAN OPTIMIZATION"].getfloat("noise")
         )
