@@ -1,6 +1,6 @@
 [
-	{"name": "optimizer", "bounds": ["adam", "adamw", "sgd"], "section": "TRAIN"},
-	{"name": "learning_rate", "bounds": [1e-6, 1e-4], "log_scale": true, "section": "TRAIN"},
-    {"name": "weight_decay", "bounds": [1e-7, 1e-3], "log_scale": true, "section": "TRAIN"},
- 	{"name": "batch_size", "bounds": [16.0, 64.0], "log_scale": true, "convert_to_int": true, "section": "TRAIN"}
+  {"name": "optimizer", "bounds": ["adam", "adamw", "sgd"], "section": "TRAIN"},
+  {"name": "learning_rate", "bounds": [1e-6, 1e-4], "log_scale": true, "section": "TRAIN"},
+  {"name": "weight_decay", "bounds": [1e-7, 1e-3], "log_scale": true, "section": "TRAIN"},
+  {"name": "batch_size", "bounds": [16.0, 64.0], "log_scale": true, "convert_to_int": true, "section": "TRAIN"}
 ]
