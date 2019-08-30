@@ -6,4 +6,4 @@ image
 torch
 tb-nightly
 future
-git+https://github.com/scikit-optimize/scikit-optimize/
+git+https://github.com/scikit-optimize/scikit-optimize@refs/pull/675/merge
