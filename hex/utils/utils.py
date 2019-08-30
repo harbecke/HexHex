@@ -49,9 +49,9 @@ def create_optimizer(optimizer_type, parameters, learning_rate, momentum, weight
     if optimizer_type == 'adadelta':
         return optim.Adadelta(parameters, weight_decay=weight_decay)
     elif optimizer_type == 'rmsprop':
-        return optim.RMSprop(parameters, lr=learning_rate, momentum=0.9, weight_decay=weight_decay)
+        return optim.RMSprop(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_type == 'sgd':
-        return optim.SGD(parameters, lr=learning_rate, momentum=0.9, weight_decay=weight_decay)
+        return optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
     elif optimizer_type == 'adam':
         return optim.Adam(parameters, lr=learning_rate, weight_decay=weight_decay)
     elif optimizer_type == 'adamw':
