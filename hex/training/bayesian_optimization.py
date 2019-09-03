@@ -90,6 +90,7 @@ def bayesian_optimization():
         x0 = x0,
         y0 = y0,
         callback=checkpoint_callback,
+        n_restarts_optimizer=config["BAYESIAN OPTIMIZATION"].getint("optimizer_restarts"),
         noise=config["BAYESIAN OPTIMIZATION"].getfloat("noise")
         )
 
