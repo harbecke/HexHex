@@ -90,7 +90,9 @@ def bayesian_optimization():
         x0 = x0,
         y0 = y0,
         callback=checkpoint_callback,
-        noise=config["BAYESIAN OPTIMIZATION"].getfloat("noise")
+        n_restarts_optimizer=config["BAYESIAN OPTIMIZATION"].getint("optimizer_restarts"),
+        noise=config["BAYESIAN OPTIMIZATION"].getfloat("noise"),
+        n_jobs=4
         )
 
     logger.info("")
