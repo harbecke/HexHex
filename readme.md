@@ -73,7 +73,7 @@ pipenv run python play_cli.py
 * network to evaluate positions
   * output activation of network is sigmoid for each stone
   * these are probabilities of how likely that stone wins the game
-  * loss function is bewteen prediction of selected stone and outcome of game
+  * loss function is between prediction of selected stone and outcome of game
 
 * creating models with hyperparameters
 * batch-wise self-play to generate datasets

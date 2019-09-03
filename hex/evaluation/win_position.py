@@ -59,10 +59,6 @@ def win_count(model_name, reference_models, config, verbose):
     board_size = model.board_size
     results = defaultdict(lambda: defaultdict(int))
 
-    if board_size == 3:
-        win_count_3(model_name)
-        return
-
     total_lose_count = 0
     total_game_count = 0
 
