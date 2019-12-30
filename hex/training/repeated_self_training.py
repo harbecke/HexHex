@@ -77,7 +77,7 @@ class RepeatedSelfTrainer:
         self.train_model(self.get_model_name(i-1), self.get_model_name(i), self.training_data,
             self.validation_data)
         self.model_names.append(self.get_model_name(i))
-        self.create_all_elo_ratings()
+        #self.create_all_elo_ratings()
         self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True)
 
     def repeated_self_training(self):
