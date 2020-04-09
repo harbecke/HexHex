@@ -43,7 +43,6 @@ class InteractiveGame:
             logger.info('I politely recommend the following ratings\n' + str(ratings.detach().numpy()))
 
     def play_move(self):
-        self.print_ratings()
         move = self.get_move()
         if move == 'show_ratings':
             self.gui.show_field_text = not self.gui.show_field_text
@@ -58,7 +57,6 @@ class InteractiveGame:
             if self.board.winner:
                 logger.info("Player has won")
             elif not self.gui.editor_mode:
-                self.print_ratings()
                 self.play_ai_move()
         self.gui.update_board(self.board)
 
