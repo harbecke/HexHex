@@ -44,8 +44,9 @@ class InteractiveGame:
     def play_move(self):
         self.print_ratings()
         move = self.get_move()
-        if move == 'ai_move':
-
+        if move == 'redraw':
+            self.gui.update_board(self.board)
+        elif move == 'ai_move':
             self.play_ai_move()
         elif move == 'undo_move':
             self.undo_move()
@@ -84,7 +85,7 @@ class InteractiveGame:
     def get_move(self):
         while True:
             move = self.gui.get_move()
-            if move == 'ai_move' or move == 'undo_move':
+            if move == 'ai_move' or move == 'undo_move' or move == 'redraw':
                 return move
             if move in self.board.legal_moves:
                 return move
