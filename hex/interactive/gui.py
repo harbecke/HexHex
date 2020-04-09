@@ -29,7 +29,7 @@ def _get_colors(dark_mode: bool):
 class Gui:
     def __init__(self, board, radius, dark_mode=False):
         self.r = radius
-        self.size = [int(self.r * (3 / 2 * board.size + 3)), int(self.r * (3 ** (1 / 2) / 2 * board.size + 3))]
+        self.size = [int(self.r * (3 / 2 * board.size + 3)) + 200, int(self.r * (3 ** (1 / 2) / 2 * board.size + 3))]
         self.editor_mode = False  # AI will not move in editor mode
         self.colors = _get_colors(dark_mode)
         self.show_field_text = False
@@ -49,7 +49,7 @@ class Gui:
         pygame.font.init()
         font_path = "fonts/FallingSky-JKwK.otf"
         self.font = pygame.font.Font(font_path, int(radius / 3))
-        self.font_large = pygame.font.Font(font_path, int(2 * radius / 3))
+        self.font_large = pygame.font.Font(font_path, int(radius / 2.5))
 
         self.update_board(board)
 
@@ -86,7 +86,8 @@ class Gui:
 {'✓' if self.editor_mode else '   '} e: human vs human mode
 {'✓' if self.show_field_text else '   '} s: toggle ai ratings
     z: undo last move
-{'✓' if self.colors["DARK_MODE"] else '   '} d: toggle dark mode"""
+{'✓' if self.colors["DARK_MODE"] else '   '} d: toggle dark mode
+    r: restart game"""
         blit_text(self.screen, text, (self.size[0] - 200, 10), self.font, self.colors['LINES'])
 
         for x in range(-1, board.size + 1):
@@ -115,8 +116,11 @@ class Gui:
                         self.screen.blit(textsurface, (center[0] - text_size[0] // 2,
                                                        center[1] - text_size[1] // 2))
 
+        if self.board.switch:
+            blit_text(self.screen, "switched!", (self.size[0] - 180, self.size[1] - 100), self.font_large, self.colors['LINES'])
+
         if self.board.winner:
-            blit_text(self.screen, self.winner_text, (10, self.size[1] - 200), self.font_large, self.colors['LINES'])
+            blit_text(self.screen, self.winner_text, (self.size[0] - 180, self.size[1] - 50), self.font_large, self.colors['LINES'])
 
         # Go ahead and update the screen with what we've drawn.
         # This MUST happen after all the other drawing commands.
@@ -153,6 +157,8 @@ class Gui:
                     return 'undo_move'
                 if event.type == pygame.KEYDOWN and event.unicode == 's':
                     return 'show_ratings'
+                if event.type == pygame.KEYDOWN and event.unicode == 'r':
+                    return 'restart'
                 if event.type == pygame.KEYDOWN and event.unicode == 'e':
                     self.editor_mode = not self.editor_mode
                     logger.info(f'Editor mode: {self.editor_mode}')

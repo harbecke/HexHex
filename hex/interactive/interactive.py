@@ -6,7 +6,6 @@ import numpy as np
 from hex.interactive.gui import Gui
 from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
-from hex.model import mcts
 from hex.utils.logger import logger
 from hex.utils.utils import load_model
 
@@ -23,17 +22,14 @@ class InteractiveGame:
         self.board = Board(size=self.model.board_size, switch_allowed=self.switch_allowed)
         self.gui = Gui(self.board, self.config.getint('gui_radius', 50),
                        self.config.getboolean('dark_mode', False))
-        if self.config.get('mode') == 'mcts':
-            self.game = mcts.Game(self.model, config['INTERACTIVE'])
-        else:
-            self.game = MultiHexGame(
-                boards=(self.board,),
-                models=(self.model,),
-                noise=None,
-                noise_parameters=None,
-                temperature=self.config.getfloat('temperature', fallback=0.0),
-                temperature_decay=self.config.getfloat('temperature_decay', fallback=1.)
-            )
+        self.game = MultiHexGame(
+            boards=(self.board,),
+            models=(self.model,),
+            noise=None,
+            noise_parameters=None,
+            temperature=self.config.getfloat('temperature', fallback=0.0),
+            temperature_decay=self.config.getfloat('temperature_decay', fallback=1.)
+        )
 
     def print_ratings(self):
         ratings = self.model(self.board.board_tensor.unsqueeze(0)).view(self.board.size, self.board.size)
@@ -52,6 +48,8 @@ class InteractiveGame:
             self.play_ai_move()
         elif move == 'undo_move':
             self.undo_move()
+        elif move == 'restart':
+            self.board.override(Board(self.board.size, self.board.switch_allowed))
         else:
             self.board.set_stone(move)
             if self.board.winner:
@@ -86,7 +84,7 @@ class InteractiveGame:
     def get_move(self):
         while True:
             move = self.gui.get_move()
-            if move in ['ai_move', 'undo_move', 'redraw', 'show_ratings']:
+            if move in ['ai_move', 'undo_move', 'redraw', 'show_ratings', 'restart']:
                 return move
             if move in self.board.legal_moves:
                 return move

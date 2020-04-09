@@ -72,14 +72,14 @@ def update_connected_sets_check_win(connected_sets, player, position, size):
         return new_connected_sets, False
 
 
-class Board():
-    '''
+class Board:
+    """
     Board is in quadratic shape. This means diagonal neighbours are upper right and lower left, but not the other two.
     There are three layers: The first layer is for stones of the first player, second layer for second player and the third layer stores indicates whose turn it is.
     First player has to connect his stones on the first dimension (displayed top to bottom), second player on the second dimension (displayed left to right).
     If the second player decides to switch, a stone is set in the second layer that is only information.
     The second player becomes the first player and now plays the first layer and vice-versa.
-    '''
+    """
     def __init__(self, size, switch_allowed=True):
         self.size = size
         self.board_tensor = torch.zeros([2, self.size, self.size])
