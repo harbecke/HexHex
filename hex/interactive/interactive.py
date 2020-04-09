@@ -17,8 +17,8 @@ class InteractiveGame:
     """
     def __init__(self, config):
         self.config = config['INTERACTIVE']
-        self.model = load_model(f'models/{self.config.get("model")}.pt')
-        self.switch_allowed = self.config.getboolean('switch', True)
+        self.model = load_model(f'models/{self.config.get("model", fallback="11_2w4_1100")}.pt')
+        self.switch_allowed = self.config.getboolean('switch', fallback=True)
         self.board = Board(size=self.model.board_size, switch_allowed=self.switch_allowed)
         self.gui = Gui(self.board, self.config.getint('gui_radius', 50),
             self.config.getboolean('dark_mode', False))
@@ -30,8 +30,8 @@ class InteractiveGame:
                 models=(self.model,),
                 noise=None,
                 noise_parameters=None,
-                temperature=self.config.getfloat('temperature'),
-                temperature_decay=self.config.getfloat('temperature_decay')
+                temperature=self.config.getfloat('temperature', fallback=0.0),
+                temperature_decay=self.config.getfloat('temperature_decay', fallback=1.)
             )
 
     def print_ratings(self):
