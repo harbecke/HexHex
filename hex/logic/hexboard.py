@@ -171,6 +171,10 @@ class Board():
             raise SystemExit
 
     def get_owner(self, position):
+        if position[0] in [-1, self.size]:
+            return 0
+        if position[1] in [-1, self.size]:
+            return 1
         if self.logical_board_tensor[0][position].item() == 1:
             return 0
         elif self.logical_board_tensor[1][position].item() == 1:

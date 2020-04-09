@@ -12,8 +12,8 @@ LIGHT = (220, 220, 220)
 
 STRAWBERRY = (251, 41, 67)
 AZURE = (6, 154, 243)
-BURGUNDY = (97, 0, 35)
-ROYAL_BLUE = (5, 4, 170)
+BURGUNDY = (137, 0, 55)
+ROYAL_BLUE = (10, 10, 200)
 
 
 def _get_colors(dark_mode: bool):
@@ -29,7 +29,7 @@ def _get_colors(dark_mode: bool):
 class Gui:
     def __init__(self, board, radius, dark_mode=False):
         self.r = radius
-        self.size = [int(self.r * (3 / 2 * board.size + 1)), int(self.r * (3 ** (1 / 2) / 2 * board.size + 1))]
+        self.size = [int(self.r * (3 / 2 * board.size + 3)), int(self.r * (3 ** (1 / 2) / 2 * board.size + 3))]
         self.editor_mode = False  # AI will not move in editor mode
         self.colors = _get_colors(dark_mode)
         self.show_field_text = False
@@ -70,7 +70,7 @@ class Gui:
     def get_center(self, pos):
         x = pos[0]
         y = pos[1]
-        return [self.r + x * self.r / 2 + y * self.r, self.r + math.sqrt(3) / 2 * x * self.r]
+        return [2*self.r + x * self.r / 2 + y * self.r, 2*self.r + math.sqrt(3) / 2 * x * self.r]
 
     def update_field_text(self, field_text):
         self.last_field_text = field_text
@@ -86,8 +86,10 @@ class Gui:
 {'✓' if self.colors["DARK_MODE"] else '   '} d: toggle dark mode"""
         blit_text(self.screen, text, (self.size[0] - 200, 10), self.font, self.colors['LINES'])
 
-        for x in range(board.size):
-            for y in range(board.size):
+        for x in range(-1, board.size + 1):
+            for y in range(-1, board.size + 1):
+                if x == -1 and y == -1 or x == board.size and y == board.size:
+                    continue  # don't draw upper left and lower right square
                 center = self.get_center([x, y])
                 angles = [math.pi / 6 + x * math.pi / 3 for x in range(6)]
                 points = [[center[0] + math.cos(angle) * self.r / math.sqrt(3),
@@ -103,11 +105,12 @@ class Gui:
                 if self.last_field_text is not None and self.show_field_text:
                     field_text_pos = board.player * (x * board.size + y) + \
                                      (1 - board.player) * (y * board.size + x)
-                    text = self.last_field_text[field_text_pos]
-                    textsurface = self.font.render(f'{text}', True, self.colors['LINES'])
-                    text_size = self.font.size(text)
-                    self.screen.blit(textsurface, (center[0] - text_size[0] // 2,
-                                                   center[1] - text_size[1] // 2))
+                    if x in range(board.size) and y in range(board.size):
+                        text = self.last_field_text[field_text_pos]
+                        textsurface = self.font.render(f'{text}', True, self.colors['LINES'])
+                        text_size = self.font.size(text)
+                        self.screen.blit(textsurface, (center[0] - text_size[0] // 2,
+                                                       center[1] - text_size[1] // 2))
 
         # Go ahead and update the screen with what we've drawn.
         # This MUST happen after all the other drawing commands.
