@@ -126,14 +126,14 @@ class Gui:
         # This MUST happen after all the other drawing commands.
         pygame.display.flip()
 
-    def wait_for_click(self):
+    def wait_for_pressing_r(self):
         while True:
             self.clock.tick(10)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # If user clicked close
                     self.quit()
                     exit(0)
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.type == pygame.KEYDOWN and event.unicode == 'r':
                     return
 
     def get_move(self):
