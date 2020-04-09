@@ -55,6 +55,7 @@ class InteractiveGame:
         else:
             self.board.set_stone(move)
             if self.board.winner:
+                self.gui.set_winner("Player has won")
                 logger.info("Player has won")
             elif not self.gui.editor_mode:
                 self.play_ai_move()
@@ -77,10 +78,10 @@ class InteractiveGame:
             else:
                 rating_strings.append("{0:0.1f}".format(rating))
         self.gui.update_field_text(rating_strings)
-        self.gui.update_board(self.board)
 
         if self.board.winner:
             logger.info("agent has won!")
+            self.gui.set_winner("agent has won!")
 
     def get_move(self):
         while True:

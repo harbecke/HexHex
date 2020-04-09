@@ -34,6 +34,7 @@ class Gui:
         self.colors = _get_colors(dark_mode)
         self.show_field_text = False
         self.last_field_text = None
+        self.winner_text = None
 
         pygame.init()
 
@@ -46,7 +47,9 @@ class Gui:
         self.board = board
 
         pygame.font.init()
-        self.font = pygame.font.Font("fonts/FallingSky-JKwK.otf", int(radius / 3))
+        font_path = "fonts/FallingSky-JKwK.otf"
+        self.font = pygame.font.Font(font_path, int(radius / 3))
+        self.font_large = pygame.font.Font(font_path, int(2 * radius / 3))
 
         self.update_board(board)
 
@@ -112,6 +115,9 @@ class Gui:
                         self.screen.blit(textsurface, (center[0] - text_size[0] // 2,
                                                        center[1] - text_size[1] // 2))
 
+        if self.board.winner:
+            blit_text(self.screen, self.winner_text, (10, self.size[1] - 200), self.font_large, self.colors['LINES'])
+
         # Go ahead and update the screen with what we've drawn.
         # This MUST happen after all the other drawing commands.
         pygame.display.flip()
@@ -151,6 +157,9 @@ class Gui:
                     self.editor_mode = not self.editor_mode
                     logger.info(f'Editor mode: {self.editor_mode}')
                     return 'redraw'
+
+    def set_winner(self, winner_text):
+        self.winner_text = winner_text
 
 
 # From https://stackoverflow.com/questions/42014195/rendering-text-with-multiple-lines-in-pygame/42015712
