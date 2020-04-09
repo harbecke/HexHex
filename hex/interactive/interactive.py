@@ -95,7 +95,7 @@ def play_game(interactive):
             break
 
 
-def _main():
+def main():
     logger.info("Starting interactive game")
 
     config = ConfigParser()
@@ -108,4 +108,4 @@ def _main():
 
 
 if __name__ == '__main__':
-    _main()
+    main()
