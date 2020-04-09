@@ -32,6 +32,8 @@ class Gui:
         self.size = [int(self.r * (3 / 2 * board.size + 1)), int(self.r * (3 ** (1 / 2) / 2 * board.size + 1))]
         self.editor_mode = False  # AI will not move in editor mode
         self.colors = _get_colors(dark_mode)
+        self.show_field_text = False
+        self.last_field_text = None
 
         pygame.init()
 
@@ -44,7 +46,7 @@ class Gui:
         self.board = board
 
         pygame.font.init()
-        self.font = pygame.font.SysFont(pygame.font.get_default_font(), int(radius / 2))
+        self.font = pygame.font.Font("fonts/FallingSky-JKwK.otf", int(radius / 3))
 
         self.update_board(board)
 
@@ -70,14 +72,18 @@ class Gui:
         y = pos[1]
         return [self.r + x * self.r / 2 + y * self.r, self.r + math.sqrt(3) / 2 * x * self.r]
 
-    def update_board(self, board, field_text=None):
+    def update_field_text(self, field_text):
+        self.last_field_text = field_text
+
+    def update_board(self, board):
         # Clear the screen and set the screen background
         self.screen.fill(self.colors['BACKGROUND'])
 
-        text = """e: human vs human mode
-a: trigger ai move
-z: undo last move
-d: toggle dark mode"""
+        text = f"""    a: trigger ai move
+{'✓' if self.editor_mode else '   '} e: human vs human mode
+{'✓' if self.show_field_text else '   '} s: toggle ai ratings
+    z: undo last move
+{'✓' if self.colors["DARK_MODE"] else '   '} d: toggle dark mode"""
         blit_text(self.screen, text, (self.size[0] - 200, 10), self.font, self.colors['LINES'])
 
         for x in range(board.size):
@@ -94,10 +100,10 @@ d: toggle dark mode"""
                     pygame.draw.polygon(self.screen, self.colors['PLAYER_2'], points, 0)
                 pygame.draw.polygon(self.screen, self.colors['LINES'], points, 3)
 
-                if field_text is not None:
+                if self.last_field_text is not None and self.show_field_text:
                     field_text_pos = board.player * (x * board.size + y) + \
                                      (1 - board.player) * (y * board.size + x)
-                    text = field_text[field_text_pos]
+                    text = self.last_field_text[field_text_pos]
                     textsurface = self.font.render(f'{text}', True, self.colors['LINES'])
                     text_size = self.font.size(text)
                     self.screen.blit(textsurface, (center[0] - text_size[0] // 2,
@@ -136,9 +142,12 @@ d: toggle dark mode"""
                     return 'ai_move'
                 if event.type == pygame.KEYDOWN and event.unicode == 'z':
                     return 'undo_move'
+                if event.type == pygame.KEYDOWN and event.unicode == 's':
+                    return 'show_ratings'
                 if event.type == pygame.KEYDOWN and event.unicode == 'e':
                     self.editor_mode = not self.editor_mode
                     logger.info(f'Editor mode: {self.editor_mode}')
+                    return 'redraw'
 
 
 # From https://stackoverflow.com/questions/42014195/rendering-text-with-multiple-lines-in-pygame/42015712
