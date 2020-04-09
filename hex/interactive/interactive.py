@@ -100,9 +100,6 @@ def play_game(interactive):
 
 def _main():
     logger.info("Starting interactive game")
-    logger.info("Press 'e' for editor mode")
-    logger.info("Press 'a' to trigger ai move")
-    logger.info("Press 'z' to undo last move")
 
     config = ConfigParser()
     config.read('config.ini')

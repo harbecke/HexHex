@@ -42,9 +42,11 @@ class Gui:
         self.clock = pygame.time.Clock()
         # distance of neighboring hexagons
         self.board = board
-        self.update_board(board)
+
         pygame.font.init()
         self.font = pygame.font.SysFont(pygame.font.get_default_font(), int(radius / 2))
+
+        self.update_board(board)
 
     def toggle_colors(self):
         self.colors = _get_colors(not self.colors['DARK_MODE'])
@@ -71,6 +73,12 @@ class Gui:
     def update_board(self, board, field_text=None):
         # Clear the screen and set the screen background
         self.screen.fill(self.colors['BACKGROUND'])
+
+        text = """e: human vs human mode
+a: trigger ai move
+z: undo last move
+d: toggle dark mode"""
+        blit_text(self.screen, text, (self.size[0] - 200, 10), self.font, self.colors['LINES'])
 
         for x in range(board.size):
             for y in range(board.size):
@@ -131,3 +139,22 @@ class Gui:
                 if event.type == pygame.KEYDOWN and event.unicode == 'e':
                     self.editor_mode = not self.editor_mode
                     logger.info(f'Editor mode: {self.editor_mode}')
+
+
+# From https://stackoverflow.com/questions/42014195/rendering-text-with-multiple-lines-in-pygame/42015712
+def blit_text(surface, text, pos, font, color=pygame.Color('black')):
+    words = [word.split(' ') for word in text.splitlines()]  # 2D array where each row is a list of words.
+    space = font.size(' ')[0]  # The width of a space.
+    max_width, max_height = surface.get_size()
+    x, y = pos
+    for line in words:
+        for word in line:
+            word_surface = font.render(word, True, color)
+            word_width, word_height = word_surface.get_size()
+            if x + word_width >= max_width:
+                x = pos[0]  # Reset the x.
+                y += word_height  # Start on new row.
+            surface.blit(word_surface, (x, y))
+            x += word_width + space
+        x = pos[0]  # Reset the x.
+        y += word_height  # Start on new row.
