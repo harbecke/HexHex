@@ -3,8 +3,6 @@ import math
 import pygame
 
 # Define the colors we will use in RGB format
-from hex.utils.logger import logger
-
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 DARK = (40, 40, 40)
@@ -161,7 +159,6 @@ class Gui:
                     return 'restart'
                 if event.type == pygame.KEYDOWN and event.unicode == 'e':
                     self.editor_mode = not self.editor_mode
-                    logger.info(f'Editor mode: {self.editor_mode}')
                     return 'redraw'
 
     def set_winner(self, winner_text):
