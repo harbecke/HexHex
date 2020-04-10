@@ -92,12 +92,10 @@ pipenv run python play_cli.py
 ## Features
 
 * board representation with logic + switch rule
-
 * network to evaluate positions
   * output activation of network is sigmoid for each stone
   * these are probabilities of how likely that stone wins the game
   * loss function is between prediction of selected stone and outcome of game
-
 * creating models with hyperparameters
 * batch-wise self-play to generate datasets
 * training and validating models
@@ -105,8 +103,6 @@ pipenv run python play_cli.py
 * ELO rating via `output_ratings` in `hex/elo/elo.py`
 * iterative training loop
 * puzzle set for endgame evaluation
-
 * config to control plenty of hyperparameters
 * Bayesian optimization to tune hyperparameters
-
 * playable gui
