@@ -1,11 +1,34 @@
 # HexHex
 
-AlphaGo Zero adaptation of Hex. [Image of intend](https://user-images.githubusercontent.com/33026629/32346749-47b65b36-c049-11e7-9bac-08bc42cf9dae.png)
+Reinforcement learning agent for the board game hex only trained by self-play.
 
-See [here](https://www.gwern.net/docs/rl/2017-silver.pdf) for full paper.
+![hexhex-game](hexhex.png "HexHex game Title Text 1")
+Finished game of HexHex. Red won because he connected the two red rows on the top and bottom.
 
+Our agent uses a similar neural network architecture and training methods as used in AlphaGo Zero (Silver et al. (2017). "Mastering the game of Go without human knowledge". Nature. 550 (7676): 354–359).
 
-## Getting Started
+To our surprise, the agent is became very strong even without Monte Carlo Tree Search (MCTS). 
+This means training data can quickly be generated without hundreds of roll-outs per move.
+Instead, we use only one feed-forward pass through the neural network to generate ratings for all potential moves.
+The agent simply picks the field with the highest score, potentially randomized by applying a softmax with temperature > 0.
+This allows to generate and train on millions of training positions on a single machine within days. 
+
+## Play against a pretrained agent
+
+It is easy to play against our agent. A fully trained model is already included in the repository. Python 3.6 or newer is required.
+
+```
+git clone https://github.com/harbecke/hex && cd hex
+pip install torch pygame numpy
+python main.py
+```
+
+Note that both players can make use of the switch rule.
+Some starting moves are much better than others, the switch rule forces the first player to pick a more neutral move.
+This means after the first player (red) makes the first move, the second player (blue) can switch colors and take over this first move.
+The game continues by the first player (now blue) making the second move.
+
+## Training your own agent
 
 ### Option 1: Manual Installation
 
