@@ -24,7 +24,7 @@ class InteractiveGame:
             models=(self.model,),
             noise=None,
             noise_parameters=None,
-            temperature=self.config.getfloat("INTERACTIVE", 'temperature', fallback=0.0),
+            temperature=self.config.getfloat("INTERACTIVE", 'temperature', fallback=0.1),
             temperature_decay=self.config.getfloat("INTERACTIVE", 'temperature_decay', fallback=1.)
         )
 
