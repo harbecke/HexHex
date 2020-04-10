@@ -33,9 +33,7 @@ The game continues by the first player (now blue) making the second move.
 ### Option 1: Manual Installation
 
 * install Python 3.7
-
 * install Pytorch 1.2 (see [here](https://pytorch.org/get-started/locally/) for installation info)
-
 * install requirements.txt `pip install -r requirements.txt`
 
 ### Option 2: Installation with pipenv
