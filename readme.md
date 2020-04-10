@@ -55,12 +55,10 @@ pipenv shell
 ### Execution
 
 * copy `sample_files` into root directory `cp sample_files/* .`
-
 * run scripts and notebooks from root directory
     - `python -m hex.training.repeated_self_training` for training a model with parameters in `config.ini`
     - `python -m hex.training.bayesian_optimization` for Bayesian optimization of parameters and ranges specified in `bo_parameters.json`
     - `python -m hex.interactive.interactive` for playing against a trained model in a gui
-
 * both scripts use reference models from `reference_models.json`
     - insert "random" for the dict of your current board size for a random reference model
     - insert "{your_model_name}" for an already trained model as reference model
