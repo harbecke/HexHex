@@ -90,8 +90,8 @@ class Gui:
 
         for x in range(-1, board.size + 1):
             for y in range(-1, board.size + 1):
-                if x == -1 and y == -1 or x == board.size and y == board.size:
-                    continue  # don't draw upper left and lower right square
+                if x in [-1, board.size] and y in [-1, board.size]:
+                    continue  # don't draw borders as they don't belong to a single player
                 center = self.get_center([x, y])
                 angles = [math.pi / 6 + x * math.pi / 3 for x in range(6)]
                 points = [[center[0] + math.cos(angle) * self.r / math.sqrt(3),
