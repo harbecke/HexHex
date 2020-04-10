@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 from configparser import ConfigParser
 
-import numpy as np
-
 from hex.interactive.gui import Gui
 from hex.logic.hexboard import Board
 from hex.logic.hexgame import MultiHexGame
-from hex.utils.logger import logger
 from hex.utils.utils import load_model
 
 
@@ -16,27 +13,20 @@ class InteractiveGame:
     """
 
     def __init__(self, config):
-        self.config = config['INTERACTIVE']
-        self.model = load_model(f'models/{self.config.get("model", fallback="11_2w4_1100")}.pt')
-        self.switch_allowed = self.config.getboolean('switch', fallback=True)
+        self.config = config
+        self.model = load_model(f'models/{self.config.get("INTERACTIVE", "model", fallback="11_2w4_1100")}.pt')
+        self.switch_allowed = self.config.getboolean("INTERACTIVE", 'switch', fallback=True)
         self.board = Board(size=self.model.board_size, switch_allowed=self.switch_allowed)
-        self.gui = Gui(self.board, self.config.getint('gui_radius', 50),
-                       self.config.getboolean('dark_mode', False))
+        self.gui = Gui(self.board, self.config.getint("INTERACTIVE", 'gui_radius', fallback=50),
+                       self.config.getboolean("INTERACTIVE", 'dark_mode', fallback=False))
         self.game = MultiHexGame(
             boards=(self.board,),
             models=(self.model,),
             noise=None,
             noise_parameters=None,
-            temperature=self.config.getfloat('temperature', fallback=0.0),
-            temperature_decay=self.config.getfloat('temperature_decay', fallback=1.)
+            temperature=self.config.getfloat("INTERACTIVE", 'temperature', fallback=0.0),
+            temperature_decay=self.config.getfloat("INTERACTIVE", 'temperature_decay', fallback=1.)
         )
-
-    def print_ratings(self):
-        ratings = self.model(self.board.board_tensor.unsqueeze(0)).view(self.board.size, self.board.size)
-        if self.board.player:
-            ratings = ratings.transpose(0, 1)
-        with np.printoptions(precision=1, suppress=True):
-            logger.info('I politely recommend the following ratings\n' + str(ratings.detach().numpy()))
 
     def play_move(self):
         move = self.get_move()
@@ -96,8 +86,6 @@ def play_game(interactive):
 
 
 def main():
-    logger.info("Starting interactive game")
-
     config = ConfigParser()
     config.read('config.ini')
 
