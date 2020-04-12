@@ -6,13 +6,12 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data.dataset import TensorDataset, ConcatDataset
-from torch.utils.data.sampler import SubsetRandomSampler
+from torch.utils.data.dataset import TensorDataset
 
-from hex.creation import puzzle
-from hex.utils.logger import logger
-from hex.utils.summary import writer
-from hex.utils.utils import device, load_model, create_optimizer, Average
+from hexhex.creation import puzzle
+from hexhex.utils.logger import logger
+from hexhex.utils.summary import writer
+from hexhex.utils.utils import device, load_model, create_optimizer, Average
 
 
 class LossTriple:

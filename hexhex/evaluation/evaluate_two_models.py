@@ -3,11 +3,11 @@ import random
 from configparser import ConfigParser
 from time import gmtime, strftime
 
-from hex.logic import hexboard
-from hex.logic.hexgame import MultiHexGame
-from hex.utils.logger import logger
-from hex.utils.utils import load_model
-from hex.visualization.image import draw_board_image
+from hexhex.logic import hexboard
+from hexhex.logic.hexgame import MultiHexGame
+from hexhex.utils.logger import logger
+from hexhex.utils.utils import load_model
+from hexhex.visualization.image import draw_board_image
 
 
 def play_games(models, num_opened_moves, number_of_games, batch_size, temperature, temperature_decay, plot_board, verbose=False):

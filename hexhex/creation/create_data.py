@@ -2,10 +2,10 @@
 import numpy as np
 import torch
 
-from hex.logic.hexboard import Board
-from hex.logic.hexgame import MultiHexGame
-from hex.utils import utils
-from hex.utils.logger import logger
+from hexhex.logic.hexboard import Board
+from hexhex.logic.hexgame import MultiHexGame
+from hexhex.utils import utils
+from hexhex.utils.logger import logger
 
 
 class SelfPlayGenerator:

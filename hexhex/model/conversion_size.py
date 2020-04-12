@@ -1,7 +1,9 @@
 import sys
 
 import torch
-from hex.utils.utils import device
+
+from hexhex.utils.utils import device
+
 
 def convert_boardsize_of_model(model_name, new_bs):
     checkpoint = torch.load(f'models/{model_name}.pt', map_location=device)

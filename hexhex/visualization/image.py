@@ -1,6 +1,8 @@
-import PIL.ImageDraw as ImageDraw
-import PIL.Image as Image
 import math
+
+import PIL.Image as Image
+import PIL.ImageDraw as ImageDraw
+
 
 def draw_board_image(board_tensor, file):
     red = (255,0,0)

@@ -2,10 +2,10 @@ from configparser import ConfigParser
 
 import torch
 
-from hex.logic.hexboard import Board
-from hex.logic.hexgame import MultiHexGame
-from hex.model.hexconvolution import RandomModel
-from hex.utils.logger import logger
+from hexhex.logic.hexboard import Board
+from hexhex.logic.hexgame import MultiHexGame
+from hexhex.model.hexconvolution import RandomModel
+from hexhex.utils.logger import logger
 
 
 def create_puzzle(config):

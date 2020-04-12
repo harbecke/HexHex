@@ -1,12 +1,13 @@
-import time
+import copy
 import json
 import os
+import time
 from configparser import ConfigParser
-import copy
+
 import skopt
 
-from hex.training.repeated_self_training import RepeatedSelfTrainer, load_reference_models
-from hex.utils.logger import logger
+from hexhex.training.repeated_self_training import RepeatedSelfTrainer, load_reference_models
+from hexhex.utils.logger import logger
 
 
 def parameter_dict_to_named_arg(pdict):

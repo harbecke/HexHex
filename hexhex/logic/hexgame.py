@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
-from hex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
-from hex.utils import utils
+from hexhex.creation.noise import singh_maddala_onto_output, uniform_noise_onto_output
+from hexhex.utils import utils
 
 
 def tempered_moves_selection(output_tensor, temperature):

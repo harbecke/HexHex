@@ -3,12 +3,12 @@ from collections import defaultdict
 
 import torch
 
-from hex.evaluation import evaluate_two_models
-from hex.logic.hexboard import Board
-from hex.logic.hexgame import MultiHexGame
-from hex.utils.logger import logger
-from hex.utils.summary import writer
-from hex.utils.utils import load_model
+from hexhex.evaluation import evaluate_two_models
+from hexhex.logic.hexboard import Board
+from hexhex.logic.hexgame import MultiHexGame
+from hexhex.utils.logger import logger
+from hexhex.utils.summary import writer
+from hexhex.utils.utils import load_model
 
 
 class TestModel:

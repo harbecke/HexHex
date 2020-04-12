@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from configparser import ConfigParser
 
-from hex.interactive.gui import Gui
-from hex.logic.hexboard import Board
-from hex.logic.hexgame import MultiHexGame
-from hex.utils.utils import load_model
+from hexhex.interactive.gui import Gui
+from hexhex.logic.hexboard import Board
+from hexhex.logic.hexgame import MultiHexGame
+from hexhex.utils.utils import load_model
 
 
 class InteractiveGame:

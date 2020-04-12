@@ -3,9 +3,9 @@ import logging
 import sys
 from configparser import ConfigParser
 
-from hex.logic import hexboard
-from hex.logic.hexgame import MultiHexGame
-from hex.utils.utils import load_model
+from hexhex.logic import hexboard
+from hexhex.logic.hexgame import MultiHexGame
+from hexhex.utils.utils import load_model
 
 logging.basicConfig(level=logging.DEBUG, filename='play_cli.log', filemode='w')
 

@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 
-from hex.logic.hexboard import Board
-from hex.utils import utils
+from hexhex.logic.hexboard import Board
+from hexhex.utils import utils
 
 
 class Node:

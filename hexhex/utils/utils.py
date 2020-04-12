@@ -4,8 +4,8 @@ import copy
 import torch
 import torch.optim as optim
 
-from hex.creation.create_model import create_model
-from hex.utils.logger import logger
+from hexhex.creation.create_model import create_model
+from hexhex.utils.logger import logger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

@@ -3,10 +3,8 @@ import copy
 import math
 from collections import defaultdict
 
-import numpy as np
-
-from hex.evaluation import evaluate_two_models
-from hex.utils.utils import load_model
+from hexhex.evaluation import evaluate_two_models
+from hexhex.utils.utils import load_model
 
 
 def add_to_tournament(model_list, new_model_name, args, old_results):

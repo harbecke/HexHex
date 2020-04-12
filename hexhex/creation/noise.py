@@ -1,6 +1,8 @@
 import torch
 from torch.distributions.pareto import Pareto
-from hex.utils.utils import device
+
+from hexhex.utils.utils import device
+
 
 def singh_maddala_onto_output(output_tensor, noise_alpha, noise_beta, noise_lambda):
     '''

@@ -2,8 +2,8 @@
 
 import torch
 
-from hex.model import hexconvolution
-from hex.utils.logger import logger
+from hexhex.model import hexconvolution
+from hexhex.utils.logger import logger
 
 
 def create_model(config):

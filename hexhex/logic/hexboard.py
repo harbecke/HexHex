@@ -2,7 +2,7 @@ import copy
 
 import torch
 
-from hex.utils.logger import logger
+from hexhex.utils.logger import logger
 
 
 def to_move_idx(move, board_size):

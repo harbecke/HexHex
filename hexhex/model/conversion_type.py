@@ -1,7 +1,8 @@
 import sys
 
 import torch
-from hex.utils.utils import device
+
+from hexhex.utils.utils import device
 
 
 def convert_model(model_name):

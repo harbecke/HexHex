@@ -6,14 +6,14 @@ from configparser import ConfigParser
 
 import torch
 
-from hex.creation import create_data, create_model
-from hex.elo import elo
-from hex.evaluation import win_position
-from hex.model.hexconvolution import RandomModel
-from hex.training import train
-from hex.utils.logger import logger
-from hex.utils.summary import writer
-from hex.utils.utils import load_model, merge_dicts_of_dicts
+from hexhex.creation import create_data, create_model
+from hexhex.elo import elo
+from hexhex.evaluation import win_position
+from hexhex.model.hexconvolution import RandomModel
+from hexhex.training import train
+from hexhex.utils.logger import logger
+from hexhex.utils.summary import writer
+from hexhex.utils.utils import load_model, merge_dicts_of_dicts
 
 
 def load_reference_models(config):
