@@ -18,9 +18,9 @@ This allows to generate and train on millions of training positions on a single 
 It is easy to play against our agent. A fully trained model is already included in the repository. Python 3.6 or newer is required.
 
 ```
-git clone https://github.com/harbecke/hex && cd hex
+git clone https://github.com/harbecke/hexhex && cd hexhex
 pip install torch pygame numpy
-python main.py
+python -m hexhex
 ```
 
 Note that both players can make use of the switch rule.
