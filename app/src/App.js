@@ -1,3 +1,9 @@
+// TODO
+// * switch move
+// * trigger rating display
+// * deploy to cleeff.github.io
+// * monte carlo move selection
+
 import { Client } from "boardgame.io/react";
 import { HexGrid, Layout, Hexagon, Text } from "react-hexgrid";
 import React from "react";
@@ -298,6 +304,6 @@ class HexBoard extends React.Component {
   }
 }
 
-const App = Client({ game: HexGame, board: HexBoard, debug: true });
+const App = Client({ game: HexGame, board: HexBoard, debug: false });
 
 export default App;
