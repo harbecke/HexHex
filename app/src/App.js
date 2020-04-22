@@ -1,8 +1,15 @@
 import { Client } from "boardgame.io/react";
-import { HexGrid, Layout, Hexagon } from "react-hexgrid";
+import { HexGrid, Layout, Hexagon, Text } from "react-hexgrid";
 import React from "react";
+import { Tensor, InferenceSession } from "onnxjs";
 
-const board_size = 5;
+import './App.css'
+
+const board_size = 11;
+const sess = new InferenceSession();
+const url = "./11_2w4_1100.onnx";
+
+let sess_init = false;
 
 function PosToId(x, y) {
   return x + board_size * y;
@@ -42,7 +49,7 @@ function Neighbors(id) {
 function AddStone(G, id, player_color) {
   const [x, y] = IdToPos(id);
   let new_cc = new Set([id]);
-  let new_cc_rows = player_color == 0 ? new Set([y]) : new Set([x]);
+  let new_cc_rows = player_color === '0' ? new Set([y]) : new Set([x]);
 
   const neighbors = new Set(Neighbors(id));
   for (let idx = 0; idx < G.connected_sets[player_color].length; idx++) {
@@ -60,12 +67,56 @@ function AddStone(G, id, player_color) {
   return new_cc_rows.has(0) && new_cc_rows.has(board_size - 1);
 }
 
+async function runModel(cells) {
+      try {
+        if (!sess_init) {
+          await sess.loadModel(url);
+          sess_init = true;
+        }
+        console.log(cells);
+        let input_values = [];
+        for (let x = 0; x < board_size; x++) {
+          for (let y = 0; y < board_size; y++) {
+            const id = PosToId(x, y);
+            input_values.push(cells[id] === "1" ? 1 : 0);
+          }
+        }
+        for (let x = 0; x < board_size; x++) {
+         for (let y = 0; y < board_size; y++) {
+            const id = PosToId(x, y);
+            input_values.push(cells[id] === "0" ? 1 : 0);
+          }
+        }
+        const input = [new Tensor(new Float32Array(input_values), "float32", [1, 2, 11, 11])];
+        console.log(input);
+        const output = await sess.run(input);
+        const outputTensor = output.values().next().value;
+        let output_transposed = [];
+        for (let x = 0; x < board_size; x++) {
+         for (let y = 0; y < board_size; y++) {
+            const id = PosToId(x, y);
+            output_transposed.push(outputTensor.data[id]);
+          }
+        }
+        /*
+        for (let i = 0; i < board_size * board_size; i++) {
+          this.props.G.model_output[i] = output_transposed[i];
+        }
+        */
+        return output_transposed;
+      }
+      catch(e) {
+        console.error(e);
+      }
+    }
+
 const HexGame = {
   setup: () => ({
     cells: Array(board_size * board_size).fill(null),
     connected_sets: [[], []],
     connected_set_rows: [[], []],
     winner: null,
+    model_output: Array(board_size * board_size).fill(0),
     // index 0 will always be red independent of swap
     // save a pair of sets for each player:
     //   * the first set is a connected component of stones
@@ -103,6 +154,23 @@ const HexGame = {
 
   ai: {
     enumerate: (G, ctx) => {
+      console.log(G.cells);
+      runModel(G.cells).then((result) => {
+        console.log(result); 
+        let best = -1;
+        let best_value;
+        for (let i = 0; i < board_size*board_size; i++) {
+          if (G.cells[i] === null) {
+            if (best === -1 || result[i] > best_value) {
+              best = i;
+              best_value = result[i];
+            }
+          }
+        }
+        console.log(best, best_value);
+        return [{move: 'clickCell', args: [best] }];
+      });
+/*
       let moves = [];
       for (let i = 0; i < board_size * board_size; i++) {
         if (G.cells[i] === null) {
@@ -110,6 +178,7 @@ const HexGame = {
         }
       }
       return moves;
+      */
     },
   },
 };
@@ -118,6 +187,23 @@ class HexBoard extends React.Component {
   onClick(id) {
     if (this.isActive(id)) {
       this.props.moves.clickCell(id);
+      /*
+      this.runModel().then((result) => {
+        console.log(result); 
+        let best = -1;
+        let best_value;
+        for (let i = 0; i < board_size*board_size; i++) {
+          if (this.props.G.cells[i] === null) {
+            if (best === -1 || result[i] > best_value) {
+              best = i;
+              best_value = result[i];
+            }
+          }
+        }
+        console.log(best, best_value);
+        this.props.moves.clickCell(best);
+      });
+      */
     }
   }
 
@@ -129,6 +215,10 @@ class HexBoard extends React.Component {
       return "p1Style";
     }
     return "p2Style";
+  }
+
+  cellText(id) {
+    return this.props.G.model_output[id].toFixed(1);
   }
 
   isActive(id) {
@@ -184,20 +274,24 @@ class HexBoard extends React.Component {
             q={q}
             r={r}
             s={-q - r}
-          />
+          >
+          <Text>{this.cellText(id)}</Text>
+          </Hexagon>
         );
       }
     }
 
     // border hexagons
+    let id=board_size * board_size;
     for (let a = 0; a < board_size; a++) {
       let b = -1;
-      hexagons.push(<Hexagon cellStyle={p1Style} q={a} r={b} s={-a - b} />);
-      hexagons.push(<Hexagon cellStyle={p2Style} q={b} r={a} s={-a - b} />);
+      hexagons.push(<Hexagon key={id++} cellStyle={p1Style} q={a} r={b} s={-a - b} />);
+      hexagons.push(<Hexagon key={id++} cellStyle={p2Style} q={b} r={a} s={-a - b} />);
       b = board_size;
-      hexagons.push(<Hexagon cellStyle={p1Style} q={a} r={b} s={-a - b} />);
-      hexagons.push(<Hexagon cellStyle={p2Style} q={b} r={a} s={-a - b} />);
+      hexagons.push(<Hexagon key={id++} cellStyle={p1Style} q={a} r={b} s={-a - b} />);
+      hexagons.push(<Hexagon key={id++} cellStyle={p2Style} q={b} r={a} s={-a - b} />);
     }
+
 
     return (
       <div>
@@ -214,6 +308,6 @@ class HexBoard extends React.Component {
   }
 }
 
-const App = Client({ game: HexGame, board: HexBoard });
+const App = Client({ game: HexGame, board: HexBoard, debug: false });
 
 export default App;

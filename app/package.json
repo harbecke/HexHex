@@ -8,6 +8,7 @@
     "@testing-library/user-event": "^7.2.1",
     "babel": "^6.23.0",
     "boardgame.io": "^0.39.6",
+    "onnxjs": "^0.1.7",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-hexgrid": "^1.0.3",
