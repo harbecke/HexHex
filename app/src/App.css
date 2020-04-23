@@ -9,7 +9,15 @@
 
 #winner {
   font-size: 40px;
+  height: 60px;
   text-align: center;
+}
+
+#controls {
+  text-align: center;
+}
+button {
+    font-size: 20px;
 }
 
 @media (prefers-reduced-motion: no-preference) {

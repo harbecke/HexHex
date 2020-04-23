@@ -1,6 +1,5 @@
 // TODO
 // * switch move
-// * trigger rating display
 // * deploy to cleeff.github.io
 // * monte carlo move selection
 
@@ -16,6 +15,7 @@ const sess = new InferenceSession();
 const url = "./11_2w4_1100.onnx";
 
 let sess_init = false;
+let info = "";
 
 async function load_model() {
   await sess.loadModel(url);
@@ -78,13 +78,38 @@ function AddStone(G, id, player_color) {
   return new_cc_rows.has(0) && new_cc_rows.has(board_size - 1);
 }
 
+class Toggle extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {showRatings: props.initial};
+
+    // This binding is necessary to make `this` work in the callback
+    this.handleClick = this.handleClick.bind(this);
+  }
+
+  handleClick() {
+    this.props.toggle(!this.state.showRatings);
+    this.setState(state => ({
+      showRatings: !state.showRatings
+    }));
+  }
+
+  render() {
+    return (
+      <button onClick={this.handleClick}>
+        {this.state.showRatings ? 'Hide Ratings' : 'Show Ratings'}
+      </button>
+    );
+  }
+}
+
 const HexGame = {
   setup: () => ({
     cells: Array(board_size * board_size).fill(null),
     connected_sets: [[], []],
     connected_set_rows: [[], []],
     winner: null,
-    model_output: Array(board_size * board_size).fill(0),
+    model_output: Array(board_size * board_size).fill(null),
     // index 0 will always be red independent of swap
     // save a pair of sets for each player:
     //   * the first set is a connected component of stones
@@ -130,6 +155,12 @@ const HexGame = {
 };
 
 class HexBoard extends React.Component {
+  constructor(props) {
+    super(props);
+    this.setDisplayRatings = this.setDisplayRatings.bind(this);
+    this.state = {display_ratings: false};
+  }
+
   onClick(id) {
     if (!this.isActive(id)) {
       return;
@@ -159,8 +190,13 @@ class HexBoard extends React.Component {
     });
   }
 
+  setDisplayRatings(display_ratings) {
+    this.setState({display_ratings: display_ratings});
+  }
+
   async runModel(cells) {
     try {
+      info = "waiting for agent to move...";
       if (!sess_init) {
         await load_model();
       }
@@ -194,7 +230,7 @@ class HexBoard extends React.Component {
       for (let i = 0; i < board_size * board_size; i++) {
         this.props.G.model_output[i] = output_transposed[i];
       }
-
+      info = "";
       return output_transposed;
     } catch (e) {
       console.error(e);
@@ -211,8 +247,11 @@ class HexBoard extends React.Component {
     return "p2Style";
   }
 
-  cellText(id) {
-    return this.props.G.model_output[id].toFixed(1);
+  cellText(id, display_ratings) {
+    if (display_ratings && this.props.G.model_output[0] !== null) {
+      return this.props.G.model_output[id].toFixed(1);
+    }
+    return "";
   }
 
   isActive(id) {
@@ -222,9 +261,8 @@ class HexBoard extends React.Component {
   }
 
   render() {
-    let winner = "";
     if (this.props.ctx.gameover) {
-      winner =this.props.ctx.gameover.winner === '0' ? 'Red has won!' : 'Blue has won!';
+      info = this.props.ctx.gameover.winner === '0' ? 'Player has won!' : 'Agent has won!';
     }
 
     const p1Style = {
@@ -264,7 +302,7 @@ class HexBoard extends React.Component {
             r={r}
             s={-q - r}
           >
-            <Text>{this.cellText(id)}</Text>
+            <Text>{this.cellText(id, this.state.display_ratings)}</Text>
           </Hexagon>
         );
       }
@@ -291,9 +329,12 @@ class HexBoard extends React.Component {
 
     return (
       <div>
-        <div id="winner">{winner}</div>
+        <div id="winner">{info}</div>
+        <div id="controls">
+          <Toggle initial={false} toggle={this.setDisplayRatings}/>
+        </div>
         <div className="App">
-          <HexGrid width={1000} height={800} viewBox="-2 -4 30 30">
+          <HexGrid width={1000} height={800} viewBox="0 -3 30 30">
             <Layout size={{ x: 1, y: 1 }} flat={false} spacing={1}>
               {hexagons}
             </Layout>
