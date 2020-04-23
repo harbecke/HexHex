@@ -1,3 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;1,500&display=swap');
+
+* {
+    font-family: 'Roboto', sans-serif;
+}
+
 .App {
   text-align: center;
 }
@@ -5,6 +11,11 @@
 .App-logo {
   height: 40vmin;
   pointer-events: none;
+}
+
+.intro {
+  margin-top: 10px;
+  text-align:center;
 }
 
 #winner {

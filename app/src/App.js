@@ -1,5 +1,4 @@
 // TODO
-// * deploy to cleeff.github.io
 // * monte carlo move selection
 
 import { Client } from "boardgame.io/react";
@@ -363,8 +362,8 @@ class HexBoard extends React.Component {
 
     return (
       <div>
-        <div>
-          Joint work of Simon Buchholz, David Harbecke, and Pascal Van Cleeff.
+        <div class="intro">
+          HexHex - A reinforcement deep learning agent by Simon Buchholz, David Harbecke, and Pascal Van Cleeff.
           <br />
           <a href="https://github.com/harbecke/hex">github.com/harbecke/hex</a>
         </div>
