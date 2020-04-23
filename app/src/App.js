@@ -1,5 +1,4 @@
 // TODO
-// * switch move
 // * deploy to cleeff.github.io
 // * monte carlo move selection
 
