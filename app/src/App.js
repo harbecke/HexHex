@@ -16,6 +16,7 @@ const url = "./11_2w4_1100.onnx";
 
 let sess_init = false;
 let info = "";
+let agent_is_blue = true;
 
 async function load_model() {
   await sess.loadModel(url);
@@ -120,13 +121,23 @@ const HexGame = {
 
   moves: {
     clickCell: (G, ctx, id) => {
-      if (G.cells[id] !== null) {
-        return;
+      const num_moves = G.cells.reduce((x, y) => x + (y ? 1 : 0), 0);
+      if (num_moves == 1 && G.cells[id] == '0') {
+        // switch!
+        agent_is_blue = !agent_is_blue;
+        info = "Switched!"
       }
-      G.cells[id] = ctx.currentPlayer;
-      const has_won = AddStone(G, id, ctx.currentPlayer);
-      if (has_won) {
-        G.winner = ctx.currentPlayer;
+
+      else {
+        let cur_player = ctx.currentPlayer;
+        if (!agent_is_blue) {
+          cur_player = ctx.currentPlayer === '0' ? '1' : '0';
+        }
+        G.cells[id] = cur_player;
+        const has_won = AddStone(G, id, cur_player);
+        if (has_won) {
+          G.winner = cur_player;
+        }
       }
     },
   },
@@ -167,8 +178,7 @@ class HexBoard extends React.Component {
     }
     // build board for ai independently from
     // game mechanics to avoid race conditions.
-    // assume current player is always 0
-    const current_player = "0";
+    const current_player = agent_is_blue ? "0" : "1";
     let ai_board = Array.from(this.props.G.cells);
     ai_board[id] = current_player;
 
@@ -176,10 +186,12 @@ class HexBoard extends React.Component {
     this.props.moves.clickCell(id);
 
     this.runModel(ai_board).then((result) => {
+      // AI move selection
+      const num_moves = this.props.G.cells.reduce((x, y) => x + (y ? 1 : 0), 0);
       let best = -1;
       let best_value;
       for (let i = 0; i < board_size * board_size; i++) {
-        if (this.props.G.cells[i] === null) {
+        if (num_moves <= 1 || this.props.G.cells[i] === null) {
           if (best === -1 || result[i] > best_value) {
             best = i;
             best_value = result[i];
@@ -202,16 +214,31 @@ class HexBoard extends React.Component {
       }
 
       let input_values = [];
-      for (let x = 0; x < board_size; x++) {
-        for (let y = 0; y < board_size; y++) {
-          const id = PosToId(x, y);
-          input_values.push(cells[id] === "1" ? 1 : 0);
+      if (agent_is_blue) {
+        for (let x = 0; x < board_size; x++) {
+          for (let y = 0; y < board_size; y++) {
+            const id = PosToId(x, y);
+            input_values.push(cells[id] === "1" ? 1 : 0);
+          }
         }
-      }
-      for (let x = 0; x < board_size; x++) {
+        for (let x = 0; x < board_size; x++) {
+          for (let y = 0; y < board_size; y++) {
+            const id = PosToId(x, y);
+            input_values.push(cells[id] === "0" ? 1 : 0);
+          }
+        }
+      } else {
         for (let y = 0; y < board_size; y++) {
-          const id = PosToId(x, y);
-          input_values.push(cells[id] === "0" ? 1 : 0);
+          for (let x = 0; x < board_size; x++) {
+            const id = PosToId(x, y);
+            input_values.push(cells[id] === "0" ? 1 : 0);
+          }
+        }
+        for (let y = 0; y < board_size; y++) {
+          for (let x = 0; x < board_size; x++) {
+            const id = PosToId(x, y);
+            input_values.push(cells[id] === "1" ? 1 : 0);
+          }
         }
       }
       const input = [
@@ -220,11 +247,15 @@ class HexBoard extends React.Component {
       const output = await sess.run(input);
       const outputTensor = output.values().next().value;
       let output_transposed = [];
-      for (let x = 0; x < board_size; x++) {
-        for (let y = 0; y < board_size; y++) {
-          const id = PosToId(x, y);
-          output_transposed.push(outputTensor.data[id]);
+      if (agent_is_blue){
+        for (let x = 0; x < board_size; x++) {
+          for (let y = 0; y < board_size; y++) {
+            const id = PosToId(x, y);
+            output_transposed.push(outputTensor.data[id]);
+          }
         }
+      } else {
+        output_transposed = outputTensor.data;
       }
 
       for (let i = 0; i < board_size * board_size; i++) {
@@ -249,7 +280,10 @@ class HexBoard extends React.Component {
 
   cellText(id, display_ratings) {
     if (display_ratings && this.props.G.model_output[0] !== null) {
-      return this.props.G.model_output[id].toFixed(1);
+      const num_moves = this.props.G.cells.reduce((x, y) => x + (y ? 1 : 0), 0);
+      if (num_moves <= 1 || this.props.G.cells[id] === null) {
+        return this.props.G.model_output[id].toFixed(1);
+      }
     }
     return "";
   }
@@ -262,7 +296,8 @@ class HexBoard extends React.Component {
 
   render() {
     if (this.props.ctx.gameover) {
-      info = this.props.ctx.gameover.winner === '0' ? 'Player has won!' : 'Agent has won!';
+      let player = agent_is_blue ? '0' : '1';
+      info = this.props.ctx.gameover.winner === player ? 'Player has won!' : 'Agent has won!';
     }
 
     const p1Style = {
