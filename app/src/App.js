@@ -363,6 +363,11 @@ class HexBoard extends React.Component {
 
     return (
       <div>
+        <div>
+          Joint work of Simon Buchholz, David Harbecke, and Pascal Van Cleeff.
+          <br />
+          <a href="https://github.com/harbecke/hex">github.com/harbecke/hex</a>
+        </div>
         <div id="winner">{info}</div>
         <div id="controls">
           <Toggle initial={false} toggle={this.setDisplayRatings}/>
