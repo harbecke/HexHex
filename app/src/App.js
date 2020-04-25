@@ -1,16 +1,16 @@
 // TODO
 // * monte carlo move selection
 
-import { Client } from "boardgame.io/react";
-import { HexGrid, Layout, Hexagon, Text } from "react-hexgrid";
+import {Client} from "boardgame.io/react";
+import {Hexagon, HexGrid, Layout, Text} from "react-hexgrid";
 import React from "react";
-import { Tensor, InferenceSession } from "onnxjs";
+import {InferenceSession, Tensor} from "onnxjs";
 
 import "./App.css";
 
 const board_size = 11;
 const sess = new InferenceSession();
-const url = "./11_2w4_1100.onnx";
+const url = "./11_2w4_1262.onnx";
 
 let sess_init = false;
 let info = "";
@@ -116,7 +116,7 @@ const HexGame = {
     connected_set_rows: [[], []],
     winner: null,
     model_output: Array(board_size * board_size).fill(null),
-    model_display: Array(board_size * board_size).fill(null),
+    model_display: Array(board_size * board_size).fill(""),
     // index 0 will always be red independent of swap
     // save a pair of sets for each player:
     //   * the first set is a connected component of stones
@@ -178,20 +178,20 @@ function minimax(board, sets, rows, depth, maximizing_player) {
       return [0, null];
     }
     if (maximizing_player) {
-      let value = -10
+      let value = -10;
       let best = null;
       for (let i = 0; i < board_size * board_size; i++) {
         if (board[i] !== null) { continue; }
         let child_board = Array.from(board);
         let child_sets = JSON.parse(JSON.stringify(sets));
         let child_rows = JSON.parse(JSON.stringify(rows));
-        child_board[i] = 'a';
+        child_board[i] = 'x';
         if (AddStone(child_sets, child_rows, i, agent)) {
           // agent wins :-)
           // earlier = better
           return [1, i];
         }
-        const a = minimax(board, child_sets, child_rows, depth - 1, false);
+        const a = minimax(child_board, child_sets, child_rows, depth - 1, false);
         if (a[0] > value) {
           value = a[0];
           best = i;
@@ -301,7 +301,8 @@ class HexBoard extends React.Component {
       for (let i = 0; i < board_size * board_size; i++) {
         if (num_moves <= 1 || this.props.G.cells[i] === null) {
           const score = Math.pow(2, result[i] - max_rating);
-          this.props.G.model_display[i] = (100 * score / score_sum).toFixed(0);
+          //this.props.G.model_display[i] = (100 * score / score_sum).toFixed(0);
+          this.props.G.model_display[i] = result[i].toFixed(1);
         } else {
           this.props.G.model_display[i] = "";
         }

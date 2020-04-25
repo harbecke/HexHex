@@ -35,9 +35,9 @@ def correct_position1d(position1d, board_size, player):
         return position1d
 
 
-def load_model(model_file):
+def load_model(model_file, export_mode=False):
     checkpoint = torch.load(model_file, map_location=device)
-    model = create_model(checkpoint['config'])
+    model = create_model(checkpoint['config'], export_mode)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     torch.no_grad()
