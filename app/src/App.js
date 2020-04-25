@@ -404,7 +404,10 @@ class HexBoard extends React.Component {
   }
 
   cellText(id, display_ratings) {
-    return this.props.G.model_display[id];
+    if (display_ratings) {
+      return this.props.G.model_display[id];
+    }
+    return "";
   }
 
   isActive(id) {
