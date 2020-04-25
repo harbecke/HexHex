@@ -181,25 +181,33 @@ function minimax(board, sets, rows, depth, maximizing_player) {
       let value = -10;
       let best = null;
       for (let i = 0; i < board_size * board_size; i++) {
-        if (board[i] !== null) { continue; }
-        let child_board = Array.from(board);
-        let child_sets = JSON.parse(JSON.stringify(sets));
-        let child_rows = JSON.parse(JSON.stringify(rows));
-        child_board[i] = 'x';
-        if (AddStone(child_sets, child_rows, i, agent)) {
-          // agent wins :-)
-          // earlier = better
-          return [1, i];
-        }
-        const a = minimax(child_board, child_sets, child_rows, depth - 1, false);
-        if (a[0] > value) {
-          value = a[0];
-          best = i;
-        }
-        if (value >= 1) {
-          // this is good enough
-          return [value, best];
-        }
+          if (board[i] !== null) {
+              continue;
+          }
+          let child_sets = JSON.parse(JSON.stringify(sets));
+          let child_rows = JSON.parse(JSON.stringify(rows));
+          if (AddStone(child_sets, child_rows, i, agent)) {
+              // agent wins :-)
+              return [1, i];
+          }
+      }
+      for (let i = 0; i < board_size * board_size; i++) {
+          if (board[i] !== null) {
+              continue;
+          }
+          let child_board = Array.from(board);
+          let child_sets = JSON.parse(JSON.stringify(sets));
+          let child_rows = JSON.parse(JSON.stringify(rows));
+          child_board[i] = 'x';
+          const a = minimax(child_board, child_sets, child_rows, depth - 1, false);
+          if (a[0] > value) {
+              value = a[0];
+              best = i;
+          }
+          if (value >= 1) {
+              // this is good enough
+              return [value, best];
+          }
       }
       return [value, best];
     }
