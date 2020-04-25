@@ -17,6 +17,12 @@ let info = "";
 let agent_is_blue = true;
 let max_rating;
 
+if (!Array.prototype.last){
+    Array.prototype.last = function(){
+        return this[this.length - 1];
+    };
+};
+
 async function load_model() {
   await sess.loadModel(url);
   sess_init = true;
@@ -57,15 +63,15 @@ function Neighbors(id) {
   return neighbors;
 }
 
-function AddStone(G, id, player_color) {
+function AddStone(connected_sets, connected_set_rows, id, player_color) {
   const [x, y] = IdToPos(id);
   let new_cc = new Set([id]);
   let new_cc_rows = player_color === "0" ? new Set([y]) : new Set([x]);
 
   const neighbors = new Set(Neighbors(id));
-  for (let idx = 0; idx < G.connected_sets[player_color].length; idx++) {
-    let cc = new Set(G.connected_sets[player_color][idx]);
-    let cc_rows = new Set(G.connected_set_rows[player_color][idx]);
+  for (let idx = 0; idx < connected_sets[player_color].length; idx++) {
+    let cc = new Set(connected_sets[player_color][idx]);
+    let cc_rows = new Set(connected_set_rows[player_color][idx]);
     const intersection = new Set([...cc].filter((x) => neighbors.has(x)));
     if (intersection.size > 0) {
       new_cc = new Set([...new_cc, ...cc]);
@@ -73,9 +79,8 @@ function AddStone(G, id, player_color) {
     }
   }
 
-  G.connected_sets[player_color].push(Array.from(new_cc));
-  G.connected_set_rows[player_color].push(Array.from(new_cc_rows));
-  G.last_move = id;
+  connected_sets[player_color].push(Array.from(new_cc));
+  connected_set_rows[player_color].push(Array.from(new_cc_rows));
   return new_cc_rows.has(0) && new_cc_rows.has(board_size - 1);
 }
 
@@ -133,7 +138,8 @@ const HexGame = {
           cur_player = ctx.currentPlayer === "0" ? "1" : "0";
         }
         G.cells[id] = cur_player;
-        const has_won = AddStone(G, id, cur_player);
+        const has_won = AddStone(G.connected_sets, G.connected_set_rows, id, cur_player);
+        G.last_move = id;
         if (has_won) {
           G.winner = cur_player;
         }
@@ -164,11 +170,81 @@ const HexGame = {
   },
 };
 
+function minimax(board, sets, rows, depth, maximizing_player) {
+    const player = agent_is_blue ? "0" : "1";
+    const agent = agent_is_blue ? "1" : "0";
+
+    if (depth === 0) {
+      return [0, null];
+    }
+    if (maximizing_player) {
+      let value = -10
+      let best = null;
+      for (let i = 0; i < board_size * board_size; i++) {
+        if (board[i] !== null) { continue; }
+        let child_board = Array.from(board);
+        let child_sets = JSON.parse(JSON.stringify(sets));
+        let child_rows = JSON.parse(JSON.stringify(rows));
+        child_board[i] = 'a';
+        if (AddStone(child_sets, child_rows, i, agent)) {
+          // agent wins :-)
+          // earlier = better
+          return [1, i];
+        }
+        const a = minimax(board, child_sets, child_rows, depth - 1, false);
+        if (a[0] > value) {
+          value = a[0];
+          best = i;
+        }
+        if (value >= 1) {
+          // this is good enough
+          return [value, best];
+        }
+      }
+      return [value, best];
+    }
+    else {
+      let value = 10;
+      let best = null;
+      for (let i = 0; i < board_size * board_size; i++) {
+        if (board[i] !== null) { continue; }
+        let child_board = Array.from(board);
+        let child_sets = JSON.parse(JSON.stringify(sets));
+        let child_rows = JSON.parse(JSON.stringify(rows));
+        child_board[i] = 'p';
+        if (AddStone(child_sets, child_rows, i, player)) {
+          // player wins.
+          return [-1, i];
+        }
+        const a = minimax(child_board, child_sets, child_rows, depth - 1, true);
+        if (a[0] < value) {
+          value = a[0];
+          best = i;
+          if (value <= 0) {
+            // this is bad enough
+            return [value, best];
+          }
+        }
+      }
+      return [value, best];
+    }
+  }
+
 class HexBoard extends React.Component {
   constructor(props) {
     super(props);
     this.setDisplayRatings = this.setDisplayRatings.bind(this);
     this.state = { display_ratings: false };
+  }
+
+  findSureWinMove(board, connected_sets, connected_set_rows) {
+    const depth = 3;
+    const ai_first = true;
+    const a = minimax(board, connected_sets, connected_set_rows, depth, ai_first);
+    if (a[0] > 0) {
+      return a[1];
+    } 
+    return null;
   }
 
   onClick(id) {
@@ -178,11 +254,29 @@ class HexBoard extends React.Component {
     // build board for ai independently from
     // game mechanics to avoid race conditions.
     const current_player = agent_is_blue ? "0" : "1";
+    const agent = agent_is_blue ? "1" : "0";
     let ai_board = Array.from(this.props.G.cells);
     ai_board[id] = current_player;
 
     // actually make the move
     this.props.moves.clickCell(id);
+
+    let connected_sets = JSON.parse(JSON.stringify(this.props.G.connected_sets));
+    let connected_set_rows = JSON.parse(JSON.stringify(this.props.G.connected_set_rows));
+    if (AddStone(connected_sets, connected_set_rows, id, current_player)) {
+      // player has already won.
+      return; 
+    }
+
+    const sure_win_move = this.findSureWinMove(ai_board, connected_sets, connected_set_rows);
+    if (sure_win_move !== null) {
+      console.log("Found sure win move", sure_win_move);
+      this.props.moves.clickCell(sure_win_move);
+      for (let i = 0; i < board_size * board_size; i++) {
+        this.props.G.model_display[i] = "";
+      }
+      return;
+    }
 
     this.runModel(ai_board).then((result) => {
       // AI move selection
@@ -273,7 +367,6 @@ class HexBoard extends React.Component {
       const output2 = await sess.run(input2);
       const outputTensor = output.values().next().value;
       const outputTensor2 = output2.values().next().value;
-      console.log(outputTensor2);
       let output_transposed = [];
       if (agent_is_blue) {
         for (let x = 0; x < board_size; x++) {
