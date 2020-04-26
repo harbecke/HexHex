@@ -5,6 +5,7 @@ import {Client} from "boardgame.io/react";
 import {Hexagon, HexGrid, Layout, Text} from "react-hexgrid";
 import React from "react";
 import {InferenceSession, Tensor} from "onnxjs";
+import _ from "lodash";
 
 import "./App.css";
 
@@ -17,11 +18,6 @@ let info = "";
 let agent_is_blue = true;
 let max_rating;
 
-if (!Array.prototype.last){
-    Array.prototype.last = function(){
-        return this[this.length - 1];
-    };
-};
 
 async function load_model() {
   await sess.loadModel(url);
@@ -31,6 +27,7 @@ async function load_model() {
 function PosToId(x, y) {
   return x + board_size * y;
 }
+
 function IdToPos(id) {
   const x = id % board_size;
   const y = (id - x) / board_size;
@@ -63,31 +60,69 @@ function Neighbors(id) {
   return neighbors;
 }
 
-function AddStone(connected_sets, connected_set_rows, id, player_color) {
+function FullNeighbors(id) {
+  if (id === 'red-bottom') {
+    return _.range(board_size * (board_size - 1), board_size * board_size);
+  }
+  if (id === 'red-top') {
+    return _.range(0, board_size);
+  }
+  if (id === 'blue-left') {
+    return _.range(0, board_size * board_size, board_size);
+  }
+  if (id === 'blue-right') {
+    return _.range(board_size - 1, board_size * board_size, board_size);
+  }
+  let neighbors = Neighbors(id);
   const [x, y] = IdToPos(id);
-  let new_cc = new Set([id]);
-  let new_cc_rows = player_color === "0" ? new Set([y]) : new Set([x]);
+  if (x === 0) {
+    neighbors.push('blue-left');
+  }
+  if (x === board_size - 1) {
+    neighbors.push('blue-right');
+  }
+  if (y === 0) {
+    neighbors.push('red-top');
+  }
+  if (y === board_size - 1) {
+    neighbors.push('red-bottom');
+  }
+  return neighbors;
+}
 
-  const neighbors = new Set(Neighbors(id));
-  for (let idx = 0; idx < connected_sets[player_color].length; idx++) {
-    let cc = new Set(connected_sets[player_color][idx]);
-    let cc_rows = new Set(connected_set_rows[player_color][idx]);
-    const intersection = new Set([...cc].filter((x) => neighbors.has(x)));
-    if (intersection.size > 0) {
-      new_cc = new Set([...new_cc, ...cc]);
-      new_cc_rows = new Set([...new_cc_rows, ...cc_rows]);
+/**
+ * @return {boolean}
+ */
+function HasWinner(board) {
+  const starts = ['red-top', 'blue-left'];
+  const targets = ['red-bottom', 'blue-right'];
+  for (let p in _.range(2)) {
+    const target = targets[p];
+    let toVisit = [starts[p]];
+    let visited = new Set();
+    while (toVisit.length > 0) {
+      const node = toVisit.pop();
+      for (const neighbor of FullNeighbors(node)) {
+        if (neighbor === target) {
+          return true;
+        }
+        if (typeof neighbor === 'string') {
+          continue;
+        }
+        if (board[neighbor] === p.toString() && !visited.has(neighbor)) {
+          toVisit.push(neighbor);
+          visited.add(neighbor);
+        }
+      }
     }
   }
-
-  connected_sets[player_color].push(Array.from(new_cc));
-  connected_set_rows[player_color].push(Array.from(new_cc_rows));
-  return new_cc_rows.has(0) && new_cc_rows.has(board_size - 1);
+  return false;
 }
 
 class Toggle extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { showRatings: props.initial };
+    this.state = {showRatings: props.initial};
 
     // This binding is necessary to make `this` work in the callback
     this.handleClick = this.handleClick.bind(this);
@@ -138,7 +173,7 @@ const HexGame = {
           cur_player = ctx.currentPlayer === "0" ? "1" : "0";
         }
         G.cells[id] = cur_player;
-        const has_won = AddStone(G.connected_sets, G.connected_set_rows, id, cur_player);
+        const has_won = HasWinner(G.cells);
         G.last_move = id;
         if (has_won) {
           G.winner = cur_player;
@@ -149,7 +184,7 @@ const HexGame = {
 
   endIf: (G, ctx) => {
     if (G.winner !== null) {
-      return { winner: G.winner };
+      return {winner: G.winner};
     }
   },
 
@@ -162,7 +197,7 @@ const HexGame = {
       let moves = [];
       for (let i = 0; i < board_size * board_size; i++) {
         if (G.cells[i] === null) {
-          moves.push({ move: "clickCell", args: [i] });
+          moves.push({move: "clickCell", args: [i]});
         }
       }
       return moves;
@@ -170,88 +205,95 @@ const HexGame = {
   },
 };
 
-function minimax(board, sets, rows, depth, maximizing_player) {
-    const player = agent_is_blue ? "0" : "1";
-    const agent = agent_is_blue ? "1" : "0";
-
-    if (depth === 0) {
-      return [0, null];
-    }
-    if (maximizing_player) {
-      let value = -10;
-      let best = null;
-      for (let i = 0; i < board_size * board_size; i++) {
-          if (board[i] !== null) {
-              continue;
-          }
-          let child_sets = JSON.parse(JSON.stringify(sets));
-          let child_rows = JSON.parse(JSON.stringify(rows));
-          if (AddStone(child_sets, child_rows, i, agent)) {
-              // agent wins :-)
-              return [1, i];
-          }
-      }
-      for (let i = 0; i < board_size * board_size; i++) {
-          if (board[i] !== null) {
-              continue;
-          }
-          let child_board = Array.from(board);
-          let child_sets = JSON.parse(JSON.stringify(sets));
-          let child_rows = JSON.parse(JSON.stringify(rows));
-          child_board[i] = 'x';
-          const a = minimax(child_board, child_sets, child_rows, depth - 1, false);
-          if (a[0] > value) {
-              value = a[0];
-              best = i;
-          }
-          if (value >= 1) {
-              // this is good enough
-              return [value, best];
-          }
-      }
-      return [value, best];
-    }
-    else {
-      let value = 10;
-      let best = null;
-      for (let i = 0; i < board_size * board_size; i++) {
-        if (board[i] !== null) { continue; }
-        let child_board = Array.from(board);
-        let child_sets = JSON.parse(JSON.stringify(sets));
-        let child_rows = JSON.parse(JSON.stringify(rows));
-        child_board[i] = 'p';
-        if (AddStone(child_sets, child_rows, i, player)) {
-          // player wins.
-          return [-1, i];
-        }
-        const a = minimax(child_board, child_sets, child_rows, depth - 1, true);
-        if (a[0] < value) {
-          value = a[0];
-          best = i;
-          if (value <= 0) {
-            // this is bad enough
-            return [value, best];
-          }
-        }
-      }
-      return [value, best];
+// rating: +1 = red ("0") wins
+//         -1 = blue ("1") wins
+// might return 0 although the opponent could force a win.
+function minimax(board, depth, current_player, first_player) {
+  const other_player = current_player === "0" ? "1" : "0";
+  if (HasWinner(board)) {
+    // other player won.
+    if (current_player === "0") {
+      return [-1, null]; // blue won
+    } else {
+      return [1, null]; // red won
     }
   }
+
+  if (depth === 0) {
+    return [0, null]; // no one won
+  }
+  if (current_player === "0") { // red, maximizing
+    let value = -10;
+    let best = null;
+    for (let i = 0; i < board_size * board_size; i++) {
+      if (board[i] !== null) {
+        continue;
+      }
+      board[i] = current_player;
+      const a = minimax(board, depth - 1, other_player, first_player);
+      board[i] = null;
+      if (a[0] > value) {
+        value = a[0];
+        best = i;
+      }
+      if (value >= 1) {
+        // this is good enough
+        return [value, best];
+      }
+      if (current_player !== first_player && value === 0) {
+          // this is good enough for the second player.
+          return [value, best];
+      }
+    }
+    return [value, best];
+  } else { // blue, minimizing
+    let value = 10;
+    let best = null;
+    for (let i = 0; i < board_size * board_size; i++) {
+      if (board[i] !== null) {
+        continue;
+      }
+      board[i] = current_player;
+      const a = minimax(board, depth - 1, other_player, first_player);
+      board[i] = null;
+      if (a[0] < value) {
+        value = a[0];
+        best = i;
+        if (value <= -1) {
+          // this is bad enough
+          return [value, best];
+        }
+        if (current_player !== first_player && value === 0) {
+          // this is good enough for the second player.
+          return [value, best];
+        }
+      }
+    }
+    return [value, best];
+  }
+}
 
 class HexBoard extends React.Component {
   constructor(props) {
     super(props);
     this.setDisplayRatings = this.setDisplayRatings.bind(this);
-    this.state = { display_ratings: false };
+    this.state = {display_ratings: false};
   }
 
-  findSureWinMove(board, connected_sets, connected_set_rows) {
-    const depth = 3;
-    const ai_first = true;
-    const a = minimax(board, connected_sets, connected_set_rows, depth, ai_first);
-    if (a[0] > 0) {
-      return a[1];
-    } 
+  findSureWinMove(board, player) {
+    for (let depth of [1, 3]) {
+      const a = minimax(board, depth, player, player);
+      if (player === '0') {
+        if (a[0] > 0) {
+          return a[1];
+        }
+      } else {
+        if (a[0] < 0) {
+          return a[1];
+        }
+      }
+    }
+
     return null;
   }
 
@@ -261,22 +303,20 @@ class HexBoard extends React.Component {
     }
     // build board for ai independently from
     // game mechanics to avoid race conditions.
-    const current_player = agent_is_blue ? "0" : "1";
+    const player = agent_is_blue ? "0" : "1";
     const agent = agent_is_blue ? "1" : "0";
     let ai_board = Array.from(this.props.G.cells);
-    ai_board[id] = current_player;
+    ai_board[id] = player;
 
     // actually make the move
     this.props.moves.clickCell(id);
 
-    let connected_sets = JSON.parse(JSON.stringify(this.props.G.connected_sets));
-    let connected_set_rows = JSON.parse(JSON.stringify(this.props.G.connected_set_rows));
-    if (AddStone(connected_sets, connected_set_rows, id, current_player)) {
+    if (HasWinner(ai_board)) {
       // player has already won.
-      return; 
+      return;
     }
 
-    const sure_win_move = this.findSureWinMove(ai_board, connected_sets, connected_set_rows);
+    const sure_win_move = this.findSureWinMove(ai_board, agent);
     if (sure_win_move !== null) {
       console.log("Found sure win move", sure_win_move);
       this.props.moves.clickCell(sure_win_move);
@@ -316,12 +356,21 @@ class HexBoard extends React.Component {
         }
       }
 
+      let test_board = Array.from(this.props.G.cells);
+      test_board[id] = player;
+      test_board[best] = agent;
+      const sure_win = this.findSureWinMove(test_board, player);
+      if (sure_win !== null) {
+        console.log("Player can surely win with the suggested move", best, "Moving to the sure win move instead.");
+        best = sure_win;
+      }
+
       this.props.moves.clickCell(best);
     });
   }
 
   setDisplayRatings(display_ratings) {
-    this.setState({ display_ratings: display_ratings });
+    this.setState({display_ratings: display_ratings});
   }
 
   async runModel(cells) {
@@ -361,10 +410,10 @@ class HexBoard extends React.Component {
       }
       let input_values2 = [];
       for (let id = 0; id < board_size * board_size; id++) {
-        input_values2.push(input_values[board_size*board_size - id - 1]);
+        input_values2.push(input_values[board_size * board_size - id - 1]);
       }
       for (let id = 0; id < board_size * board_size; id++) {
-        input_values2.push(input_values[2*board_size*board_size - id - 1]);
+        input_values2.push(input_values[2 * board_size * board_size - id - 1]);
       }
       const input = [
         new Tensor(new Float32Array(input_values), "float32", [1, 2, 11, 11]),
@@ -383,7 +432,7 @@ class HexBoard extends React.Component {
             const id = PosToId(x, y);
             output_transposed.push(
               (outputTensor.data[id] +
-               outputTensor2.data[board_size * board_size - id - 1]
+                outputTensor2.data[board_size * board_size - id - 1]
               ) / 2);
           }
         }
@@ -482,17 +531,17 @@ class HexBoard extends React.Component {
     for (let a = 0; a < board_size; a++) {
       let b = -1;
       hexagons.push(
-        <Hexagon key={id++} cellStyle={p1Style} q={a} r={b} s={-a - b} />
+        <Hexagon key={id++} cellStyle={p1Style} q={a} r={b} s={-a - b}/>
       );
       hexagons.push(
-        <Hexagon key={id++} cellStyle={p2Style} q={b} r={a} s={-a - b} />
+        <Hexagon key={id++} cellStyle={p2Style} q={b} r={a} s={-a - b}/>
       );
       b = board_size;
       hexagons.push(
-        <Hexagon key={id++} cellStyle={p1Style} q={a} r={b} s={-a - b} />
+        <Hexagon key={id++} cellStyle={p1Style} q={a} r={b} s={-a - b}/>
       );
       hexagons.push(
-        <Hexagon key={id++} cellStyle={p2Style} q={b} r={a} s={-a - b} />
+        <Hexagon key={id++} cellStyle={p2Style} q={b} r={a} s={-a - b}/>
       );
     }
 
@@ -501,16 +550,16 @@ class HexBoard extends React.Component {
         <div class="intro">
           HexHex - A reinforcement deep learning agent by Simon Buchholz, David
           Harbecke, and Pascal Van Cleeff.
-          <br />
+          <br/>
           <a href="https://github.com/harbecke/hex">github.com/harbecke/hex</a>
         </div>
         <div id="winner">{info}</div>
         <div id="controls">
-          <Toggle initial={false} toggle={this.setDisplayRatings} />
+          <Toggle initial={false} toggle={this.setDisplayRatings}/>
         </div>
         <div className="App">
           <HexGrid width={1000} height={800} viewBox="0 -3 30 30">
-            <Layout size={{ x: 1, y: 1 }} flat={false} spacing={1}>
+            <Layout size={{x: 1, y: 1}} flat={false} spacing={1}>
               {hexagons}
             </Layout>
           </HexGrid>
@@ -520,6 +569,6 @@ class HexBoard extends React.Component {
   }
 }
 
-const App = Client({ game: HexGame, board: HexBoard, debug: false });
+const App = Client({game: HexGame, board: HexBoard, debug: false});
 
 export default App;

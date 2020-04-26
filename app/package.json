@@ -13,7 +13,8 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-hexgrid": "^1.0.3",
-    "react-scripts": "3.4.1"
+    "react-scripts": "3.4.1",
+    "lodash": "latest"
   },
   "scripts": {
     "start": "react-scripts start",
