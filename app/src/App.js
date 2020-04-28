@@ -373,6 +373,15 @@ class HexBoard extends React.Component {
     this.setState({display_ratings: display_ratings});
   }
 
+  async evalModel(input_array)
+  {
+      const input = [
+        new Tensor(new Float32Array(input_array), "float32", [1, 2, 11, 11]),
+      ];
+      const output = await sess.run(input);
+      return output.values().next().value.data;
+  }
+
   async runModel(cells) {
     try {
       info = "waiting for agent to move...";
@@ -415,37 +424,33 @@ class HexBoard extends React.Component {
       for (let id = 0; id < board_size * board_size; id++) {
         input_values2.push(input_values[2 * board_size * board_size - id - 1]);
       }
-      const input = [
-        new Tensor(new Float32Array(input_values), "float32", [1, 2, 11, 11]),
-      ];
-      const input2 = [
-        new Tensor(new Float32Array(input_values2), "float32", [1, 2, 11, 11]),
-      ];
-      const output = await sess.run(input);
-      const output2 = await sess.run(input2);
-      const outputTensor = output.values().next().value;
-      const outputTensor2 = output2.values().next().value;
-      let output_transposed = [];
+
+      const outputTensor = await this.evalModel(input_values);
+      const outputTensor2 = await this.evalModel(input_values2);
+      let average_output = [];
+      for (let id = 0; id < board_size * board_size; id++) {
+        average_output.push((outputTensor[id] + outputTensor2[board_size * board_size - id - 1])/2);
+      }
+
+      let final_output = [];
       if (agent_is_blue) {
+        // need to transpose
         for (let x = 0; x < board_size; x++) {
           for (let y = 0; y < board_size; y++) {
             const id = PosToId(x, y);
-            output_transposed.push(
-              (outputTensor.data[id] +
-                outputTensor2.data[board_size * board_size - id - 1]
-              ) / 2);
+            final_output.push(average_output[id]);
           }
         }
       } else {
-        output_transposed = outputTensor.data;
+        final_output = average_output;
       }
 
       for (let i = 0; i < board_size * board_size; i++) {
-        this.props.G.model_output[i] = output_transposed[i];
+        this.props.G.model_output[i] = final_output[i];
       }
 
       info = "";
-      return output_transposed;
+      return final_output;
     } catch (e) {
       console.error(e);
     }
