@@ -88,7 +88,7 @@ class RepeatedSelfTrainer:
             self.rst_loop(i)
 
         if self.config.getboolean('REPEATED SELF TRAINING', 'save_data'):
-            torch.save((training_data, validation_data), f'data/{self.model_name}.pt')
+            torch.save((self.training_data, self.validation_data), f'data/{self.model_name}.pt')
             logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
 
         logger.info('=== finished training ===')
