@@ -82,8 +82,8 @@ class Board:
     """
     def __init__(self, size, switch_allowed=True):
         self.size = size
-        self.board_tensor = torch.zeros([2, self.size, self.size])
         self.logical_board_tensor = torch.zeros([2, self.size, self.size])
+        self.board_tensor = self.set_border(self.logical_board_tensor)
         self.made_moves = set()
         self.legal_moves = set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
         self.connected_sets = [[], []]
@@ -112,6 +112,15 @@ class Board:
             +'\nWinner\n'+str(self.winner)
             +'\nConnected sets\n'+str(self.connected_sets))+'\n'
 
+    def set_border(self, board_tensor):
+        border = torch.zeros([2, self.size+2, self.size+2])
+        border[0, 0, :] = 1
+        border[0, -1, :] = 1
+        border[1, :, 0] = 1
+        border[1, :, -1] = 1
+        border[:, 1:-1, 1:-1] = board_tensor
+        return border
+
     def set_stone_immutable(self, position):
         """
         Same as set_stone but does not alter the board.
@@ -135,7 +144,8 @@ class Board:
                     self.switch = True
                     self.legal_moves.remove(position)
                     self.logical_board_tensor[1][position] = 0.001
-                    self.board_tensor = torch.transpose(torch.roll(self.logical_board_tensor, 1, 0), 1, 2)
+                    self.board_tensor = torch.transpose(torch.roll(self.set_border(
+                        self.logical_board_tensor), 1, 0), 1, 2)
                     self.move_history.append((self.player, position))
                     return
 
@@ -160,9 +170,10 @@ class Board:
 
             self.player = 1-self.player
             if self.player:
-                self.board_tensor = torch.transpose(torch.roll(self.logical_board_tensor, 1, 0), 1, 2)
+                self.board_tensor = torch.transpose(torch.roll(self.set_border(
+                    self.logical_board_tensor), 1, 0), 1, 2)
             else:
-                self.board_tensor = self.logical_board_tensor
+                self.board_tensor = self.set_border(self.logical_board_tensor)
 
         else:
             logger.error(f'Illegal Move! {position} of type {type(position)}')
