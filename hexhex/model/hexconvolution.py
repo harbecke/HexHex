@@ -73,7 +73,7 @@ class NoSwitchWrapperModel(nn.Module):
         self.internal_model = model
 
     def forward(self, x):
-        illegal = 1000*torch.sum(x, dim=1).view(-1,self.board_size**2)
+        illegal = 1000*torch.sum(x[:, :, 1:-1, 1:-1], dim=1).view(-1,self.board_size**2)
         return self.internal_model(x)-illegal
 
 
