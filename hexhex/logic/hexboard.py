@@ -114,10 +114,10 @@ class Board:
 
     def set_border(self, board_tensor):
         border = torch.zeros([2, self.size+2, self.size+2])
-        border[0, 0, :] = 1
-        border[0, -1, :] = 1
-        border[1, :, 0] = 1
-        border[1, :, -1] = 1
+        border[0, 0, 1:-1] = 1
+        border[0, -1, 1:-1] = 1
+        border[1, 1:-1, 0] = 1
+        border[1, 1:-1, -1] = 1
         border[:, 1:-1, 1:-1] = board_tensor
         return border
 
