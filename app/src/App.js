@@ -11,7 +11,7 @@ import "./App.css";
 
 const board_size = 11;
 const sess = new InferenceSession();
-const url = "./11_2w4_1262.onnx";
+const url = "./11_2w4_2000.onnx";
 
 let sess_init = false;
 let info = "";
@@ -241,8 +241,8 @@ function minimax(board, depth, current_player, first_player) {
         return [value, best];
       }
       if (current_player !== first_player && value === 0) {
-          // this is good enough for the second player.
-          return [value, best];
+        // this is good enough for the second player.
+        return [value, best];
       }
     }
     return [value, best];
@@ -271,6 +271,24 @@ function minimax(board, depth, current_player, first_player) {
     }
     return [value, best];
   }
+}
+
+function AddBorder(x, y, input_values, border_color) {
+  if ([-1, board_size].includes(x) && [-1, board_size].includes(y)) {
+    // on both players borders
+    input_values.push(0);
+    return true;
+  }
+  if (!([-1, board_size].includes(x) || [-1, board_size].includes(y))) {
+    // no border
+    return false;
+  }
+  if ([-1, board_size].includes(x)) {
+    input_values.push(border_color ? 1 : 0);
+  } else {
+    input_values.push(border_color ? 0 : 1);
+  }
+  return true;
 }
 
 class HexBoard extends React.Component {
@@ -373,13 +391,12 @@ class HexBoard extends React.Component {
     this.setState({display_ratings: display_ratings});
   }
 
-  async evalModel(input_array)
-  {
-      const input = [
-        new Tensor(new Float32Array(input_array), "float32", [1, 2, 11, 11]),
-      ];
-      const output = await sess.run(input);
-      return output.values().next().value.data;
+  async evalModel(input_array) {
+    const input = [
+      new Tensor(new Float32Array(input_array), "float32", [1, 2, board_size + 2, board_size + 2]),
+    ];
+    const output = await sess.run(input);
+    return output.values().next().value.data;
   }
 
   async runModel(cells) {
@@ -391,45 +408,53 @@ class HexBoard extends React.Component {
 
       let input_values = [];
       if (agent_is_blue) {
-        for (let x = 0; x < board_size; x++) {
-          for (let y = 0; y < board_size; y++) {
-            const id = PosToId(x, y);
-            input_values.push(cells[id] === "1" ? 1 : 0);
+        for (let x = -1; x < board_size + 1; x++) {
+          for (let y = -1; y < board_size + 1; y++) {
+            if (!AddBorder(x, y, input_values, 1)) {
+              const id = PosToId(x, y);
+              input_values.push(cells[id] === "1" ? 1 : 0);
+            }
           }
         }
-        for (let x = 0; x < board_size; x++) {
-          for (let y = 0; y < board_size; y++) {
-            const id = PosToId(x, y);
-            input_values.push(cells[id] === "0" ? 1 : 0);
+        for (let x = -1; x < board_size + 1; x++) {
+          for (let y = -1; y < board_size + 1; y++) {
+            if (!AddBorder(x, y, input_values, 0)) {
+              const id = PosToId(x, y);
+              input_values.push(cells[id] === "0" ? 1 : 0);
+            }
           }
         }
       } else {
-        for (let y = 0; y < board_size; y++) {
-          for (let x = 0; x < board_size; x++) {
-            const id = PosToId(x, y);
-            input_values.push(cells[id] === "0" ? 1 : 0);
+        for (let y = -1; y < board_size + 1; y++) {
+          for (let x = -1; x < board_size + 1; x++) {
+            if (!AddBorder(x, y, input_values, 0)) {
+              const id = PosToId(x, y);
+              input_values.push(cells[id] === "0" ? 1 : 0);
+            }
           }
         }
-        for (let y = 0; y < board_size; y++) {
-          for (let x = 0; x < board_size; x++) {
-            const id = PosToId(x, y);
-            input_values.push(cells[id] === "1" ? 1 : 0);
+        for (let y = -1; y < board_size + 1; y++) {
+          for (let x = -1; x < board_size + 1; x++) {
+            if (!AddBorder(x, y, input_values, 1)) {
+              const id = PosToId(x, y);
+              input_values.push(cells[id] === "1" ? 1 : 0);
+            }
           }
         }
       }
       let input_values2 = [];
-      for (let id = 0; id < board_size * board_size; id++) {
-        input_values2.push(input_values[board_size * board_size - id - 1]);
+      for (let id = 0; id < (board_size + 2) * (board_size + 2); id++) {
+        input_values2.push(input_values[(board_size + 2) * (board_size + 2) - id - 1]);
       }
-      for (let id = 0; id < board_size * board_size; id++) {
-        input_values2.push(input_values[2 * board_size * board_size - id - 1]);
+      for (let id = 0; id < (board_size + 2) * (board_size + 2); id++) {
+        input_values2.push(input_values[2 * (board_size + 2) * (board_size + 2) - id - 1]);
       }
 
       const outputTensor = await this.evalModel(input_values);
       const outputTensor2 = await this.evalModel(input_values2);
       let average_output = [];
       for (let id = 0; id < board_size * board_size; id++) {
-        average_output.push((outputTensor[id] + outputTensor2[board_size * board_size - id - 1])/2);
+        average_output.push((outputTensor[id] + outputTensor2[board_size * board_size - id - 1]) / 2);
       }
 
       let final_output = [];

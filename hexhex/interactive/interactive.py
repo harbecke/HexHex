@@ -14,7 +14,7 @@ class InteractiveGame:
 
     def __init__(self, config):
         self.config = config
-        self.model = load_model(f'models/{self.config.get("INTERACTIVE", "model", fallback="11_2w4_1100")}.pt')
+        self.model = load_model(f'models/{self.config.get("INTERACTIVE", "model", fallback="11_2w4_2000")}.pt')
         self.switch_allowed = self.config.getboolean("INTERACTIVE", 'switch', fallback=True)
         self.board = Board(size=self.model.board_size, switch_allowed=self.switch_allowed)
         self.gui = Gui(self.board, self.config.getint("INTERACTIVE", 'gui_radius', fallback=50),
