@@ -54,7 +54,7 @@ def create_self_play_data(args, model, num_samples, verbose=True):
     position_generator = self_play_generator.position_generator()
 
     board_size = model.board_size
-    all_boards_tensor = torch.zeros((num_samples, 2, board_size, board_size), dtype=torch.float)
+    all_boards_tensor = torch.zeros((num_samples, 2, board_size+2, board_size+2), dtype=torch.float)
     all_moves = torch.zeros((num_samples, 1), dtype=torch.long)
     all_results = torch.zeros(num_samples, dtype=torch.float)
 
@@ -67,7 +67,7 @@ def create_self_play_data(args, model, num_samples, verbose=True):
     if verbose:
         def k_th_move_idx(k):
             return [idx for idx in range(all_boards_tensor.shape[0]) if np.ceil(torch.sum(
-                all_boards_tensor[idx])) == k]
+                all_boards_tensor[idx, :, 1:-1, 1:-1])) == k]
 
         first_move_indices = k_th_move_idx(0)
         first_move_frequency = torch.zeros([board_size ** 2], dtype=torch.float)

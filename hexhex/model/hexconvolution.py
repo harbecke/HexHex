@@ -30,14 +30,14 @@ class Conv(nn.Module):
     def __init__(self, board_size, layers, intermediate_channels, reach, export_mode):
         super(Conv, self).__init__()
         self.board_size = board_size
-        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=2*reach+1, padding=reach)
+        self.conv = nn.Conv2d(2, intermediate_channels, kernel_size=2*reach+1, padding=reach-1)
         self.skiplayers = nn.ModuleList([SkipLayerBias(intermediate_channels, 1) for idx in range(layers)])
         self.policyconv = nn.Conv2d(intermediate_channels, 1, kernel_size=2*reach+1, padding=reach, bias=False)
         self.bias = nn.Parameter(torch.zeros(board_size**2))
         self.export_mode = export_mode
 
     def forward(self, x):
-        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
+        x_sum = torch.sum(x[:, :, 1:-1, 1:-1], dim=1).view(-1,self.board_size**2)
         x = self.conv(x)
         for skiplayer in self.skiplayers:
             x = skiplayer(x)
@@ -45,7 +45,7 @@ class Conv(nn.Module):
             return self.policyconv(x).view(-1, self.board_size ** 2) + self.bias
         #  illegal moves are given a huge negative bias, so they are never selected for play
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
-        return self.policyconv(x).view(-1, self.board_size**2) - illegal + self.bias
+        return self.policyconv(x).view(-1, self.board_size**2) + self.bias - illegal
 
 
 class RandomModel(nn.Module):
@@ -58,7 +58,7 @@ class RandomModel(nn.Module):
         self.board_size = board_size
 
     def forward(self, x):
-        x_sum = torch.sum(x, dim=1).view(-1,self.board_size**2)
+        x_sum = torch.sum(x[:, :, 1:-1, 1:-1], dim=1).view(-1,self.board_size**2)
         illegal = x_sum * torch.exp(torch.tanh((x_sum.sum(dim=1)-1)*1000)*10).unsqueeze(1).expand_as(x_sum) - x_sum
         return torch.rand_like(illegal) - illegal
 
@@ -73,7 +73,7 @@ class NoSwitchWrapperModel(nn.Module):
         self.internal_model = model
 
     def forward(self, x):
-        illegal = 1000*torch.sum(x, dim=1).view(-1,self.board_size**2)
+        illegal = 1000*torch.sum(x[:, :, 1:-1, 1:-1], dim=1).view(-1,self.board_size**2)
         return self.internal_model(x)-illegal
 
 
