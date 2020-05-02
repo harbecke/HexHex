@@ -2,6 +2,8 @@
 
 Reinforcement learning agent for the board game hex only trained by self-play.
 
+Play online! https://cleeff.github.io/hex/
+
 ![hexhex-game](hexhex.png "HexHex game Title Text 1")
 Finished game of HexHex. Red won because he connected the two red rows on the top and bottom.
 
