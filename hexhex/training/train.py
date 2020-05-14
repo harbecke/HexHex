@@ -66,7 +66,7 @@ class TrainingStats:
 
 
 def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_triple, config):
-    criterion = nn.MSELoss(reduction='sum')(pred, y)
+    criterion = nn.MSELoss(reduction='sum')
 
     def measure_loss(data_triple, eval_mode):
         def _measure_loss_impl(data_triple):
