@@ -61,9 +61,9 @@ def create_optimizer(optimizer_type, parameters, learning_rate, momentum, weight
         raise SystemExit
 
 
-def get_targets(boards, gamma):
-    target_list = [[0.5 + 0.5 * (-1) ** k * (1 - gamma) ** (2 * (k//2)) for k in reversed(range(len(
-        board.move_history)))] for board in boards]
+def get_targets(boards, gamma, gamma_max):
+    target_list = [[0.5 + 0.5 * (-1) ** k * (1 - gamma * (min(gamma_max, k//2)))
+        for k in reversed(range(len(board.move_history)))] for board in boards]
     return torch.tensor(zip_list_of_lists(*target_list), device=torch.device('cpu'))
 
 
