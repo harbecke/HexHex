@@ -44,7 +44,8 @@ class RepeatedSelfTrainer:
         self.reference_models = load_reference_models(self.config)
 
     def get_model_name(self, i):
-        return '%s_%04d' % (self.model_name, i)
+        #return '%s_%04d' % (self.model_name, i)
+        return self.model_name
 
     def get_data_files(self, i):
         return [self.get_model_name(idx) for idx in range(i)]
@@ -76,7 +77,7 @@ class RepeatedSelfTrainer:
                 val_samples_per_model] = new_val_triple[idx]
         self.train_model(self.get_model_name(i-1), self.get_model_name(i), self.training_data,
             self.validation_data)
-        self.model_names.append(self.get_model_name(i))
+        #self.model_names.append(self.get_model_name(i))
         #self.create_all_elo_ratings()
         self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True)
 
