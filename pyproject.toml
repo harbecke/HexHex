@@ -5,8 +5,8 @@ description = "Reinforcement learning agent for the board game Hex"
 readme = "readme.md"
 requires-python = ">=3.10"
 dependencies = [
-    "torch>=1.13.0,<2.3.0",
-    "numpy<2",
+    "torch>=1.13.0,<2.3.0", # specific range for macos x86_64 support.
+    "numpy<2", # Also macos x86_64 issue, maybe can be worked around.
     "pygame",
     "tensorboard",
     "scikit-optimize",
@@ -15,6 +15,7 @@ dependencies = [
     "image",
     "future",
     "scikit-learn",
+    "setuptools<70", # Old version for tensorboard to work.
 ]
 
 [build-system]
