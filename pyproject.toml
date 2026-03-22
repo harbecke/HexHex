@@ -16,6 +16,8 @@ dependencies = [
     "future",
     "scikit-learn",
     "setuptools<70", # Old version for tensorboard to work.
+    "onnx>=1.19.0",
+    "ml-dtypes>=0.4.1", # This version is needed for onnx to work properly.
 ]
 
 [build-system]
@@ -35,4 +37,5 @@ pythonpath = ["."]
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "onnxruntime>=1.24.3",
 ]
