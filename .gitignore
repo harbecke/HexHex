@@ -1,18 +1,27 @@
+# IDEs and editors
 .idea/
 .ipynb_checkpoints/
-__pycache__/
-runs/
 
-*.ipynb
+# Python environment and build
+__pycache__/
+.venv/
+*.egg-info/
+
+# Logs and training output
+runs/
 *.log
 *.profile
 
+# Jupyter notebooks
+*.ipynb
+
+# Local configuration and game results
 config.ini
 bo_results.p
 ratings.txt
 game_history.pgn
-
-Pipfile
-
 bo_parameters.json
 reference_models.json
+
+# Legacy dependency management
+Pipfile

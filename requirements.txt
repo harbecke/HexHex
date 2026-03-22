@@ -1,9 +1,0 @@
-jupyter
-matplotlib
-pygame
-numpy
-image
-torch
-tb-nightly
-future
-git+https://github.com/scikit-optimize/scikit-optimize@refs/pull/675/merge

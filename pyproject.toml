@@ -1,0 +1,32 @@
+[project]
+name = "hexhex"
+version = "0.1.0"
+description = "Reinforcement learning agent for the board game Hex"
+readme = "readme.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=1.13.0,<2.3.0",
+    "numpy<2",
+    "pygame",
+    "tensorboard",
+    "scikit-optimize",
+    "matplotlib",
+    "jupyter",
+    "image",
+    "future",
+    "scikit-learn",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["hexhex*"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
