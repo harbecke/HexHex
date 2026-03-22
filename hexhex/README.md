@@ -71,6 +71,12 @@ To load the AI into hexgui:
     ```
 3.  Connect via `Program -> connect local program`.
 
+### Testing
+We use [pytest](https://docs.pytest.org/) for unit and integration testing. Run the test suite using:
+```bash
+uv run pytest
+```
+
 ## Features
 
 * board representation with logic + switch rule
