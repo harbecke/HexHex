@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 HexHex is a reinforcement learning agent for the board game Hex, trained via self-play without MCTS (unlike AlphaGo Zero). The project has two components:
 - **Python backend** (`hexhex/`): RL training pipeline, game logic, neural network
 - **React frontend** (`app/`): Browser-based UI using ONNX.js for in-browser inference
+- **E2E tests** (`tests/app_e2e/`): Playwright smoke tests for the frontend
 
 Live demo: https://cleeff.github.io/hex/
 
@@ -28,6 +29,15 @@ npm start        # Dev server
 npm run build    # Production build
 npm test         # Run tests
 ```
+
+### Playwright E2E (root)
+```bash
+npm install                  # Install Playwright and deps (run once)
+npx playwright install       # Install browser binaries (run once)
+npx playwright test          # Run smoke tests against app/build/
+```
+
+Tests live in `tests/app_e2e/` and require a production build (`npm run build` inside `app/`) to exist at `app/build/index.html`. Screenshots are written to `tests/app_e2e/screenshots/` (gitignored).
 
 ### Linting
 Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint command is defined; use `uv run ruff check .` if needed.

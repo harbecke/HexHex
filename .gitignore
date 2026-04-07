@@ -25,3 +25,8 @@ reference_models.json
 
 # Legacy dependency management
 Pipfile
+
+# JavaScript / Playwright
+node_modules/
+test-results/
+tests/app_e2e/screenshots/
