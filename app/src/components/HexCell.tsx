@@ -19,13 +19,24 @@ interface HexCellProps {
   cellId: number;
   score: number | null;
   showScore: boolean;
+  allowScoreOnOccupied?: boolean;
   onClick?: (id: number) => void;
   "data-cell-id"?: number;
 }
 
-export default function HexCell({ cx, cy, cell, cellId, score, showScore, onClick }: HexCellProps) {
+export default function HexCell({
+  cx,
+  cy,
+  cell,
+  cellId,
+  score,
+  showScore,
+  allowScoreOnOccupied = false,
+  onClick,
+}: HexCellProps) {
   const fill = cell ? FILL[cell] : FILL.empty;
-  const label = showScore && score !== null && cell === null ? score.toFixed(1) : "";
+  const showLabel = showScore && score !== null && (cell === null || allowScoreOnOccupied);
+  const label = showLabel ? score.toFixed(1) : "";
 
   return (
     <g

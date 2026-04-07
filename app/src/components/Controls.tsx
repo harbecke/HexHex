@@ -3,6 +3,7 @@ interface ControlsProps {
   status: "idle" | "thinking" | "gameover";
   winner: "0" | "1" | null;
   agentIsBlue: boolean;
+  aiSwapped: boolean;
   onToggleRatings: () => void;
   onReset: () => void;
 }
@@ -12,6 +13,7 @@ export default function Controls({
   status,
   winner,
   agentIsBlue,
+  aiSwapped,
   onToggleRatings,
   onReset,
 }: ControlsProps) {
@@ -33,6 +35,18 @@ export default function Controls({
       {statusText && (
         <span data-testid="status" style={{ fontWeight: "bold" }}>
           {statusText}
+        </span>
+      )}
+      {aiSwapped && (
+        <span data-testid="ai-swapped" style={{ color: "#444" }}>
+          AI used the swap (pie) rule.{" "}
+          <a
+            href="https://en.wikipedia.org/wiki/Pie_rule"
+            target="_blank"
+            rel="noreferrer"
+          >
+            What is this?
+          </a>
         </span>
       )}
     </div>

@@ -36,6 +36,7 @@ export default function App() {
         status={state.status}
         winner={state.winner}
         agentIsBlue={state.agentIsBlue}
+        aiSwapped={state.aiSwapped}
         onToggleRatings={() => dispatch({ type: "TOGGLE_RATINGS" })}
         onReset={() => dispatch({ type: "RESET" })}
       />
@@ -44,6 +45,7 @@ export default function App() {
         cells={state.cells}
         modelScores={state.modelScores}
         showRatings={state.showRatings}
+        aiSwapped={state.aiSwapped}
         status={state.status}
         onCellClick={handleCellClick}
       />

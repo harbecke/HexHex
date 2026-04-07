@@ -55,12 +55,22 @@ interface HexBoardProps {
   cells: Cell[];
   modelScores: (number | null)[];
   showRatings: boolean;
+  aiSwapped: boolean;
   status: "idle" | "thinking" | "gameover";
   onCellClick: (id: number) => void;
 }
 
-export default function HexBoard({ cells, modelScores, showRatings, status, onCellClick }: HexBoardProps) {
+export default function HexBoard({
+  cells,
+  modelScores,
+  showRatings,
+  aiSwapped,
+  status,
+  onCellClick,
+}: HexBoardProps) {
   const canClick = status === "idle";
+  const numMoves = cells.filter((c) => c !== null).length;
+  const allowScoreOnOccupied = aiSwapped && numMoves === 1;
 
   // Compute SVG viewBox from all rendered hex centers (board + borders).
   const borderCenters = Array.from({ length: BOARD_SIZE }, (_, i) => [
@@ -113,6 +123,7 @@ export default function HexBoard({ cells, modelScores, showRatings, status, onCe
               cellId={id}
               score={modelScores[id]}
               showScore={showRatings}
+              allowScoreOnOccupied={allowScoreOnOccupied}
               onClick={canClick ? onCellClick : undefined}
             />
           );
