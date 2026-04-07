@@ -1,22 +1,22 @@
 import { defineConfig } from "@playwright/test";
-import path from "path";
 
 export default defineConfig({
   testDir: "./tests/app_e2e",
-  timeout: 30_000,
+  timeout: 60_000,
   use: {
+    baseURL: "http://localhost:4173",
     screenshot: "off",
   },
   projects: [
     {
       name: "chromium",
-      use: {
-        browserName: "chromium",
-        // Allow file:// access and local resource loading
-        launchOptions: {
-          args: ["--allow-file-access-from-files"],
-        },
-      },
+      use: { browserName: "chromium" },
     },
   ],
+  webServer: {
+    command: "npm run preview --prefix app",
+    url: "http://localhost:4173",
+    reuseExistingServer: !process.env["CI"],
+    timeout: 30_000,
+  },
 });

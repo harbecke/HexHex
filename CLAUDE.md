@@ -25,19 +25,20 @@ uv run tensorboard.main --logdir runs/                      # Visualize training
 
 ### JavaScript (Frontend — app/)
 ```bash
-npm start        # Dev server
-npm run build    # Production build
-npm test         # Run tests
+npm run dev      # Dev server (http://localhost:5173)
+npm run build    # Production build → app/build/
+npm test         # Run Vitest unit tests
+npm run preview  # Serve production build locally (http://localhost:4173)
 ```
 
-### Playwright E2E (root)
+### Playwright E2E (root — run by human, not Claude)
 ```bash
 npm install                  # Install Playwright and deps (run once)
 npx playwright install       # Install browser binaries (run once)
-npx playwright test          # Run smoke tests against app/build/
+npx playwright test          # Run smoke tests (starts vite preview automatically)
 ```
 
-Tests live in `tests/app_e2e/` and require a production build (`npm run build` inside `app/`) to exist at `app/build/index.html`. Screenshots are written to `tests/app_e2e/screenshots/` (gitignored).
+Tests live in `tests/app_e2e/`. Screenshots written to `tests/app_e2e/screenshots/` (gitignored). Requires a production build (`npm run build` inside `app/`) first.
 
 ### Linting
 Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint command is defined; use `uv run ruff check .` if needed.
@@ -77,7 +78,12 @@ Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint co
 
 **`hexhex/export/onnx_export.py`** — Converts trained PyTorch model to ONNX for web deployment
 
-**`app/src/App.js`** — React frontend; loads ONNX model in-browser via onnxjs, renders 11×11 board with react-hexgrid, uses boardgame.io for state management
+**`app/src/`** — React frontend (Vite + React 19 + TypeScript)
+- `game/`: pure game logic (coords, rules, encoding) — fully unit-tested with Vitest
+- `ai/modelWorker.ts`: Web Worker that loads the ONNX model via `onnxruntime-web` and runs inference
+- `hooks/useAI.ts`: manages worker lifecycle, drives AI turn after player moves
+- `components/HexBoard.tsx`: plain SVG hex grid renderer (no third-party grid library)
+- `App.tsx`: `useReducer`-based game state, wires board + AI + controls together
 
 ### Configuration
 All training and model hyperparameters live in `config.ini`. Template with defaults is in `sample_files/config.ini`. Key sections: `[CREATE MODEL]`, `[CREATE DATA]`, `[TRAIN]`, `[REPEATED SELF TRAINING]`, `[ELO]`.
