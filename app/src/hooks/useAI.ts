@@ -19,6 +19,10 @@ function getWorker(): Worker {
   return workerInstance;
 }
 
+function createStateKey(state: GameState): string {
+  return `${state.agentIsBlue}|${state.cells.map((c) => c ?? "_").join("")}`;
+}
+
 export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
   // Keep a ref to the latest state so the callback doesn't need state as a dep
   // (prevents re-creating the callback — and re-triggering the effect — on every render)
@@ -31,7 +35,9 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
     if (pendingRef.current) return;
     pendingRef.current = true;
 
-    const { cells, agentIsBlue } = stateRef.current;
+    const snapshot = stateRef.current;
+    const { cells, agentIsBlue } = snapshot;
+    const requestStateKey = createStateKey(snapshot);
     const agentPlayer = agentIsBlue ? "1" : "0";
 
     // Check for a forced win first (synchronous, fast)
@@ -50,6 +56,10 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
       if (msg.type === "RESULT_PAIR") {
         worker.removeEventListener("message", onMessage);
         pendingRef.current = false;
+        if (createStateKey(stateRef.current) !== requestStateKey) {
+          // Ignore stale worker responses from a previous board state (e.g. reset/new game).
+          return;
+        }
 
         const scores = averageOutputs(msg.out1, msg.out2, agentIsBlue);
 
