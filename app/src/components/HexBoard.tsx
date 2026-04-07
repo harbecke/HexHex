@@ -3,11 +3,13 @@ import { posToId } from "../game/coords";
 import { Cell } from "../game/rules";
 import HexCell from "./HexCell";
 
-// Flat-top hex geometry
-// Horizontal spacing between hex centers
+// Pointy-top hex geometry
+// Horizontal center spacing between neighboring columns
 const HEX_W = Math.sqrt(3); // ≈ 1.732
-// Vertical spacing
+// Vertical center spacing between neighboring rows
 const HEX_H = 1.5;
+const HEX_HALF_WIDTH = Math.sqrt(3) / 2;
+const HEX_RADIUS = 1;
 
 // The board is sheared: row y is offset by y * HEX_W/2 to the right.
 function hexCenter(x: number, y: number): [number, number] {
@@ -33,8 +35,8 @@ function borderCenterRight(y: number): [number, number] {
 const RED_FILL = "rgb(251, 41, 67)";
 const BLUE_FILL = "rgb(6, 154, 243)";
 
-// Flat-top hex points (same as HexCell but inline for border cells)
-const ANGLES = [0, 60, 120, 180, 240, 300].map((d) => (d * Math.PI) / 180);
+// Pointy-top hex points (same as HexCell but inline for border cells)
+const ANGLES = [30, 90, 150, 210, 270, 330].map((d) => (d * Math.PI) / 180);
 const BORDER_POINTS = ANGLES.map((a) => `${Math.cos(a).toFixed(4)},${Math.sin(a).toFixed(4)}`).join(" ");
 
 function BorderHex({ cx, cy, fill }: { cx: number; cy: number; fill: string }) {
@@ -60,12 +62,22 @@ interface HexBoardProps {
 export default function HexBoard({ cells, modelScores, showRatings, status, onCellClick }: HexBoardProps) {
   const canClick = status === "idle";
 
-  // Compute SVG viewBox to fit board + borders
-  const [minCx] = borderCenterLeft(0);
-  const [maxCx] = borderCenterRight(0);
-  const [, minCy] = borderCenterTop(0);
-  const [, maxCy] = borderCenterBottom(0);
-  const pad = 1.2;
+  // Compute SVG viewBox from all rendered hex centers (board + borders).
+  const borderCenters = Array.from({ length: BOARD_SIZE }, (_, i) => [
+    borderCenterTop(i),
+    borderCenterBottom(i),
+    borderCenterLeft(i),
+    borderCenterRight(i),
+  ]).flat();
+  const playCenters = Array.from({ length: BOARD_SIZE }, (_, y) =>
+    Array.from({ length: BOARD_SIZE }, (_, x) => hexCenter(x, y))
+  ).flat();
+  const allCenters = [...borderCenters, ...playCenters];
+  const minCx = Math.min(...allCenters.map(([cx]) => cx)) - HEX_HALF_WIDTH;
+  const maxCx = Math.max(...allCenters.map(([cx]) => cx)) + HEX_HALF_WIDTH;
+  const minCy = Math.min(...allCenters.map(([, cy]) => cy)) - HEX_RADIUS;
+  const maxCy = Math.max(...allCenters.map(([, cy]) => cy)) + HEX_RADIUS;
+  const pad = 0.25;
   const vx = minCx - pad;
   const vy = minCy - pad;
   const vw = maxCx - minCx + 2 * pad;
@@ -74,7 +86,7 @@ export default function HexBoard({ cells, modelScores, showRatings, status, onCe
   return (
     <svg
       data-testid="hex-board"
-      viewBox={`${vx.toFixed(2)} ${vy.toFixed(2)} ${vw.toFixed(2)} ${vh.toFixed(2)}`}
+      viewBox={`${vx} ${vy} ${vw} ${vh}`}
       style={{ width: "100%", maxWidth: 900, display: "block", margin: "0 auto" }}
     >
       {/* Border hexagons */}

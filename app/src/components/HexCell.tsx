@@ -1,8 +1,8 @@
 import { Cell } from "../game/rules";
 
-// Flat-top hexagon with unit circumradius.
-// Six vertices at angles 0°, 60°, 120°, 180°, 240°, 300°.
-const ANGLES = [0, 60, 120, 180, 240, 300].map((d) => (d * Math.PI) / 180);
+// Pointy-top hexagon with unit circumradius.
+// Rotated by 30° so center spacing in HexBoard tiles edge-to-edge.
+const ANGLES = [30, 90, 150, 210, 270, 330].map((d) => (d * Math.PI) / 180);
 const R = 1; // circumradius
 const POINTS = ANGLES.map((a) => `${(R * Math.cos(a)).toFixed(4)},${(R * Math.sin(a)).toFixed(4)}`).join(" ");
 
