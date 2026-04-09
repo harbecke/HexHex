@@ -57,6 +57,7 @@ interface HexBoardProps {
   showRatings: boolean;
   aiSwapped: boolean;
   status: "idle" | "thinking" | "gameover";
+  winningPath: Set<number> | null;
   onCellClick: (id: number) => void;
 }
 
@@ -66,6 +67,7 @@ export default function HexBoard({
   showRatings,
   aiSwapped,
   status,
+  winningPath,
   onCellClick,
 }: HexBoardProps) {
   const canClick = status === "idle";
@@ -124,6 +126,7 @@ export default function HexBoard({
               score={modelScores[id]}
               showScore={showRatings}
               allowScoreOnOccupied={allowScoreOnOccupied}
+              isOnWinningPath={winningPath?.has(id) ?? false}
               onClick={canClick ? onCellClick : undefined}
             />
           );

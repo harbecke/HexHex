@@ -5,6 +5,8 @@ import { Cell } from "../game/rules";
 const ANGLES = [30, 90, 150, 210, 270, 330].map((d) => (d * Math.PI) / 180);
 const R = 1; // circumradius
 const POINTS = ANGLES.map((a) => `${(R * Math.cos(a)).toFixed(4)},${(R * Math.sin(a)).toFixed(4)}`).join(" ");
+const R_INNER = 0.45;
+const INNER_POINTS = ANGLES.map((a) => `${(R_INNER * Math.cos(a)).toFixed(4)},${(R_INNER * Math.sin(a)).toFixed(4)}`).join(" ");
 
 const FILL: Record<string, string> = {
   "0": "rgb(251, 41, 67)",  // red player
@@ -20,6 +22,7 @@ interface HexCellProps {
   score: number | null;
   showScore: boolean;
   allowScoreOnOccupied?: boolean;
+  isOnWinningPath?: boolean;
   onClick?: (id: number) => void;
   "data-cell-id"?: number;
 }
@@ -32,6 +35,7 @@ export default function HexCell({
   score,
   showScore,
   allowScoreOnOccupied = false,
+  isOnWinningPath = false,
   onClick,
 }: HexCellProps) {
   const fill = cell ? FILL[cell] : FILL.empty;
@@ -52,6 +56,15 @@ export default function HexCell({
         stroke="black"
         strokeWidth={0.08}
       />
+      {isOnWinningPath && (
+        <polygon
+          points={INNER_POINTS}
+          fill="white"
+          fillOpacity={0.55}
+          stroke="none"
+          style={{ pointerEvents: "none" }}
+        />
+      )}
       {label && (
         <text
           fontSize={0.35}

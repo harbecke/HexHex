@@ -1,6 +1,7 @@
 import { useReducer } from "react";
 import { gameReducer, initialState } from "./game/state";
 import { useAI } from "./hooks/useAI";
+import { findWinningPath } from "./game/rules";
 import HexBoard from "./components/HexBoard";
 import Controls from "./components/Controls";
 
@@ -8,6 +9,9 @@ export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
 
   useAI(state, dispatch);
+
+  const winningPath =
+    state.winner !== null ? findWinningPath(state.cells, state.winner) : null;
 
   function handleCellClick(id: number) {
     const numMoves = state.cells.filter((c) => c !== null).length;
@@ -47,6 +51,7 @@ export default function App() {
         showRatings={state.showRatings}
         aiSwapped={state.aiSwapped}
         status={state.status}
+        winningPath={winningPath}
         onCellClick={handleCellClick}
       />
     </div>

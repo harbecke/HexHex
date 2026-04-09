@@ -30,6 +30,48 @@ export function hasWinner(cells: Cell[]): boolean {
 }
 
 /**
+ * Returns the set of cell ids forming a winning path for `player`, or null if none exists.
+ * Uses BFS with parent tracking to reconstruct a shortest path.
+ */
+export function findWinningPath(cells: Cell[], player: Player): Set<number> | null {
+  const start = PLAYER_STARTS[player];
+  const target = PLAYER_TARGETS[player];
+  // parent maps each visited node to the node it was reached from; start maps to itself as sentinel
+  const parent = new Map<VirtualNode, VirtualNode>();
+  parent.set(start, start);
+  const queue: VirtualNode[] = [start];
+
+  let found = false;
+  outer: while (queue.length > 0) {
+    const node = queue.shift()!;
+    for (const nb of fullNeighbors(node)) {
+      if (parent.has(nb)) continue;
+      if (nb === target) {
+        parent.set(nb, node);
+        found = true;
+        break outer;
+      }
+      if (typeof nb === "string") continue;
+      if (cells[nb] === player) {
+        parent.set(nb, node);
+        queue.push(nb);
+      }
+    }
+  }
+
+  if (!found) return null;
+
+  const path = new Set<number>();
+  let cur: VirtualNode = target;
+  while (cur !== start) {
+    const prev = parent.get(cur)!;
+    if (typeof cur === "number") path.add(cur);
+    cur = prev;
+  }
+  return path;
+}
+
+/**
  * Minimax endgame solver.
  * Returns [score, bestMove]:  +1 = red wins, -1 = blue wins, 0 = unknown at this depth.
  */
