@@ -31,3 +31,4 @@ node_modules/
 app/dist-types/
 test-results/
 tests/app_e2e/screenshots/
+.DS_Store
