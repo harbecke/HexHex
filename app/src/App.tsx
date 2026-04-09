@@ -4,6 +4,7 @@ import { useAI } from "./hooks/useAI";
 import { findWinningPath } from "./game/rules";
 import HexBoard from "./components/HexBoard";
 import Controls from "./components/Controls";
+import PlayerSetup from "./components/PlayerSetup";
 
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
@@ -35,25 +36,39 @@ export default function App() {
         </p>
       </header>
 
-      <Controls
-        showRatings={state.showRatings}
-        status={state.status}
-        winner={state.winner}
-        agentIsBlue={state.agentIsBlue}
-        aiSwapped={state.aiSwapped}
-        onToggleRatings={() => dispatch({ type: "TOGGLE_RATINGS" })}
-        onReset={() => dispatch({ type: "RESET" })}
-      />
+      {state.status === "setup" ? (
+        <PlayerSetup
+          defaultRedIsHuman={state.redIsHuman}
+          defaultBlueIsHuman={state.blueIsHuman}
+          onStart={(redIsHuman, blueIsHuman) =>
+            dispatch({ type: "START_GAME", redIsHuman, blueIsHuman })
+          }
+        />
+      ) : (
+        <>
+          <Controls
+            showRatings={state.showRatings}
+            status={state.status}
+            winner={state.winner}
+            redIsHuman={state.redIsHuman}
+            blueIsHuman={state.blueIsHuman}
+            agentIsBlue={state.agentIsBlue}
+            aiSwapped={state.aiSwapped}
+            onToggleRatings={() => dispatch({ type: "TOGGLE_RATINGS" })}
+            onReset={() => dispatch({ type: "RESET" })}
+          />
 
-      <HexBoard
-        cells={state.cells}
-        modelScores={state.modelScores}
-        showRatings={state.showRatings}
-        aiSwapped={state.aiSwapped}
-        status={state.status}
-        winningPath={winningPath}
-        onCellClick={handleCellClick}
-      />
+          <HexBoard
+            cells={state.cells}
+            modelScores={state.modelScores}
+            showRatings={state.showRatings}
+            aiSwapped={state.aiSwapped}
+            status={state.status}
+            winningPath={winningPath}
+            onCellClick={handleCellClick}
+          />
+        </>
+      )}
     </div>
   );
 }

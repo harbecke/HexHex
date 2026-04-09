@@ -2,6 +2,8 @@ interface ControlsProps {
   showRatings: boolean;
   status: "idle" | "thinking" | "gameover";
   winner: "0" | "1" | null;
+  redIsHuman: boolean;
+  blueIsHuman: boolean;
   agentIsBlue: boolean;
   aiSwapped: boolean;
   onToggleRatings: () => void;
@@ -12,7 +14,8 @@ export default function Controls({
   showRatings,
   status,
   winner,
-  agentIsBlue,
+  redIsHuman,
+  blueIsHuman,
   aiSwapped,
   onToggleRatings,
   onReset,
@@ -20,8 +23,14 @@ export default function Controls({
   let statusText = "";
   if (status === "thinking") statusText = "Agent is thinking…";
   if (status === "gameover" && winner !== null) {
-    const humanPlayer = agentIsBlue ? "0" : "1";
-    statusText = winner === humanPlayer ? "You win!" : "Agent wins!";
+    const isMixed = redIsHuman !== blueIsHuman; // exactly one human
+    if (isMixed) {
+      const humanIsRed = redIsHuman;
+      const humanWon = (winner === "0") === humanIsRed;
+      statusText = humanWon ? "You win!" : "Agent wins!";
+    } else {
+      statusText = winner === "0" ? "Red wins!" : "Blue wins!";
+    }
   }
 
   return (
