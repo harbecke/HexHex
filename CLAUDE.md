@@ -85,8 +85,62 @@ Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint co
 - `components/HexBoard.tsx`: plain SVG hex grid renderer (no third-party grid library)
 - `App.tsx`: `useReducer`-based game state, wires board + AI + controls together
 
+### Frontend: hex geometry
+
+Hexagons are **pointy-top** with circumradius 1. Cell centers are computed by `hexCenter(x, y)` in `HexBoard.tsx`:
+
+```
+cx = (x + 0.5) * √3  +  y * (√3 / 2)   // columns spaced √3 apart, rows sheared right
+cy = (y + 0.5) * 1.5                      // rows spaced 1.5 apart
+```
+
+The shear (`y * √3/2`) is what gives the board its parallelogram shape — each row is offset half a hex-width to the right relative to the row above. Coordinates are in SVG user units where circumradius = 1; the SVG `viewBox` is computed dynamically from all hex centers plus their radii.
+
+Cell ids use `posToId(x, y) = x + BOARD_SIZE * y` (row-major with x = column, y = row). Board origin is top-left; x increases right, y increases down.
+
+### Frontend: board encoding for ONNX inference
+
+The model always runs from the perspective of the **current agent as red** (trained with red going top↔bottom). The encoding in `game/encoding.ts` handles the perspective flip:
+
+- **Agent is red** (`agentIsBlue = false`): loop is **y-major** (outer = y, inner = x). Channel 0 = agent (red) stones + red borders lit; channel 1 = opponent (blue) stones + blue borders lit. Model output element `k` → cell `posToId(k % 11, k ÷ 11)`. No re-indexing needed.
+
+- **Agent is blue** (`agentIsBlue = true`): loop is **x-major** (outer = x, inner = y), which transposes the board so the blue agent's left↔right connectivity maps to the model's top↔bottom. Channel 0 = agent (blue) stones + blue borders lit. Model output element `k` → cell at `(k ÷ 11, k % 11)` in x-major order, which must be transposed back: `scores[x + 11*y] = avg[x*11 + y]`.
+
+**Rotation invariance**: `encodeBoard` returns both `input1` (original) and `input2` (180° rotation = per-channel element reversal). The worker runs both through the model sequentially (ORT WASM is single-threaded) and `averageOutputs` averages them — `avg[i] = (out1[i] + out2[n-1-i]) / 2` — then applies the blue transpose if needed.
+
+**Border padding**: The 11×11 board is encoded as 13×13 with a 1-cell border. Border cells are not zero — they encode the connectivity of each player's goal edges, which helps the CNN learn win conditions without seeing the literal graph structure.
+
+### Frontend: worker protocol
+
+`ai/modelWorker.ts` is a module Web Worker (bundled separately by Vite via `?worker` URL). The main thread sends a single message type:
+
+```
+→ INFER_PAIR  { input1: Float32Array, input2: Float32Array, boardSize: number, modelUrl: string }
+← RESULT_PAIR { out1: Float32Array, out2: Float32Array }   // buffers transferred (zero-copy)
+← ERROR       { message: string }
+```
+
+The model URL must be an absolute URL resolved on the main thread (`document.baseURI`) because the worker's `import.meta.url` resolves relative URLs against the worker bundle in `assets/`, not the page root where the `.onnx` file lives.
+
+Session loading is deduped: `ensureLoaded` uses a module-level promise so concurrent messages during cold-start share one load.
+
+### Frontend: game state machine
+
+`gameReducer` in `game/state.ts` drives all state transitions:
+
+```
+idle  ──PLAYER_MOVE──►  thinking  ──AI_MOVE / AI_SURE_WIN──►  idle
+                                                             └──► gameover (if winner)
+```
+
+`useAI` (`hooks/useAI.ts`) observes `status === "thinking"` and drives the AI turn: it first runs `findSureWinMove` synchronously (minimax depth 1 then 3); if no forced win is found, it encodes the board and posts to the worker. Stale worker responses (e.g. after a game reset) are discarded by comparing a `stateKey` snapshot taken at request time against the current state when the response arrives.
+
+### Frontend: pie rule (swap rule)
+
+After the human's first stone, clicking that same occupied cell triggers `SWAP` — the human effectively takes the agent's perspective (colors flip). When the **AI** decides to swap (it evaluates whether the first stone is too strong), it returns the occupied cell id as its move; the reducer detects `cells[cellId] !== null` with `numMoves === 1` and flips `agentIsBlue` without placing a new stone. `aiSwapped` is set in state so the UI can inform the player.
+
 ### Configuration
 All training and model hyperparameters live in `config.ini`. Template with defaults is in `sample_files/config.ini`. Key sections: `[CREATE MODEL]`, `[CREATE DATA]`, `[TRAIN]`, `[REPEATED SELF TRAINING]`, `[ELO]`.
 
-### Board representation
+### Python board representation
 Input: 2-channel tensor (red stones, blue stones) with border padding to help convolutions handle edge conditions.
