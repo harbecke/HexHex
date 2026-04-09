@@ -50,7 +50,7 @@ export default function HexCell({
         points={POINTS}
         fill={fill}
         stroke="black"
-        strokeWidth={0.05}
+        strokeWidth={0.08}
       />
       {label && (
         <text

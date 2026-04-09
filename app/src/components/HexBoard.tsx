@@ -45,7 +45,7 @@ function BorderHex({ cx, cy, fill }: { cx: number; cy: number; fill: string }) {
       points={BORDER_POINTS}
       fill={fill}
       stroke="black"
-      strokeWidth={0.05}
+      strokeWidth={0.08}
       transform={`translate(${cx.toFixed(3)},${cy.toFixed(3)})`}
     />
   );
