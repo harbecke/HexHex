@@ -101,5 +101,5 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
     if (state.status === "thinking") {
       handleAITurn();
     }
-  }, [state.status, handleAITurn]);
+  }, [state.aiTurn, handleAITurn]); // aiTurn increments on every new AI turn, even in AI-vs-AI
 }

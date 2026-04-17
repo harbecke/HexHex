@@ -12,6 +12,7 @@ export interface GameState {
   modelScores: (number | null)[];
   showRatings: boolean;
   status: "setup" | "idle" | "thinking" | "gameover";
+  aiTurn: number; // increments every time an AI turn begins; drives useAI effect
 }
 
 export type GameAction =
@@ -35,6 +36,7 @@ export function initialState(): GameState {
     modelScores: Array<null>(NUM_CELLS).fill(null),
     showRatings: false,
     status: "setup",
+    aiTurn: 0,
   };
 }
 
@@ -52,32 +54,33 @@ function placeStone(state: GameState, cellId: number, player: Player): GameState
 }
 
 /**
- * After placing a stone, determine the next status and agentIsBlue.
+ * After placing a stone, determine the next status, agentIsBlue, and aiTurn.
  * nextPlayer is derived from the stone count: even → red ("0"), odd → blue ("1").
+ * aiTurn increments every time we enter "thinking", guaranteeing the useAI effect fires.
  */
 function afterMoveTransition(
   cells: Cell[],
   winner: Player | null,
   redIsHuman: boolean,
   blueIsHuman: boolean,
-  currentAgentIsBlue: boolean
-): Pick<GameState, "status" | "agentIsBlue"> {
-  if (winner) return { status: "gameover", agentIsBlue: currentAgentIsBlue };
+  currentAgentIsBlue: boolean,
+  currentAiTurn: number
+): Pick<GameState, "status" | "agentIsBlue" | "aiTurn"> {
+  if (winner) return { status: "gameover", agentIsBlue: currentAgentIsBlue, aiTurn: currentAiTurn };
   const numMoves = cells.filter((c) => c !== null).length;
   const nextPlayer: Player = numMoves % 2 === 0 ? "0" : "1";
   const nextIsHuman = nextPlayer === "0" ? redIsHuman : blueIsHuman;
   if (nextIsHuman) {
-    return { status: "idle", agentIsBlue: currentAgentIsBlue };
+    return { status: "idle", agentIsBlue: currentAgentIsBlue, aiTurn: currentAiTurn };
   }
-  return { status: "thinking", agentIsBlue: nextPlayer === "1" };
+  return { status: "thinking", agentIsBlue: nextPlayer === "1", aiTurn: currentAiTurn + 1 };
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "START_GAME": {
       const { redIsHuman, blueIsHuman } = action;
-      // Red always moves first; set agentIsBlue for the first thinking turn if red is AI
-      const agentIsBlue = redIsHuman; // AI is blue if red is human, AI is red (false) if red is AI
+      const agentIsBlue = redIsHuman; // false when red is AI (AI plays red), true when blue is AI
       const status = redIsHuman ? "idle" : "thinking";
       return {
         ...initialState(),
@@ -86,6 +89,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         agentIsBlue,
         showRatings: state.showRatings,
         status,
+        aiTurn: status === "thinking" ? 1 : 0,
       };
     }
 
@@ -96,7 +100,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const currentPlayer: Player = numMoves % 2 === 0 ? "0" : "1";
       const next = placeStone({ ...state, aiSwapped: false }, action.cellId, currentPlayer);
       const transition = afterMoveTransition(
-        next.cells, next.winner, state.redIsHuman, state.blueIsHuman, state.agentIsBlue
+        next.cells, next.winner, state.redIsHuman, state.blueIsHuman, state.agentIsBlue, state.aiTurn
       );
       return { ...next, ...transition };
     }
@@ -106,7 +110,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const newRedIsHuman = state.blueIsHuman;
       const newBlueIsHuman = state.redIsHuman;
       const newAgentIsBlue = !state.agentIsBlue;
-      // After swap, blue ("1") moves next; check if that player is now AI
       const status = newBlueIsHuman ? "idle" : "thinking";
       return {
         ...state,
@@ -115,6 +118,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         agentIsBlue: newAgentIsBlue,
         aiSwapped: false,
         status,
+        aiTurn: status === "thinking" ? state.aiTurn + 1 : state.aiTurn,
       };
     }
 
@@ -127,7 +131,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           const newRedIsHuman = state.blueIsHuman;
           const newBlueIsHuman = state.redIsHuman;
           const newAgentIsBlue = !state.agentIsBlue;
-          // After swap, blue ("1") moves next; check if that player is now AI
           const status = newBlueIsHuman ? "idle" : "thinking";
           return {
             ...state,
@@ -137,6 +140,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             aiSwapped: true,
             modelScores: scores,
             status,
+            aiTurn: status === "thinking" ? state.aiTurn + 1 : state.aiTurn,
           };
         }
         return state;
@@ -145,7 +149,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const scores = Array.from({ length: NUM_CELLS }, (_, i) => action.scores[i] ?? null);
       const next = placeStone({ ...state, modelScores: scores, aiSwapped: false }, action.cellId, agentPlayer);
       const transition = afterMoveTransition(
-        next.cells, next.winner, state.redIsHuman, state.blueIsHuman, state.agentIsBlue
+        next.cells, next.winner, state.redIsHuman, state.blueIsHuman, state.agentIsBlue, state.aiTurn
       );
       return { ...next, ...transition };
     }
@@ -158,7 +162,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         agentPlayer
       );
       const transition = afterMoveTransition(
-        next.cells, next.winner, state.redIsHuman, state.blueIsHuman, state.agentIsBlue
+        next.cells, next.winner, state.redIsHuman, state.blueIsHuman, state.agentIsBlue, state.aiTurn
       );
       return { ...next, ...transition };
     }
