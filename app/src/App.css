@@ -42,3 +42,107 @@ button {
 button:hover {
   background: #eee;
 }
+
+/* Player bar */
+.player-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.player-bar-vs {
+  display: flex;
+  align-items: center;
+  color: #888;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.player-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.9rem;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  min-width: 11rem;
+  opacity: 0.6;
+  transition: opacity 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.player-badge.active {
+  opacity: 1;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.player-badge.won {
+  opacity: 1;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
+}
+
+.player-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.player-text {
+  display: flex;
+  align-items: baseline;
+  line-height: 1.2;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.player-who {
+  color: #666;
+  font-weight: 400;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.controls-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.controls-status {
+  min-height: 1.5rem;
+}
+
+.controls-status-text {
+  font-weight: bold;
+}
+
+.temperature-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #444;
+}
+
+.temperature-control input[type="range"] {
+  width: 140px;
+}
+
+.swap-hint {
+  color: #444;
+  font-size: 0.9rem;
+}
+
+.swap-hint a {
+  color: #0066cc;
+}

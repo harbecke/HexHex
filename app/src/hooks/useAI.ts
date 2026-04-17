@@ -2,7 +2,8 @@ import { useEffect, useRef, useCallback } from "react";
 import { GameState, GameAction } from "../game/state";
 import { encodeBoard, averageOutputs } from "../game/encoding";
 import { findSureWinMove } from "../game/rules";
-import { NUM_CELLS, MODEL_FILENAME } from "../game/constants";
+import { selectMove } from "../game/selectMove";
+import { MODEL_FILENAME } from "../game/constants";
 
 function getModelUrl(): string {
   return new URL(MODEL_FILENAME, document.baseURI).href;
@@ -20,12 +21,10 @@ function getWorker(): Worker {
 }
 
 function createStateKey(state: GameState): string {
-  return `${state.agentIsBlue}|${state.cells.map((c) => c ?? "_").join("")}`;
+  return `${state.agentIsBlue}|${state.swapUsed ? "s" : "_"}|${state.cells.map((c) => c ?? "_").join("")}`;
 }
 
 export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
-  // Keep a ref to the latest state so the callback doesn't need state as a dep
-  // (prevents re-creating the callback — and re-triggering the effect — on every render)
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -36,11 +35,10 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
     pendingRef.current = true;
 
     const snapshot = stateRef.current;
-    const { cells, agentIsBlue } = snapshot;
+    const { cells, agentIsBlue, swapUsed, temperature } = snapshot;
     const requestStateKey = createStateKey(snapshot);
     const agentPlayer = agentIsBlue ? "1" : "0";
 
-    // Check for a forced win first (synchronous, fast)
     const sureWin = findSureWinMove(cells, agentPlayer);
     if (sureWin !== null) {
       pendingRef.current = false;
@@ -56,31 +54,16 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
       if (msg.type === "RESULT_PAIR") {
         worker.removeEventListener("message", onMessage);
         pendingRef.current = false;
-        if (createStateKey(stateRef.current) !== requestStateKey) {
-          // Ignore stale worker responses from a previous board state (e.g. reset/new game).
-          return;
-        }
+        if (createStateKey(stateRef.current) !== requestStateKey) return;
 
         const scores = averageOutputs(msg.out1, msg.out2, agentIsBlue);
-
-        let best = -1;
-        let bestScore = -Infinity;
         const numMoves = cells.filter((c) => c !== null).length;
-
-        for (let i = 0; i < NUM_CELLS; i++) {
-          if (numMoves > 1 && cells[i] !== null) continue;
-          if (scores[i] > bestScore) {
-            bestScore = scores[i];
-            best = i;
-          }
-        }
-
-        // Block human's sure-win if agent's best move allows it
-        const humanPlayer = agentIsBlue ? "0" : "1";
-        const testCells = cells.slice();
-        testCells[best] = agentPlayer as "0" | "1";
-        const humanWin = findSureWinMove(testCells, humanPlayer as "0" | "1");
-        const finalMove = humanWin !== null ? humanWin : best;
+        const canSwapNow = numMoves === 1 && !swapUsed;
+        const finalMove = selectMove(cells, scores, agentPlayer, {
+          temperature,
+          topK: 5,
+          canSwap: canSwapNow,
+        });
 
         dispatch({ type: "AI_MOVE", cellId: finalMove, scores });
       } else if (msg.type === "ERROR") {
@@ -95,11 +78,9 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
       { type: "INFER_PAIR", input1, input2, boardSize: 11, modelUrl: getModelUrl() },
       [input1.buffer, input2.buffer]
     );
-  }, [dispatch]); // dispatch is stable — callback never recreated
+  }, [dispatch]);
 
   useEffect(() => {
-    if (state.status === "thinking") {
-      handleAITurn();
-    }
-  }, [state.aiTurn, handleAITurn]); // aiTurn increments on every new AI turn, even in AI-vs-AI
+    if (state.status === "thinking") handleAITurn();
+  }, [state.aiTurn, handleAITurn]);
 }

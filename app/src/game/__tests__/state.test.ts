@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gameReducer, initialState, GameState } from "../state";
+import { gameReducer, initialState, canSwap, GameState } from "../state";
 import { NUM_CELLS } from "../constants";
 
 function dummyScores() {
@@ -74,5 +74,78 @@ describe("gameReducer player modes", () => {
     state = gameReducer(state, { type: "AI_MOVE", cellId: 0, scores: dummyScores() });
     expect(state.cells[0]).toBe("0");
     expect(state.status).toBe("idle");
+  });
+});
+
+describe("human swap (pie rule)", () => {
+  it("human blue can swap after AI red's first move", () => {
+    let state = gameReducer(initialState(), { type: "START_GAME", redIsHuman: false, blueIsHuman: true });
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 5, scores: dummyScores() });
+    expect(canSwap(state)).toBe(true);
+
+    state = gameReducer(state, { type: "SWAP" });
+
+    expect(state.redIsHuman).toBe(true);
+    expect(state.blueIsHuman).toBe(false);
+    expect(state.cells[5]).toBe("0"); // stone color unchanged on board
+    expect(state.swapUsed).toBe(true);
+    expect(state.status).toBe("thinking"); // AI now plays blue
+    expect(state.agentIsBlue).toBe(true);
+  });
+
+  it("SWAP is a no-op when swap is no longer available", () => {
+    let state = gameReducer(initialState(), { type: "START_GAME", redIsHuman: false, blueIsHuman: true });
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 5, scores: dummyScores() });
+    state = gameReducer(state, { type: "SWAP" });
+    const afterFirstSwap = state;
+
+    // Trying to swap again (e.g., AI returns occupied cell) should be blocked.
+    state = gameReducer(state, { type: "SWAP" });
+    expect(state).toBe(afterFirstSwap);
+  });
+
+  it("AI_MOVE double-swap is ignored", () => {
+    let state = gameReducer(initialState(), { type: "START_GAME", redIsHuman: false, blueIsHuman: true });
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 5, scores: dummyScores() });
+    state = gameReducer(state, { type: "SWAP" }); // human swap: red=human, blue=AI
+    const afterFirstSwap = state;
+
+    // AI tries to swap back by returning the occupied cell
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 5, scores: dummyScores() });
+    expect(state).toBe(afterFirstSwap);
+  });
+
+  it("canSwap becomes false once the second player plays a normal move", () => {
+    let state = gameReducer(initialState(), { type: "START_GAME", redIsHuman: true, blueIsHuman: true });
+    state = gameReducer(state, { type: "PLAYER_MOVE", cellId: 0 });
+    expect(canSwap(state)).toBe(true);
+    state = gameReducer(state, { type: "PLAYER_MOVE", cellId: 1 });
+    expect(canSwap(state)).toBe(false);
+    expect(state.swapUsed).toBe(true);
+  });
+});
+
+describe("temperature", () => {
+  it("defaults to DEFAULT_TEMPERATURE", () => {
+    const state = initialState();
+    expect(state.temperature).toBeGreaterThan(0);
+  });
+
+  it("SET_TEMPERATURE clamps to [0, 2]", () => {
+    let state = initialState();
+    state = gameReducer(state, { type: "SET_TEMPERATURE", value: -1 });
+    expect(state.temperature).toBe(0);
+    state = gameReducer(state, { type: "SET_TEMPERATURE", value: 5 });
+    expect(state.temperature).toBe(2);
+    state = gameReducer(state, { type: "SET_TEMPERATURE", value: 0.7 });
+    expect(state.temperature).toBeCloseTo(0.7);
+  });
+
+  it("RESET preserves temperature", () => {
+    let state = initialState();
+    state = gameReducer(state, { type: "SET_TEMPERATURE", value: 1.2 });
+    state = gameReducer(state, { type: "START_GAME", redIsHuman: true, blueIsHuman: false });
+    state = gameReducer(state, { type: "RESET" });
+    expect(state.temperature).toBeCloseTo(1.2);
   });
 });

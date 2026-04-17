@@ -62,6 +62,7 @@ function PlayerRow({ label, subtitle, color, isHuman, onChange }: PlayerRowProps
         <input
           type="radio"
           name={id}
+          value="human"
           checked={isHuman}
           onChange={() => onChange(true)}
           style={{ marginRight: 4 }}
@@ -72,6 +73,7 @@ function PlayerRow({ label, subtitle, color, isHuman, onChange }: PlayerRowProps
         <input
           type="radio"
           name={id}
+          value="ai"
           checked={!isHuman}
           onChange={() => onChange(false)}
           style={{ marginRight: 4 }}
