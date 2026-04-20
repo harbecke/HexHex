@@ -23,7 +23,7 @@ describe("selectMove", () => {
   it("picks argmax at temperature 0", () => {
     const cells = emptyBoard();
     const scores = scoresWithPeak(42, 5);
-    const move = selectMove(cells, scores, "0", { temperature: 0, topK: 5, canSwap: false });
+    const move = selectMove(cells, scores, "0", { temperature: 0, canSwap: false });
     expect(move).toBe(42);
   });
 
@@ -31,7 +31,7 @@ describe("selectMove", () => {
     const cells = emptyBoard();
     cells[10] = "0";
     const scores = scoresWithPeak(10, 100); // highest-scoring cell is occupied
-    const move = selectMove(cells, scores, "1", { temperature: 0, topK: 5, canSwap: false });
+    const move = selectMove(cells, scores, "1", { temperature: 0, canSwap: false });
     expect(move).not.toBe(10);
   });
 
@@ -39,14 +39,15 @@ describe("selectMove", () => {
     const cells = emptyBoard();
     cells[10] = "0";
     const scores = scoresWithPeak(10, 100);
-    const move = selectMove(cells, scores, "1", { temperature: 0, topK: 5, canSwap: true });
+    const move = selectMove(cells, scores, "1", { temperature: 0, canSwap: true });
     expect(move).toBe(10);
   });
 
   it("samples stochastically at positive temperature", () => {
     const cells = emptyBoard();
     const scores = new Float32Array(NUM_CELLS);
-    // Equal top-5 scores; sampling must distribute across them
+    // A few peaked cells, the rest zero; at temperature 1 the full-board
+    // softmax should spread picks across many cells, not just the peaks.
     scores[0] = 1;
     scores[1] = 1;
     scores[2] = 1;
@@ -55,11 +56,10 @@ describe("selectMove", () => {
 
     const seen = new Set<number>();
     for (let trial = 0; trial < 60; trial++) {
-      const move = selectMove(cells, scores, "0", { temperature: 1, topK: 5, canSwap: false });
+      const move = selectMove(cells, scores, "0", { temperature: 1, canSwap: false });
       seen.add(move);
     }
-    // With 60 samples uniformly over 5 candidates, we should visit all of them
-    expect(seen.size).toBeGreaterThanOrEqual(3);
+    expect(seen.size).toBeGreaterThanOrEqual(5);
   });
 
   it("blocks opponent's forced win instead of picking argmax", () => {
@@ -73,7 +73,7 @@ describe("selectMove", () => {
     const blockingCell = posToId(BOARD_SIZE - 1, 0);
 
     const scores = scoresWithPeak(60, 100); // irrelevant peak
-    const move = selectMove(cells, scores, "0", { temperature: 0, topK: 5, canSwap: false });
+    const move = selectMove(cells, scores, "0", { temperature: 0, canSwap: false });
     expect(move).toBe(blockingCell);
   });
 });

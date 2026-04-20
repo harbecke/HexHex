@@ -35,7 +35,8 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
     pendingRef.current = true;
 
     const snapshot = stateRef.current;
-    const { cells, agentIsBlue, swapUsed, temperature } = snapshot;
+    const { cells, agentIsBlue, swapUsed, redTemperature, blueTemperature } = snapshot;
+    const temperature = agentIsBlue ? blueTemperature : redTemperature;
     const requestStateKey = createStateKey(snapshot);
     const agentPlayer = agentIsBlue ? "1" : "0";
 
@@ -61,7 +62,6 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
         const canSwapNow = numMoves === 1 && !swapUsed;
         const finalMove = selectMove(cells, scores, agentPlayer, {
           temperature,
-          topK: 5,
           canSwap: canSwapNow,
         });
 

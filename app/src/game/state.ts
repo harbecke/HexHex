@@ -5,6 +5,11 @@ export interface GameState {
   cells: Cell[];
   redIsHuman: boolean;
   blueIsHuman: boolean;
+  /** Original config at START_GAME time; preserved across swap so RESTART restores it. */
+  setupRedIsHuman: boolean;
+  setupBlueIsHuman: boolean;
+  redTemperature: number;
+  blueTemperature: number;
   agentIsBlue: boolean;
   aiSwapped: boolean;
   swapUsed: boolean;
@@ -12,20 +17,27 @@ export interface GameState {
   lastMove: number | null;
   modelScores: (number | null)[];
   showRatings: boolean;
-  temperature: number;
   status: "setup" | "idle" | "thinking" | "gameover";
   aiTurn: number;
 }
 
 export type GameAction =
-  | { type: "START_GAME"; redIsHuman: boolean; blueIsHuman: boolean }
+  | {
+      type: "START_GAME";
+      redIsHuman: boolean;
+      blueIsHuman: boolean;
+      redTemperature: number;
+      blueTemperature: number;
+    }
   | { type: "PLAYER_MOVE"; cellId: number }
   | { type: "SWAP" }
   | { type: "AI_MOVE"; cellId: number; scores: Float32Array }
   | { type: "AI_SURE_WIN"; cellId: number }
   | { type: "TOGGLE_RATINGS" }
-  | { type: "SET_TEMPERATURE"; value: number }
-  | { type: "RESET" };
+  | { type: "SET_TEMPERATURE"; player: Player; value: number }
+  | { type: "RESET" }
+  | { type: "RESTART" }
+  | { type: "RESTORE"; state: GameState };
 
 export const DEFAULT_TEMPERATURE = 0.5;
 
@@ -34,6 +46,10 @@ export function initialState(): GameState {
     cells: Array<Cell>(NUM_CELLS).fill(null),
     redIsHuman: true,
     blueIsHuman: false,
+    setupRedIsHuman: true,
+    setupBlueIsHuman: false,
+    redTemperature: DEFAULT_TEMPERATURE,
+    blueTemperature: DEFAULT_TEMPERATURE,
     agentIsBlue: true,
     aiSwapped: false,
     swapUsed: false,
@@ -41,7 +57,6 @@ export function initialState(): GameState {
     lastMove: null,
     modelScores: Array<null>(NUM_CELLS).fill(null),
     showRatings: false,
-    temperature: DEFAULT_TEMPERATURE,
     status: "setup",
     aiTurn: 0,
   };
@@ -84,11 +99,6 @@ function afterMoveTransition(
   return { status: "thinking", agentIsBlue: nextPlayer === "1", aiTurn: currentAiTurn + 1 };
 }
 
-/**
- * Apply the pie-rule swap: the two players exchange human/AI roles while the
- * stone on the board stays put. Returns only the state fields that change —
- * callers merge this with any action-specific fields (e.g. aiSwapped, scores).
- */
 function applySwap(state: GameState): Pick<
   GameState,
   "redIsHuman" | "blueIsHuman" | "agentIsBlue" | "swapUsed" | "lastMove" | "status" | "aiTurn"
@@ -107,30 +117,48 @@ function applySwap(state: GameState): Pick<
   };
 }
 
+function startGame(
+  redIsHuman: boolean,
+  blueIsHuman: boolean,
+  redTemperature: number,
+  blueTemperature: number,
+  showRatings: boolean,
+  prevAiTurn: number
+): GameState {
+  const agentIsBlue = redIsHuman;
+  const status = redIsHuman ? "idle" : "thinking";
+  return {
+    ...initialState(),
+    redIsHuman,
+    blueIsHuman,
+    setupRedIsHuman: redIsHuman,
+    setupBlueIsHuman: blueIsHuman,
+    redTemperature,
+    blueTemperature,
+    agentIsBlue,
+    showRatings,
+    status,
+    aiTurn: status === "thinking" ? prevAiTurn + 1 : prevAiTurn,
+  };
+}
+
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
-    case "START_GAME": {
-      const { redIsHuman, blueIsHuman } = action;
-      const agentIsBlue = redIsHuman;
-      const status = redIsHuman ? "idle" : "thinking";
-      return {
-        ...initialState(),
-        redIsHuman,
-        blueIsHuman,
-        agentIsBlue,
-        showRatings: state.showRatings,
-        temperature: state.temperature,
-        status,
-        aiTurn: status === "thinking" ? 1 : 0,
-      };
-    }
+    case "START_GAME":
+      return startGame(
+        action.redIsHuman,
+        action.blueIsHuman,
+        action.redTemperature,
+        action.blueTemperature,
+        state.showRatings,
+        state.aiTurn
+      );
 
     case "PLAYER_MOVE": {
       if (state.status !== "idle") return state;
       if (state.cells[action.cellId] !== null) return state;
       const numMoves = state.cells.filter((c) => c !== null).length;
       const currentPlayer: Player = numMoves % 2 === 0 ? "0" : "1";
-      // Passing on swap counts as consuming the swap opportunity.
       const swapUsed = state.swapUsed || numMoves === 1;
       const next = placeStone(
         { ...state, aiSwapped: false, swapUsed },
@@ -152,7 +180,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const scores = Array.from({ length: NUM_CELLS }, (_, i) => action.scores[i] ?? null);
 
       if (state.cells[action.cellId] !== null) {
-        // AI chose the occupied cell: interpret as a swap.
         const numMoves = state.cells.filter((c) => c !== null).length;
         if (numMoves !== 1 || state.swapUsed) return state;
         return { ...state, ...applySwap(state), aiSwapped: true, modelScores: scores };
@@ -190,15 +217,31 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "TOGGLE_RATINGS":
       return { ...state, showRatings: !state.showRatings };
 
-    case "SET_TEMPERATURE":
-      return { ...state, temperature: Math.max(0, Math.min(2, action.value)) };
+    case "SET_TEMPERATURE": {
+      const key = action.player === "0" ? "redTemperature" : "blueTemperature";
+      return { ...state, [key]: Math.max(0, Math.min(2, action.value)) };
+    }
 
     case "RESET":
       return {
         ...initialState(),
         showRatings: state.showRatings,
-        temperature: state.temperature,
+        redTemperature: state.redTemperature,
+        blueTemperature: state.blueTemperature,
       };
+
+    case "RESTART":
+      return startGame(
+        state.setupRedIsHuman,
+        state.setupBlueIsHuman,
+        state.redTemperature,
+        state.blueTemperature,
+        state.showRatings,
+        state.aiTurn
+      );
+
+    case "RESTORE":
+      return action.state;
 
     default:
       return state;

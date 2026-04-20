@@ -16,8 +16,9 @@ function hexCenter(x: number, y: number): [number, number] {
   return [cx, cy];
 }
 
-const RED_FILL = "rgb(251, 41, 67)";
-const BLUE_FILL = "rgb(6, 154, 243)";
+const RED_FILL = "oklch(0.62 0.22 25)";
+const BLUE_FILL = "oklch(0.62 0.22 240)";
+const STROKE = "#0d0d12";
 
 const ANGLES = [30, 90, 150, 210, 270, 330].map((d) => (d * Math.PI) / 180);
 const BORDER_POINTS = ANGLES.map((a) => `${Math.cos(a).toFixed(4)},${Math.sin(a).toFixed(4)}`).join(" ");
@@ -27,8 +28,9 @@ function BorderHex({ cx, cy, fill }: { cx: number; cy: number; fill: string }) {
     <polygon
       points={BORDER_POINTS}
       fill={fill}
-      stroke="black"
-      strokeWidth={0.08}
+      fillOpacity={0.85}
+      stroke={STROKE}
+      strokeWidth={0.07}
       transform={`translate(${cx.toFixed(3)},${cy.toFixed(3)})`}
     />
   );
@@ -85,7 +87,13 @@ export default function HexBoard({
     <svg
       data-testid="hex-board"
       viewBox={`${viewBox.vx} ${viewBox.vy} ${viewBox.vw} ${viewBox.vh}`}
-      style={{ width: "100%", maxWidth: 900, display: "block", margin: "0 auto" }}
+      style={{
+        width: "100%",
+        maxWidth: 740,
+        display: "block",
+        margin: "0 auto",
+        animation: "spinIn 0.4s ease",
+      }}
     >
       {Array.from({ length: BOARD_SIZE }, (_, i) => {
         const [tx, ty] = hexCenter(i, -1);
