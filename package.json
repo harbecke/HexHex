@@ -1,0 +1,28 @@
+{
+  "name": "@hexhex/hexhex",
+  "version": "1.0.0",
+  "description": "Reinforcement learning agent for the board game [hex](https://en.wikipedia.org/wiki/Hex_(board_game)) only trained by self-play.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harbecke/HexHex.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/harbecke/HexHex/issues"
+  },
+  "homepage": "https://github.com/harbecke/HexHex#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "serve": "^14.2.6"
+  }
+}
