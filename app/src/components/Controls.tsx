@@ -3,22 +3,88 @@ import { ReactNode, useState } from "react";
 interface ControlsProps {
   showRatings: boolean;
   canUndo: boolean;
+  bothAI: boolean;
+  paused: boolean;
+  canStep: boolean;
   onUndo: () => void;
   onReset: () => void;
   onRestart: () => void;
   onToggleRatings: () => void;
+  onTogglePause: () => void;
+  onStep: () => void;
 }
 
 export default function Controls({
   showRatings,
   canUndo,
+  bothAI,
+  paused,
+  canStep,
   onUndo,
   onReset,
   onRestart,
   onToggleRatings,
+  onTogglePause,
+  onStep,
 }: ControlsProps) {
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+      {bothAI && (
+        <IconBtn
+          onClick={onTogglePause}
+          testId="toggle-pause"
+          title={paused ? "Play" : "Pause"}
+          hotkey="P"
+        >
+          {paused ? (
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 14 14"
+              fill="currentColor"
+              stroke="none"
+              aria-hidden
+            >
+              <path d="M3 2v10l9-5z" />
+            </svg>
+          ) : (
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 14 14"
+              fill="currentColor"
+              stroke="none"
+              aria-hidden
+            >
+              <rect x="3" y="2" width="3" height="10" rx="0.5" />
+              <rect x="8" y="2" width="3" height="10" rx="0.5" />
+            </svg>
+          )}
+          {paused ? "Play" : "Pause"}
+        </IconBtn>
+      )}
+      {bothAI && (
+        <IconBtn
+          onClick={onStep}
+          testId="step"
+          title="Step one AI move"
+          hotkey="."
+          disabled={!canStep}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 14 14"
+            fill="currentColor"
+            stroke="none"
+            aria-hidden
+          >
+            <path d="M3 2v10l7-5z" />
+            <rect x="10.5" y="2" width="2" height="10" rx="0.4" />
+          </svg>
+          Step
+        </IconBtn>
+      )}
       {canUndo && (
         <IconBtn onClick={onUndo} testId="undo" title="Undo" hotkey="U">
           <svg
@@ -105,6 +171,7 @@ function IconBtn({
   testId,
   title,
   hotkey,
+  disabled,
 }: {
   onClick: () => void;
   children: ReactNode;
@@ -112,11 +179,18 @@ function IconBtn({
   testId?: string;
   title?: string;
   hotkey?: string;
+  disabled?: boolean;
 }) {
   const [hov, setHov] = useState(false);
-  const border = active || hov ? "var(--border2)" : "var(--border)";
-  const bg = active ? "var(--surface)" : hov ? "#ececf0" : "transparent";
-  const color = active ? "var(--text)" : "var(--muted2)";
+  const border = !disabled && (active || hov) ? "var(--border2)" : "var(--border)";
+  const bg = disabled
+    ? "transparent"
+    : active
+      ? "var(--surface)"
+      : hov
+        ? "#ececf0"
+        : "transparent";
+  const color = disabled ? "var(--muted)" : active ? "var(--text)" : "var(--muted2)";
   const fullTitle = hotkey ? `${title ?? ""} (${hotkey})`.trim() : title;
   return (
     <button
@@ -125,6 +199,7 @@ function IconBtn({
       onMouseLeave={() => setHov(false)}
       data-testid={testId}
       title={fullTitle}
+      disabled={disabled}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -137,7 +212,8 @@ function IconBtn({
         fontSize: 13,
         fontWeight: 500,
         fontFamily: "var(--font)",
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.5 : 1,
         transition: "all 0.15s",
       }}
     >

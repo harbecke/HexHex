@@ -19,6 +19,10 @@ export interface GameState {
   showRatings: boolean;
   status: "setup" | "idle" | "thinking" | "gameover";
   aiTurn: number;
+  /** When true, AI turns won't auto-fire. Only meaningful in AI-vs-AI games. */
+  paused: boolean;
+  /** Monotonic counter — incrementing it requests one AI move regardless of `paused`. */
+  stepSignal: number;
 }
 
 export type GameAction =
@@ -35,6 +39,8 @@ export type GameAction =
   | { type: "AI_SURE_WIN"; cellId: number }
   | { type: "TOGGLE_RATINGS" }
   | { type: "SET_TEMPERATURE"; player: Player; value: number }
+  | { type: "TOGGLE_PAUSE" }
+  | { type: "STEP" }
   | { type: "RESET" }
   | { type: "RESTART" }
   | { type: "RESTORE"; state: GameState };
@@ -59,6 +65,8 @@ export function initialState(): GameState {
     showRatings: false,
     status: "setup",
     aiTurn: 0,
+    paused: false,
+    stepSignal: 0,
   };
 }
 
@@ -109,7 +117,12 @@ function applySwap(state: GameState): Pick<
   return {
     redIsHuman: state.blueIsHuman,
     blueIsHuman: newBlueIsHuman,
-    agentIsBlue: !state.agentIsBlue,
+    // After a swap numMoves is 1, so the next player is always blue.
+    // The agent's color is therefore blue whenever blue is AI. Flipping
+    // the previous agentIsBlue works for human-vs-AI (the two sides trade
+    // roles) but breaks for AI-vs-AI, where both sides are AI and the
+    // side-to-move is still blue after the swap.
+    agentIsBlue: !newBlueIsHuman,
     swapUsed: true,
     lastMove: swappedCell,
     status,
@@ -127,6 +140,7 @@ function startGame(
 ): GameState {
   const agentIsBlue = redIsHuman;
   const status = redIsHuman ? "idle" : "thinking";
+  const bothAI = !redIsHuman && !blueIsHuman;
   return {
     ...initialState(),
     redIsHuman,
@@ -139,6 +153,7 @@ function startGame(
     showRatings,
     status,
     aiTurn: status === "thinking" ? prevAiTurn + 1 : prevAiTurn,
+    paused: bothAI,
   };
 }
 
@@ -221,6 +236,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const key = action.player === "0" ? "redTemperature" : "blueTemperature";
       return { ...state, [key]: Math.max(0, Math.min(2, action.value)) };
     }
+
+    case "TOGGLE_PAUSE":
+      return { ...state, paused: !state.paused };
+
+    case "STEP":
+      return { ...state, stepSignal: state.stepSignal + 1 };
 
     case "RESET":
       return {

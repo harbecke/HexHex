@@ -83,6 +83,36 @@ describe("gameReducer player modes", () => {
     expect(state.agentIsBlue).toBe(true);
   });
 
+  it("AI vs AI: after AI blue swaps, next move is still blue (not a second red stone)", () => {
+    let state = gameReducer(initialState(), {
+      type: "START_GAME",
+      redIsHuman: false,
+      blueIsHuman: false,
+      redTemperature: DEFAULT_TEMPERATURE,
+      blueTemperature: DEFAULT_TEMPERATURE,
+    });
+    // AI red plays first stone.
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 5, scores: dummyScores() });
+    expect(state.cells[5]).toBe("0");
+    expect(state.agentIsBlue).toBe(true);
+
+    // AI blue chooses to swap (returns the occupied cell).
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 5, scores: dummyScores() });
+    expect(state.aiSwapped).toBe(true);
+    expect(state.swapUsed).toBe(true);
+    // Swap must leave the agent viewing the board as blue — the next stone
+    // is blue's, not another red. Previously this flipped to red and the AI
+    // placed a second red stone.
+    expect(state.agentIsBlue).toBe(true);
+    expect(state.status).toBe("thinking");
+
+    // Now AI blue plays a real move on an empty cell; it must be blue.
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 6, scores: dummyScores() });
+    expect(state.cells[6]).toBe("1");
+    expect(state.cells.filter((c) => c === "0").length).toBe(1);
+    expect(state.cells.filter((c) => c === "1").length).toBe(1);
+  });
+
   it("AI (red) vs human (blue): starts thinking, then idle after AI move", () => {
     let state = gameReducer(initialState(), {
       type: "START_GAME",

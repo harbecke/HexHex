@@ -49,6 +49,8 @@ export default function App() {
 
   const canSwap = canSwapSelector(state);
   const canUndo = historyLen > 0 && state.status !== "setup" && state.status !== "thinking";
+  const bothAI = !state.redIsHuman && !state.blueIsHuman;
+  const canStep = bothAI && state.paused && state.status === "thinking";
 
   const winningPath = useMemo(
     () => (state.winner !== null ? findWinningPath(state.cells, state.winner) : null),
@@ -81,11 +83,17 @@ export default function App() {
       } else if (k === "s") {
         e.preventDefault();
         dispatch({ type: "TOGGLE_RATINGS" });
+      } else if (k === "p" && bothAI) {
+        e.preventDefault();
+        dispatch({ type: "TOGGLE_PAUSE" });
+      } else if (k === "." && canStep) {
+        e.preventDefault();
+        dispatch({ type: "STEP" });
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [state.status, canUndo, handleUndo, handleReset, handleRestart]);
+  }, [state.status, canUndo, bothAI, canStep, handleUndo, handleReset, handleRestart]);
 
   function handleCellClick(id: number) {
     if (canSwap && state.cells[id] !== null) {
@@ -217,10 +225,15 @@ export default function App() {
         <Controls
           showRatings={state.showRatings}
           canUndo={canUndo}
+          bothAI={bothAI}
+          paused={state.paused}
+          canStep={canStep}
           onUndo={handleUndo}
           onReset={handleReset}
           onRestart={handleRestart}
           onToggleRatings={() => dispatch({ type: "TOGGLE_RATINGS" })}
+          onTogglePause={() => dispatch({ type: "TOGGLE_PAUSE" })}
+          onStep={() => dispatch({ type: "STEP" })}
         />
         {state.showRatings && (
           <div
@@ -241,7 +254,6 @@ export default function App() {
             <strong style={{ color: "var(--text)", fontWeight: 600 }}>Move values:</strong>{" "}
             logits of the AI's estimated win probability after each move, from the mover's
             perspective. Higher is better; sigmoid(score) ≈ P(win) (0 ≈ 50%, +2 ≈ ~88%).
-            Training labels decay toward 0.5 far from game end, so early-game scores are muted.
           </div>
         )}
       </div>

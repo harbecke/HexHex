@@ -81,6 +81,13 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
   }, [dispatch]);
 
   useEffect(() => {
+    if (state.status === "thinking" && !state.paused) handleAITurn();
+  }, [state.aiTurn, state.paused, handleAITurn]);
+
+  useEffect(() => {
+    if (state.stepSignal === 0) return;
     if (state.status === "thinking") handleAITurn();
-  }, [state.aiTurn, handleAITurn]);
+    // Intentionally only depend on stepSignal: stepping runs one move on demand.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.stepSignal]);
 }
