@@ -45,7 +45,7 @@ export type GameAction =
   | { type: "RESTART" }
   | { type: "RESTORE"; state: GameState };
 
-export const DEFAULT_TEMPERATURE = 0.5;
+export const DEFAULT_TEMPERATURE = 0.3;
 
 export function initialState(): GameState {
   return {

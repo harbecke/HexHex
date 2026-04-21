@@ -1,4 +1,5 @@
-import { useState, CSSProperties } from "react";
+import { useState, useRef, CSSProperties } from "react";
+import { createPortal } from "react-dom";
 
 interface PlayerSetupProps {
   defaultRedIsHuman: boolean;
@@ -335,6 +336,84 @@ function TogglePill({
   );
 }
 
+function InfoIcon({ label, tooltip }: { label: string; tooltip: string }) {
+  const [hover, setHover] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const iconRef = useRef<HTMLSpanElement | null>(null);
+
+  function show() {
+    const rect = iconRef.current?.getBoundingClientRect();
+    if (rect) setPos({ left: rect.left, top: rect.bottom + 6 });
+    setHover(true);
+  }
+  function hide() {
+    setHover(false);
+  }
+
+  return (
+    <>
+      <span
+        ref={iconRef}
+        tabIndex={0}
+        role="img"
+        aria-label={label}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          border: "1px solid var(--border2)",
+          color: "var(--muted)",
+          fontSize: 9,
+          fontWeight: 600,
+          fontFamily: "var(--font)",
+          cursor: "help",
+          lineHeight: 1,
+          userSelect: "none",
+        }}
+      >
+        i
+      </span>
+      {hover &&
+        pos &&
+        createPortal(
+          <div
+            role="tooltip"
+            style={{
+              position: "fixed",
+              left: pos.left,
+              top: pos.top,
+              zIndex: 1000,
+              width: 260,
+              maxWidth: "calc(100vw - 24px)",
+              padding: "10px 12px",
+              fontSize: 12,
+              fontWeight: 400,
+              letterSpacing: "normal",
+              textTransform: "none",
+              lineHeight: 1.5,
+              color: "var(--text)",
+              background: "var(--card)",
+              border: "1px solid var(--border2)",
+              borderRadius: 8,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+              pointerEvents: "none",
+            }}
+          >
+            {tooltip}
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
+
 function TempSlider({
   value,
   onChange,
@@ -353,6 +432,9 @@ function TempSlider({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span
           style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
             fontSize: 12,
             color: "var(--muted2)",
             letterSpacing: "0.04em",
@@ -361,6 +443,16 @@ function TempSlider({
           }}
         >
           Temperature
+          <InfoIcon
+            label="About temperature"
+            tooltip={
+              "Controls how much randomness the AI adds when choosing a move. " +
+              "At 0 it always plays what it thinks is the best move, so every game " +
+              "looks the same. Higher values sample from alternatives — more variety, " +
+              "weaker play. Around 0.3 keeps moves strong but lets the AI pick among " +
+              "near-equal options instead of repeating the same opening."
+            }
+          />
         </span>
         <span style={{ fontSize: 13, fontFamily: "var(--mono)", color, fontWeight: 500 }}>
           {value.toFixed(2)}
@@ -377,8 +469,8 @@ function TempSlider({
         onChange={(e) => onChange(parseFloat(e.target.value))}
       />
       <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, color: "var(--muted)" }}>Precise</span>
-        <span style={{ fontSize: 11, color: "var(--muted)" }}>Creative</span>
+        <span style={{ fontSize: 11, color: "var(--muted)" }}>Sharp</span>
+        <span style={{ fontSize: 11, color: "var(--muted)" }}>Random</span>
       </div>
     </div>
   );
