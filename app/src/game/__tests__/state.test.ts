@@ -306,3 +306,99 @@ describe("RESET", () => {
     expect(state.cells.every((c) => c === null)).toBe(true);
   });
 });
+
+describe("teacher mode", () => {
+  function scoresWithBest(bestId: number, bestVal = 2.5, otherVal = -1): Float32Array {
+    const s = new Float32Array(NUM_CELLS);
+    for (let i = 0; i < NUM_CELLS; i++) s[i] = otherVal;
+    s[bestId] = bestVal;
+    return s;
+  }
+
+  it("TOGGLE_TEACHER flips the flag and clears snapshots", () => {
+    let state = startedState();
+    state = gameReducer(state, { type: "TOGGLE_TEACHER" });
+    expect(state.teacherMode).toBe(true);
+
+    state = gameReducer(state, { type: "TEACHER_SCORES", scores: scoresWithBest(0) });
+    expect(state.pendingTeacherScores).not.toBeNull();
+
+    state = gameReducer(state, { type: "TOGGLE_TEACHER" });
+    expect(state.teacherMode).toBe(false);
+    expect(state.pendingTeacherScores).toBeNull();
+    expect(state.teacherScores).toBeNull();
+    expect(state.teacherMoveId).toBeNull();
+  });
+
+  it("TEACHER_SCORES is ignored when teacherMode is off", () => {
+    let state = startedState();
+    state = gameReducer(state, { type: "TEACHER_SCORES", scores: scoresWithBest(0) });
+    expect(state.pendingTeacherScores).toBeNull();
+  });
+
+  it("PLAYER_MOVE snapshots pendingTeacherScores into teacherScores", () => {
+    let state = startedState();
+    state = gameReducer(state, { type: "TOGGLE_TEACHER" });
+    state = gameReducer(state, { type: "TEACHER_SCORES", scores: scoresWithBest(5) });
+    expect(state.pendingTeacherScores?.[5]).toBeCloseTo(2.5);
+
+    state = gameReducer(state, { type: "PLAYER_MOVE", cellId: 3 });
+    expect(state.teacherMoveId).toBe(3);
+    expect(state.teacherScores?.[5]).toBeCloseTo(2.5);
+    expect(state.teacherScores?.[3]).toBeCloseTo(-1);
+    expect(state.pendingTeacherScores).toBeNull();
+  });
+
+  it("PLAYER_MOVE without pending scores leaves teacher fields null", () => {
+    let state = startedState();
+    state = gameReducer(state, { type: "TOGGLE_TEACHER" });
+    state = gameReducer(state, { type: "PLAYER_MOVE", cellId: 3 });
+    expect(state.teacherMoveId).toBeNull();
+    expect(state.teacherScores).toBeNull();
+  });
+
+  it("AI_MOVE clears pendingTeacherScores", () => {
+    let state = startedState();
+    state = gameReducer(state, { type: "TOGGLE_TEACHER" });
+    state = gameReducer(state, { type: "PLAYER_MOVE", cellId: 0 });
+    state = gameReducer(state, { type: "TEACHER_SCORES", scores: scoresWithBest(5) });
+    expect(state.pendingTeacherScores).not.toBeNull();
+
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 1, scores: dummyScores() });
+    expect(state.pendingTeacherScores).toBeNull();
+  });
+
+  it("teacher annotation persists across AI turns until next PLAYER_MOVE", () => {
+    let state = startedState();
+    state = gameReducer(state, { type: "TOGGLE_TEACHER" });
+    state = gameReducer(state, { type: "TEACHER_SCORES", scores: scoresWithBest(5) });
+    state = gameReducer(state, { type: "PLAYER_MOVE", cellId: 3 });
+    const annotatedMoveId = state.teacherMoveId;
+    state = gameReducer(state, { type: "AI_MOVE", cellId: 1, scores: dummyScores() });
+    expect(state.teacherMoveId).toBe(annotatedMoveId);
+    expect(state.teacherScores).not.toBeNull();
+  });
+
+  it("RESET preserves teacherMode", () => {
+    let state = startedState();
+    state = gameReducer(state, { type: "TOGGLE_TEACHER" });
+    expect(state.teacherMode).toBe(true);
+    state = gameReducer(state, { type: "RESET" });
+    expect(state.teacherMode).toBe(true);
+    expect(state.pendingTeacherScores).toBeNull();
+    expect(state.teacherScores).toBeNull();
+  });
+
+  it("RESTART preserves teacherMode but clears annotations", () => {
+    let state = startedState();
+    state = gameReducer(state, { type: "TOGGLE_TEACHER" });
+    state = gameReducer(state, { type: "TEACHER_SCORES", scores: scoresWithBest(5) });
+    state = gameReducer(state, { type: "PLAYER_MOVE", cellId: 3 });
+    expect(state.teacherMoveId).toBe(3);
+
+    state = gameReducer(state, { type: "RESTART" });
+    expect(state.teacherMode).toBe(true);
+    expect(state.teacherMoveId).toBeNull();
+    expect(state.teacherScores).toBeNull();
+  });
+});

@@ -2,6 +2,9 @@ import { ReactNode, useState } from "react";
 
 interface ControlsProps {
   showRatings: boolean;
+  teacherMode: boolean;
+  showTeacher: boolean;
+  hasUndoHistory: boolean;
   canUndo: boolean;
   bothAI: boolean;
   paused: boolean;
@@ -10,12 +13,16 @@ interface ControlsProps {
   onReset: () => void;
   onRestart: () => void;
   onToggleRatings: () => void;
+  onToggleTeacher: () => void;
   onTogglePause: () => void;
   onStep: () => void;
 }
 
 export default function Controls({
   showRatings,
+  teacherMode,
+  showTeacher,
+  hasUndoHistory,
   canUndo,
   bothAI,
   paused,
@@ -24,6 +31,7 @@ export default function Controls({
   onReset,
   onRestart,
   onToggleRatings,
+  onToggleTeacher,
   onTogglePause,
   onStep,
 }: ControlsProps) {
@@ -85,8 +93,14 @@ export default function Controls({
           Step
         </IconBtn>
       )}
-      {canUndo && (
-        <IconBtn onClick={onUndo} testId="undo" title="Undo" hotkey="U">
+      {hasUndoHistory && (
+        <IconBtn
+          onClick={onUndo}
+          testId="undo"
+          title="Undo"
+          hotkey="U"
+          disabled={!canUndo}
+        >
           <svg
             width="13"
             height="13"
@@ -160,6 +174,32 @@ export default function Controls({
         </svg>
         Ratings
       </IconBtn>
+      {showTeacher && (
+        <IconBtn
+          onClick={onToggleTeacher}
+          active={teacherMode}
+          testId="toggle-teacher"
+          title="Highlight blunders and better moves"
+          hotkey="T"
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <circle cx="7" cy="4" r="2.5" />
+            <path d="M2 13c0-2.76 2.24-5 5-5s5 2.24 5 5" />
+            <path d="M10 7.5l1.5 1-1.5 1" />
+          </svg>
+          Teacher
+        </IconBtn>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { BOARD_SIZE } from "../game/constants";
 import { posToId } from "../game/coords";
 import { Cell } from "../game/rules";
+import { getTopSuggestions, Suggestion } from "../game/teacher";
 import HexCell from "./HexCell";
 
 // Pointy-top hex geometry
@@ -44,6 +45,9 @@ interface HexBoardProps {
   lastMove: number | null;
   status: "idle" | "thinking" | "gameover";
   winningPath: Set<number> | null;
+  teacherMode: boolean;
+  teacherScores: (number | null)[] | null;
+  teacherMoveId: number | null;
   onCellClick: (id: number) => void;
 }
 
@@ -55,10 +59,25 @@ export default function HexBoard({
   lastMove,
   status,
   winningPath,
+  teacherMode,
+  teacherScores,
+  teacherMoveId,
   onCellClick,
 }: HexBoardProps) {
   const canClick = status === "idle";
   const swapTargetId = canSwap ? cells.findIndex((c) => c !== null) : -1;
+
+  const teacherSuggestionMap = useMemo(() => {
+    if (!teacherMode || teacherMoveId === null) return new Map<number, Suggestion>();
+    const suggestions = getTopSuggestions(teacherScores, cells, teacherMoveId, 3);
+    return new Map(suggestions.map((s) => [s.id, s]));
+  }, [teacherMode, teacherScores, teacherMoveId, cells]);
+
+  const suggestionColor = useMemo(() => {
+    if (teacherMoveId === null) return null;
+    const player = cells[teacherMoveId];
+    return player === "0" ? RED_FILL : player === "1" ? BLUE_FILL : null;
+  }, [cells, teacherMoveId]);
 
   const viewBox = useMemo(() => {
     const borderCenters: [number, number][] = [];
@@ -126,6 +145,11 @@ export default function HexBoard({
               isLastMove={id === lastMove}
               isOnWinningPath={winningPath?.has(id) ?? false}
               isSwapTarget={id === swapTargetId}
+              teacherPlayedScore={
+                id === teacherMoveId && teacherScores ? (teacherScores[id] ?? null) : null
+              }
+              teacherSuggestion={teacherSuggestionMap.get(id) ?? null}
+              suggestionColor={suggestionColor}
               onClick={canClick ? onCellClick : undefined}
             />
           );

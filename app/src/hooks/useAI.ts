@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { GameState, GameAction } from "../game/state";
 import { encodeBoard, averageOutputs } from "../game/encoding";
-import { findSureWinMove } from "../game/rules";
+import { findSureWinMove, Player } from "../game/rules";
 import { selectMove } from "../game/selectMove";
 import { MODEL_FILENAME } from "../game/constants";
 
@@ -22,6 +22,14 @@ function getWorker(): Worker {
 
 function createStateKey(state: GameState): string {
   return `${state.agentIsBlue}|${state.swapUsed ? "s" : "_"}|${state.cells.map((c) => c ?? "_").join("")}`;
+}
+
+function humanToMove(state: GameState): Player | null {
+  if (state.status !== "idle") return null;
+  const numMoves = state.cells.filter((c) => c !== null).length;
+  const nextPlayer: Player = numMoves % 2 === 0 ? "0" : "1";
+  const nextIsHuman = nextPlayer === "0" ? state.redIsHuman : state.blueIsHuman;
+  return nextIsHuman ? nextPlayer : null;
 }
 
 export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
@@ -80,6 +88,44 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
     );
   }, [dispatch]);
 
+  /** Pre-computes scores from the human-to-move's perspective for teacher mode. */
+  const handleTeacherTurn = useCallback(() => {
+    if (pendingRef.current) return;
+    const snapshot = stateRef.current;
+    const player = humanToMove(snapshot);
+    if (player === null) return;
+
+    pendingRef.current = true;
+    const { cells } = snapshot;
+    const playerIsBlue = player === "1";
+    const requestStateKey = createStateKey(snapshot);
+    const { input1, input2 } = encodeBoard(cells, playerIsBlue);
+    const worker = getWorker();
+
+    function onMessage(e: MessageEvent) {
+      const msg = e.data;
+      if (msg.type === "RESULT_PAIR") {
+        worker.removeEventListener("message", onMessage);
+        pendingRef.current = false;
+        const now = stateRef.current;
+        if (createStateKey(now) !== requestStateKey) return;
+        if (!now.teacherMode) return;
+        const scores = averageOutputs(msg.out1, msg.out2, playerIsBlue);
+        dispatch({ type: "TEACHER_SCORES", scores });
+      } else if (msg.type === "ERROR") {
+        worker.removeEventListener("message", onMessage);
+        pendingRef.current = false;
+        console.error("AI worker error:", msg.message);
+      }
+    }
+
+    worker.addEventListener("message", onMessage);
+    worker.postMessage(
+      { type: "INFER_PAIR", input1, input2, boardSize: 11, modelUrl: getModelUrl() },
+      [input1.buffer, input2.buffer]
+    );
+  }, [dispatch]);
+
   useEffect(() => {
     if (state.status === "thinking" && !state.paused) handleAITurn();
   }, [state.aiTurn, state.paused, handleAITurn]);
@@ -90,4 +136,19 @@ export function useAI(state: GameState, dispatch: React.Dispatch<GameAction>) {
     // Intentionally only depend on stepSignal: stepping runs one move on demand.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.stepSignal]);
+
+  useEffect(() => {
+    if (!state.teacherMode) return;
+    if (state.pendingTeacherScores !== null) return;
+    if (humanToMove(state) === null) return;
+    handleTeacherTurn();
+  }, [
+    state.teacherMode,
+    state.pendingTeacherScores,
+    state.status,
+    state.cells,
+    state.redIsHuman,
+    state.blueIsHuman,
+    handleTeacherTurn,
+  ]);
 }

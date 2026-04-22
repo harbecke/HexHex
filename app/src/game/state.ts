@@ -17,6 +17,13 @@ export interface GameState {
   lastMove: number | null;
   modelScores: (number | null)[];
   showRatings: boolean;
+  teacherMode: boolean;
+  /** Scores pre-computed for the current human-to-move position (null until inference lands). */
+  pendingTeacherScores: (number | null)[] | null;
+  /** Scores frozen at the moment of the last human move, used to annotate that move. */
+  teacherScores: (number | null)[] | null;
+  /** Cell id of the last human move annotated by teacher mode. */
+  teacherMoveId: number | null;
   status: "setup" | "idle" | "thinking" | "gameover";
   aiTurn: number;
   /** When true, AI turns won't auto-fire. Only meaningful in AI-vs-AI games. */
@@ -38,6 +45,8 @@ export type GameAction =
   | { type: "AI_MOVE"; cellId: number; scores: Float32Array }
   | { type: "AI_SURE_WIN"; cellId: number }
   | { type: "TOGGLE_RATINGS" }
+  | { type: "TOGGLE_TEACHER" }
+  | { type: "TEACHER_SCORES"; scores: Float32Array }
   | { type: "SET_TEMPERATURE"; player: Player; value: number }
   | { type: "TOGGLE_PAUSE" }
   | { type: "STEP" }
@@ -63,6 +72,10 @@ export function initialState(): GameState {
     lastMove: null,
     modelScores: Array<null>(NUM_CELLS).fill(null),
     showRatings: false,
+    teacherMode: false,
+    pendingTeacherScores: null,
+    teacherScores: null,
+    teacherMoveId: null,
     status: "setup",
     aiTurn: 0,
     paused: false,
@@ -136,6 +149,7 @@ function startGame(
   redTemperature: number,
   blueTemperature: number,
   showRatings: boolean,
+  teacherMode: boolean,
   prevAiTurn: number
 ): GameState {
   const agentIsBlue = redIsHuman;
@@ -151,6 +165,7 @@ function startGame(
     blueTemperature,
     agentIsBlue,
     showRatings,
+    teacherMode,
     status,
     aiTurn: status === "thinking" ? prevAiTurn + 1 : prevAiTurn,
     paused: bothAI,
@@ -166,6 +181,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         action.redTemperature,
         action.blueTemperature,
         state.showRatings,
+        state.teacherMode,
         state.aiTurn
       );
 
@@ -175,8 +191,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const numMoves = state.cells.filter((c) => c !== null).length;
       const currentPlayer: Player = numMoves % 2 === 0 ? "0" : "1";
       const swapUsed = state.swapUsed || numMoves === 1;
+      // Freeze pre-computed teacher scores onto this move. If inference hasn't
+      // finished yet, leave teacherScores null — the annotation simply won't
+      // appear (and the pending inference will become stale and be discarded).
+      const teacherScores = state.teacherMode ? state.pendingTeacherScores : null;
+      const teacherMoveId = state.teacherMode && teacherScores !== null ? action.cellId : null;
       const next = placeStone(
-        { ...state, aiSwapped: false, swapUsed },
+        { ...state, aiSwapped: false, swapUsed, pendingTeacherScores: null, teacherScores, teacherMoveId },
         action.cellId,
         currentPlayer
       );
@@ -188,7 +209,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "SWAP": {
       if (!canSwap(state)) return state;
-      return { ...state, ...applySwap(state), aiSwapped: false };
+      return { ...state, ...applySwap(state), aiSwapped: false, pendingTeacherScores: null };
     }
 
     case "AI_MOVE": {
@@ -197,14 +218,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.cells[action.cellId] !== null) {
         const numMoves = state.cells.filter((c) => c !== null).length;
         if (numMoves !== 1 || state.swapUsed) return state;
-        return { ...state, ...applySwap(state), aiSwapped: true, modelScores: scores };
+        return {
+          ...state,
+          ...applySwap(state),
+          aiSwapped: true,
+          modelScores: scores,
+          pendingTeacherScores: null,
+        };
       }
 
       const agentPlayer: Player = state.agentIsBlue ? "1" : "0";
       const numMoves = state.cells.filter((c) => c !== null).length;
       const swapUsed = state.swapUsed || numMoves === 1;
       const next = placeStone(
-        { ...state, modelScores: scores, aiSwapped: false, swapUsed },
+        { ...state, modelScores: scores, aiSwapped: false, swapUsed, pendingTeacherScores: null },
         action.cellId,
         agentPlayer
       );
@@ -219,7 +246,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const numMoves = state.cells.filter((c) => c !== null).length;
       const swapUsed = state.swapUsed || numMoves === 1;
       const next = placeStone(
-        { ...state, modelScores: Array<null>(NUM_CELLS).fill(null), aiSwapped: false, swapUsed },
+        {
+          ...state,
+          modelScores: Array<null>(NUM_CELLS).fill(null),
+          aiSwapped: false,
+          swapUsed,
+          pendingTeacherScores: null,
+        },
         action.cellId,
         agentPlayer
       );
@@ -231,6 +264,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "TOGGLE_RATINGS":
       return { ...state, showRatings: !state.showRatings };
+
+    case "TOGGLE_TEACHER":
+      return {
+        ...state,
+        teacherMode: !state.teacherMode,
+        pendingTeacherScores: null,
+        teacherScores: null,
+        teacherMoveId: null,
+      };
+
+    case "TEACHER_SCORES": {
+      if (!state.teacherMode) return state;
+      const scores = Array.from({ length: NUM_CELLS }, (_, i) => action.scores[i] ?? null);
+      return { ...state, pendingTeacherScores: scores };
+    }
 
     case "SET_TEMPERATURE": {
       const key = action.player === "0" ? "redTemperature" : "blueTemperature";
@@ -247,6 +295,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...initialState(),
         showRatings: state.showRatings,
+        teacherMode: state.teacherMode,
         redTemperature: state.redTemperature,
         blueTemperature: state.blueTemperature,
       };
@@ -258,6 +307,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         state.redTemperature,
         state.blueTemperature,
         state.showRatings,
+        state.teacherMode,
         state.aiTurn
       );
 
