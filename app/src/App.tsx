@@ -49,7 +49,8 @@ export default function App() {
   }, [clearHistory]);
 
   const canSwap = canSwapSelector(state);
-  const canUndo = historyLen > 0 && state.status !== "setup" && state.status !== "thinking";
+  const hasUndoHistory = historyLen > 0 && state.status !== "setup";
+  const canUndo = hasUndoHistory && state.status !== "thinking";
   const bothAI = !state.redIsHuman && !state.blueIsHuman;
   const canStep = bothAI && state.paused && state.status === "thinking";
 
@@ -153,7 +154,6 @@ export default function App() {
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "100vh",
         alignItems: "center",
         padding: "20px 16px 32px",
       }}
@@ -165,7 +165,7 @@ export default function App() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 20,
+          marginBottom: 16,
           animation: "fadeUp 0.35s ease",
         }}
       >
@@ -207,9 +207,7 @@ export default function App() {
         style={{
           width: "100%",
           maxWidth: BOARD_MAX_WIDTH,
-          flex: 1,
           display: "flex",
-          alignItems: "center",
           justifyContent: "center",
         }}
       >
@@ -230,7 +228,7 @@ export default function App() {
 
       <div
         style={{
-          marginTop: 20,
+          marginTop: 16,
           width: "100%",
           maxWidth: BOARD_MAX_WIDTH,
           animation: "fadeUp 0.35s ease 0.1s both",
@@ -254,6 +252,7 @@ export default function App() {
           showRatings={state.showRatings}
           teacherMode={state.teacherMode}
           showTeacher={showTeacher}
+          hasUndoHistory={hasUndoHistory}
           canUndo={canUndo}
           bothAI={bothAI}
           paused={state.paused}

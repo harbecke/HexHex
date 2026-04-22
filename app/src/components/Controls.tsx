@@ -4,6 +4,7 @@ interface ControlsProps {
   showRatings: boolean;
   teacherMode: boolean;
   showTeacher: boolean;
+  hasUndoHistory: boolean;
   canUndo: boolean;
   bothAI: boolean;
   paused: boolean;
@@ -21,6 +22,7 @@ export default function Controls({
   showRatings,
   teacherMode,
   showTeacher,
+  hasUndoHistory,
   canUndo,
   bothAI,
   paused,
@@ -91,8 +93,14 @@ export default function Controls({
           Step
         </IconBtn>
       )}
-      {canUndo && (
-        <IconBtn onClick={onUndo} testId="undo" title="Undo" hotkey="U">
+      {hasUndoHistory && (
+        <IconBtn
+          onClick={onUndo}
+          testId="undo"
+          title="Undo"
+          hotkey="U"
+          disabled={!canUndo}
+        >
           <svg
             width="13"
             height="13"
