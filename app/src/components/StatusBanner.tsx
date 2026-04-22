@@ -1,4 +1,5 @@
 import { Player } from "../game/rules";
+import { QualityAnnotation } from "../game/teacher";
 
 interface StatusBannerProps {
   status: "idle" | "thinking" | "gameover";
@@ -7,6 +8,8 @@ interface StatusBannerProps {
   blueIsHuman: boolean;
   canSwap: boolean;
   aiSwapped: boolean;
+  teacherQuality?: QualityAnnotation | null;
+  teacherLoading?: boolean;
 }
 
 /**
@@ -20,24 +23,34 @@ export default function StatusBanner({
   blueIsHuman,
   canSwap,
   aiSwapped,
+  teacherQuality = null,
+  teacherLoading = false,
 }: StatusBannerProps) {
-  const content = selectContent({ status, winner, redIsHuman, blueIsHuman, canSwap, aiSwapped });
+  const primary = selectPrimary({ status, winner, redIsHuman, blueIsHuman, canSwap, aiSwapped });
+  const coach = teacherQuality ? (
+    <TeacherCoachLine quality={teacherQuality} />
+  ) : teacherLoading ? (
+    <TeacherLoadingLine />
+  ) : null;
 
   return (
     <div
       style={{
         minHeight: 52,
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
+        gap: 6,
       }}
     >
-      {content}
+      {primary}
+      {coach}
     </div>
   );
 }
 
-function selectContent(props: StatusBannerProps) {
+function selectPrimary(props: Omit<StatusBannerProps, "teacherQuality">) {
   const { status, winner, redIsHuman, blueIsHuman, canSwap, aiSwapped } = props;
 
   if (canSwap) {
@@ -102,6 +115,70 @@ function selectContent(props: StatusBannerProps) {
   }
 
   return null;
+}
+
+function TeacherCoachLine({ quality }: { quality: QualityAnnotation }) {
+  const borderColor = quality.color.replace(/\)$/, " / 0.35)");
+  const bgColor = quality.color.replace(/\)$/, " / 0.08)");
+  return (
+    <div
+      data-testid="teacher-coach"
+      style={{
+        display: "inline-flex",
+        alignItems: "baseline",
+        gap: 10,
+        textAlign: "center",
+        lineHeight: 1.4,
+        padding: "12px 20px",
+        borderRadius: 12,
+        border: `1px solid ${borderColor}`,
+        background: bgColor,
+      }}
+    >
+      <span style={{ color: quality.color, fontWeight: 600, fontSize: 18 }}>{quality.label}</span>
+      <span style={{ color: "var(--muted)", fontFamily: "var(--mono)", fontSize: 14 }}>
+        Δ {quality.delta.toFixed(2)}
+      </span>
+      {quality.label !== "Good" && (
+        <span style={{ color: "var(--muted2)", fontSize: 14 }}>
+          — better moves shown on board
+        </span>
+      )}
+    </div>
+  );
+}
+
+function TeacherLoadingLine() {
+  return (
+    <div
+      data-testid="teacher-loading"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 10,
+        textAlign: "center",
+        lineHeight: 1.4,
+        padding: "12px 20px",
+        borderRadius: 12,
+        border: "1px dashed var(--border)",
+        background: "var(--card)",
+        color: "var(--muted2)",
+        fontSize: 14,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: "var(--muted2)",
+          animation: "pulse 1.2s ease infinite",
+        }}
+      />
+      <span>Teacher is analyzing the position…</span>
+    </div>
+  );
 }
 
 function Banner({

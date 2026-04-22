@@ -2,6 +2,7 @@ import { useReducer, useMemo, useRef, useState, useEffect, useCallback } from "r
 import { gameReducer, initialState, canSwap as canSwapSelector, GameState } from "./game/state";
 import { useAI } from "./hooks/useAI";
 import { findWinningPath, Player } from "./game/rules";
+import { classifyMoveQuality } from "./game/teacher";
 import HexBoard from "./components/HexBoard";
 import Controls from "./components/Controls";
 import PlayerSetup from "./components/PlayerSetup";
@@ -62,6 +63,25 @@ export default function App() {
     return stones % 2 === 0 ? "0" : "1";
   }, [state.cells]);
 
+  const teacherQuality = useMemo(
+    () =>
+      state.teacherMode && state.teacherMoveId !== null
+        ? classifyMoveQuality(state.teacherScores, state.cells, state.teacherMoveId)
+        : null,
+    [state.teacherMode, state.teacherScores, state.teacherMoveId, state.cells]
+  );
+
+  // Show a "analyzing…" hint when teacher mode is on but we have nothing to
+  // render yet — typically the first cold-start inference, or when the user
+  // moves faster than the worker can respond.
+  const teacherLoading =
+    state.teacherMode &&
+    teacherQuality === null &&
+    state.pendingTeacherScores === null &&
+    state.status === "idle";
+
+  const showTeacher = state.redIsHuman || state.blueIsHuman;
+
   // Global hotkeys — skip when an input/textarea has focus.
   useEffect(() => {
     if (state.status === "setup") return;
@@ -83,6 +103,9 @@ export default function App() {
       } else if (k === "s") {
         e.preventDefault();
         dispatch({ type: "TOGGLE_RATINGS" });
+      } else if (k === "t" && showTeacher) {
+        e.preventDefault();
+        dispatch({ type: "TOGGLE_TEACHER" });
       } else if (k === "p" && bothAI) {
         e.preventDefault();
         dispatch({ type: "TOGGLE_PAUSE" });
@@ -93,7 +116,7 @@ export default function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [state.status, canUndo, bothAI, canStep, handleUndo, handleReset, handleRestart]);
+  }, [state.status, canUndo, bothAI, canStep, showTeacher, handleUndo, handleReset, handleRestart]);
 
   function handleCellClick(id: number) {
     if (canSwap && state.cells[id] !== null) {
@@ -198,6 +221,9 @@ export default function App() {
           lastMove={state.lastMove}
           status={state.status}
           winningPath={winningPath}
+          teacherMode={state.teacherMode}
+          teacherScores={state.teacherScores}
+          teacherMoveId={state.teacherMoveId}
           onCellClick={handleCellClick}
         />
       </div>
@@ -221,9 +247,13 @@ export default function App() {
           blueIsHuman={state.blueIsHuman}
           canSwap={canSwap}
           aiSwapped={state.aiSwapped}
+          teacherQuality={teacherQuality}
+          teacherLoading={teacherLoading}
         />
         <Controls
           showRatings={state.showRatings}
+          teacherMode={state.teacherMode}
+          showTeacher={showTeacher}
           canUndo={canUndo}
           bothAI={bothAI}
           paused={state.paused}
@@ -232,6 +262,7 @@ export default function App() {
           onReset={handleReset}
           onRestart={handleRestart}
           onToggleRatings={() => dispatch({ type: "TOGGLE_RATINGS" })}
+          onToggleTeacher={() => dispatch({ type: "TOGGLE_TEACHER" })}
           onTogglePause={() => dispatch({ type: "TOGGLE_PAUSE" })}
           onStep={() => dispatch({ type: "STEP" })}
         />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Cell } from "../game/rules";
+import { Suggestion } from "../game/teacher";
 
 const ANGLES = [30, 90, 150, 210, 270, 330].map((d) => (d * Math.PI) / 180);
 const R = 1;
@@ -27,8 +28,16 @@ interface HexCellProps {
   isLastMove?: boolean;
   isOnWinningPath?: boolean;
   isSwapTarget?: boolean;
+  /** Score to render on the played stone in teacher mode (regardless of showScore). */
+  teacherPlayedScore?: number | null;
+  /** Ghost marker on an empty cell the AI preferred. */
+  teacherSuggestion?: Suggestion | null;
+  /** Color used for ghost suggestions — the player who was choosing. */
+  suggestionColor?: string | null;
   onClick?: (id: number) => void;
 }
+
+const SUGGESTION_OPACITY = [0.95, 0.75, 0.55];
 
 export default function HexCell({
   cx,
@@ -40,15 +49,31 @@ export default function HexCell({
   isLastMove = false,
   isOnWinningPath = false,
   isSwapTarget = false,
+  teacherPlayedScore = null,
+  teacherSuggestion = null,
+  suggestionColor = null,
   onClick,
 }: HexCellProps) {
   const [hovered, setHovered] = useState(false);
   const stoneFill = cell === "0" ? RED_FILL : cell === "1" ? BLUE_FILL : null;
   const fill = stoneFill ?? (hovered && onClick ? EMPTY_HOVER : EMPTY_FILL);
-  const showLabel = showScore && score !== null && (cell === null || isLastMove);
-  const label = showLabel ? score.toFixed(1) : "";
+  // Teacher-mode score on the played stone always wins over the ratings label,
+  // since it's the frozen score from the player's own perspective at decision time.
+  const teacherScoreVisible = teacherPlayedScore != null && cell !== null;
+  const showLabel = teacherScoreVisible || (showScore && score !== null && (cell === null || isLastMove));
+  const label = teacherScoreVisible
+    ? teacherPlayedScore.toFixed(1)
+    : showLabel && score !== null
+      ? score.toFixed(1)
+      : "";
   const clickable = Boolean(onClick) && (cell === null || isSwapTarget);
   const labelColor = cell === null ? "#66666f" : "white";
+
+  const showSuggestion = teacherSuggestion !== null && cell === null && suggestionColor !== null;
+  const suggestionOpacity =
+    showSuggestion && teacherSuggestion
+      ? (SUGGESTION_OPACITY[teacherSuggestion.rank - 1] ?? 0.4)
+      : 0;
 
   return (
     <g
@@ -61,6 +86,29 @@ export default function HexCell({
       data-testid="hex-cell"
     >
       <polygon points={POINTS} fill={fill} stroke={STROKE} strokeWidth={0.07} />
+      {showSuggestion && teacherSuggestion && suggestionColor && (
+        <g style={{ pointerEvents: "none" }} data-testid="teacher-suggestion">
+          <polygon
+            points={POINTS}
+            fill={suggestionColor}
+            fillOpacity={suggestionOpacity * 0.18}
+            stroke={suggestionColor}
+            strokeWidth={0.09}
+            strokeOpacity={suggestionOpacity}
+            strokeDasharray="0.18,0.12"
+          />
+          <text
+            fontSize={0.5}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill={suggestionColor}
+            fillOpacity={suggestionOpacity}
+            style={{ userSelect: "none", fontFamily: "var(--mono)", fontWeight: 500 }}
+          >
+            {teacherSuggestion.score.toFixed(1)}
+          </text>
+        </g>
+      )}
       {isSwapTarget && (
         <polygon
           points={SWAP_POINTS}
