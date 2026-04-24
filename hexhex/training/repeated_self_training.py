@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import json
+import math
 import os
 from collections import defaultdict
-from configparser import ConfigParser
 
+import hydra
 import torch
+from omegaconf import DictConfig
 
 from hexhex.creation import create_data, create_model
 from hexhex.elo import elo
@@ -16,14 +18,14 @@ from hexhex.utils.summary import writer
 from hexhex.utils.utils import load_model, merge_dicts_of_dicts
 
 
-def load_reference_models(config):
+def load_reference_models(board_size):
     reference_model_path = 'reference_models.json'
     if not os.path.isfile(reference_model_path):
         with open(reference_model_path, 'w') as file:
             file.write("{}")
     with open(reference_model_path) as file:
         reference_models = json.load(file)
-    board_size_str = str(config['CREATE MODEL'].getint('board_size'))
+    board_size_str = str(board_size)
     if board_size_str not in reference_models:
         reference_models[board_size_str] = []
         with open(reference_model_path, 'w') as file:
@@ -32,16 +34,17 @@ def load_reference_models(config):
 
 
 class RepeatedSelfTrainer:
-    def __init__(self, config):
-        self.config = config
-        self.num_data_models = self.config.getint('REPEATED SELF TRAINING', 'num_data_models')
-        self.train_samples = self.config.getint('CREATE DATA', 'num_train_samples')
-        self.val_samples = self.config.getint('CREATE DATA', 'num_val_samples')
-        self.model_name = self.config.get('CREATE MODEL', 'model_name')
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.num_data_models = cfg.rst.num_data_models
+        self.train_samples = cfg.data.num_train_samples
+        self.val_samples = cfg.data.num_val_samples
+        self.model_name = cfg.model.model_name
         self.model_names = []
-        self.start_index = self.config.getint('REPEATED SELF TRAINING', 'start_index', fallback=0)
+        self.start_index = cfg.rst.start_index
         self.tournament_results = defaultdict(lambda: defaultdict(int))
-        self.reference_models = load_reference_models(self.config)
+        self.reference_models = load_reference_models(cfg.model.board_size)
+        self.total_epochs_trained = 0
 
     def get_model_name(self, i):
         return '%s_%04d' % (self.model_name, i)
@@ -77,34 +80,29 @@ class RepeatedSelfTrainer:
         self.train_model(self.get_model_name(i-1), self.get_model_name(i), self.training_data,
             self.validation_data)
         self.model_names.append(self.get_model_name(i))
-        #self.create_all_elo_ratings()
         self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True)
 
     def repeated_self_training(self):
         self.prepare_rst()
 
-        for i in range(self.start_index + 1, self.start_index + 1 + self.config.
-            getint('REPEATED SELF TRAINING', 'num_iterations')):
+        for i in range(self.start_index + 1, self.start_index + 1 + self.cfg.rst.num_iterations):
             self.rst_loop(i)
 
-        if self.config.getboolean('REPEATED SELF TRAINING', 'save_data'):
+        if self.cfg.rst.save_data:
             torch.save((self.training_data, self.validation_data), f'data/{self.model_name}.pt')
             logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
 
         logger.info('=== finished training ===')
 
     def create_initial_model(self):
-        config = self.config['CREATE MODEL']
-        create_model.create_and_store_model(config, self.get_model_name(0))
-        return
+        create_model.create_and_store_model(self.cfg.model, self.get_model_name(0))
 
     def create_data_samples(self, model_name, num_samples, verbose=True):
         model = load_model(f'models/{model_name}.pt')
-        self_play_args = self.config['CREATE DATA']
-        return create_data.create_self_play_data(self_play_args, model, num_samples, verbose)
+        return create_data.create_self_play_data(self.cfg.data, model, num_samples, verbose)
 
     def initial_data(self):
-        if self.config.getboolean('REPEATED SELF TRAINING', 'load_initial_data'):
+        if self.cfg.rst.load_initial_data:
             logger.info("")
             logger.info('=== loading initial data ===')
             return torch.load(f'data/{self.model_name}.pt')
@@ -112,11 +110,10 @@ class RepeatedSelfTrainer:
         else:
             logger.info("")
             logger.info('=== creating random initial data ===')
-            model = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
-            self_play_args = self.config['CREATE DATA']
-            training_data = create_data.create_self_play_data(self_play_args, model,
+            model = RandomModel(self.cfg.model.board_size)
+            training_data = create_data.create_self_play_data(self.cfg.data, model,
                 self.train_samples, verbose=False)
-            validation_data = create_data.create_self_play_data(self_play_args, model,
+            validation_data = create_data.create_self_play_data(self.cfg.data, model,
                 self.val_samples, verbose=False)
             return training_data, validation_data
 
@@ -131,10 +128,16 @@ class RepeatedSelfTrainer:
             return [data_part[:amount] for data_part in data]
 
     def train_model(self, input_model, output_model, training_data, validation_data):
-        config = self.config['TRAIN']
-        config['load_model'] = input_model
-        config['save_model'] = output_model
-        train.train(config, training_data, validation_data)
+        train.train(
+            cfg=self.cfg.train,
+            training_data=training_data,
+            validation_data=validation_data,
+            load_model_name=input_model,
+            save_model_name=output_model,
+            puzzle_num_samples=self.cfg.puzzle.num_samples,
+            global_step_offset=self.total_epochs_trained,
+        )
+        self.total_epochs_trained += math.ceil(self.cfg.train.epochs)
 
     def create_all_elo_ratings(self):
         """
@@ -143,15 +146,14 @@ class RepeatedSelfTrainer:
         logger.info("")
         logger.info("=== updating ELO ratings ===")
 
-        args = self.config['ELO']
         self.tournament_results = elo.add_to_tournament(
             self.sorted_model_names,
             self.model_names[-1],
-            args,
+            self.cfg.elo,
             self.tournament_results
         )
         ratings = elo.create_ratings(self.tournament_results)
-        writer.add_scalar('elo', ratings[self.model_names[-1]])
+        writer.add_scalar('elo', ratings[self.model_names[-1]], len(self.model_names) - 1)
 
         self.sorted_model_names.append(self.model_names[-1])
         self.sorted_model_names.sort(key=lambda name: ratings[name], reverse=True)
@@ -180,16 +182,19 @@ class RepeatedSelfTrainer:
         reference_models = {}
         for model in reference_model_names:
             if model == "random":
-                reference_models["random"] = RandomModel(self.config.getint('CREATE MODEL', 'board_size'))
+                reference_models["random"] = RandomModel(self.cfg.model.board_size)
             else:
                 reference_models[model] = load_model(f'models/{model}.pt')
         results = win_position.win_count(model_name, reference_models,
-            self.config['VS REFERENCE MODELS'], verbose)
+            self.cfg.vs_reference, verbose)
         self.tournament_results = merge_dicts_of_dicts(self.tournament_results, results)
 
 
-if __name__ == '__main__':
-    config = ConfigParser()
-    config.read('config.ini')
-    trainer = RepeatedSelfTrainer(config)
+@hydra.main(version_base=None, config_path="../../conf", config_name="config")
+def main(cfg: DictConfig):
+    trainer = RepeatedSelfTrainer(cfg)
     trainer.repeated_self_training()
+
+
+if __name__ == '__main__':
+    main()

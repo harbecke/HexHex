@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import random
-from configparser import ConfigParser
 from time import gmtime, strftime
+
+import hydra
+from omegaconf import DictConfig
 
 from hexhex.logic import hexboard
 from hexhex.logic.hexgame import MultiHexGame
@@ -67,26 +69,29 @@ def play_games(models, num_opened_moves, number_of_games, batch_size, temperatur
     return result, signed_chi_squared
 
 
-def evaluate(config_file):
+def evaluate(cfg):
     logger.info("")
     logger.info("=== evaluating two models ===")
-    config = ConfigParser()
-    config.read(config_file)
 
-    model1 = load_model(f"models/{config.get('EVALUATE MODELS', 'model1')}.pt")
-    model2 = load_model(f"models/{config.get('EVALUATE MODELS', 'model2')}.pt")
+    model1 = load_model(f"models/{cfg.evaluate.model1}.pt")
+    model2 = load_model(f"models/{cfg.evaluate.model2}.pt")
 
     play_games(
             models=(model1, model2),
-            num_opened_moves=config.getint('EVALUATE MODELS', 'num_opened_moves'),
-            number_of_games=config.getint('EVALUATE MODELS', 'number_of_games'),
-            batch_size=config.getint('EVALUATE MODELS', 'batch_size'),
-            temperature=config.getfloat('EVALUATE MODELS', 'temperature'),
-            temperature_decay=config.getfloat('EVALUATE MODELS', 'temperature_decay'),
-            plot_board=config.getboolean('EVALUATE MODELS', 'plot_board'),
+            num_opened_moves=cfg.evaluate.num_opened_moves,
+            number_of_games=cfg.evaluate.number_of_games,
+            batch_size=cfg.evaluate.batch_size,
+            temperature=cfg.evaluate.temperature,
+            temperature_decay=cfg.evaluate.temperature_decay,
+            plot_board=cfg.evaluate.plot_board,
             verbose=True
         )
 
 
+@hydra.main(version_base=None, config_path="../../conf", config_name="config")
+def main(cfg: DictConfig):
+    evaluate(cfg)
+
+
 if __name__ == '__main__':
-    evaluate('config.ini')
+    main()

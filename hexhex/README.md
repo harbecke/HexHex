@@ -1,5 +1,4 @@
 # Train your own agent!
-Sorry, this is poorly documented and likely outdated. You're mostly on your own here.
 
 ## Play against a pretrained agent
 
@@ -7,90 +6,104 @@ It is easy to play against our agent. A fully trained model is already included 
 
 ```bash
 git clone https://github.com/harbecke/hexhex && cd hexhex
-# Install dependencies and sync environment
 uv sync
-# Run the agent
-uv run python -m hexhex
+uv run python -m hexhex.interactive.interactive
 ```
 
 Note that both players can make use of the switch rule.
 Some starting moves are much better than others, the switch rule forces the first player to pick a more neutral move.
-This means after the first player (red) makes the first move, the second player (blue) can switch colors and take over this first move.
-The game continues by the first player (now blue) making the second move.
 
 ## Setup and Installation
 
-We use [uv](https://github.com/astral-sh/uv) to manage all dependencies and the virtual environment. This ensures a consistent and reproducible setup.
+We use [uv](https://github.com/astral-sh/uv) to manage all dependencies and the virtual environment.
 
-1.  **Install uv**: Please refer to the [official installation guide](https://docs.astral.sh/uv/getting-started/installation/) for instructions on how to install `uv` on your system.
-2.  **Sync Environment**: Once `uv` is installed, run the following command in the project root to create a virtual environment and install all necessary dependencies:
-    ```bash
-    uv sync
-    ```
+1. **Install uv**: See the [official installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+2. **Sync Environment**:
+   ```bash
+   uv sync
+   ```
 
-## Execution
+## Configuration
 
-All scripts and notebooks must be run through `uv run` from the project root.
+All hyperparameters live in `conf/` as typed YAML files (via [Hydra](https://hydra.cc)):
 
-1.  **Initialize Configuration**: Copy the sample configuration files to the root directory:
-    ```bash
-    cp sample_files/* .
-    ```
-
-2.  **Run Training and Tools**:
-    - **Repeated Self-Training**: `uv run python -m hexhex.training.repeated_self_training`
-    - **Bayesian Optimization**: `uv run python -m hexhex.training.bayesian_optimization`
-    - **Interactive GUI**: `uv run python -m hexhex.interactive.interactive`
-
-3.  **Reference Models**: Both training scripts use `reference_models.json`.
-    - Use `"random"` for a random reference model for your board size.
-    - Use `"{your_model_name}"` to use a previously trained model as a reference.
-
-### Visualize Training with Tensorboard
-Training automatically creates log files for Tensorboard. View them using:
-```bash
-uv run python -m tensorboard.main --logdir runs/
+```
+conf/
+  config.yaml          # top-level defaults
+  model/default.yaml   # architecture: board_size, layers, channels, …
+  data/default.yaml    # self-play: batch_size, temperature, noise, …
+  train/default.yaml   # training: learning_rate, optimizer, epochs, …
+  elo/default.yaml     # tournament settings
+  rst/default.yaml     # repeated self-training loop settings
+  evaluate/default.yaml
+  interactive/default.yaml
 ```
 
-### Visualize Bayesian optimization with jupyter
-Bayesian optimization creates a pickle file in `data/bayes_experiments`.
-Run jupyter notebook, select the correct experiment in the second cell, and execute:
+Override any value on the command line — no need to edit YAML files for one-off runs:
+
 ```bash
-uv run jupyter notebook
+uv run python -m hexhex.training.repeated_self_training \
+    model.board_size=11 \
+    model.layers=18 \
+    model.intermediate_channels=64 \
+    train.learning_rate=3e-4
 ```
 
-### Loading Into hexgui
-[hexgui](https://github.com/ryanbhayward/hexgui) can be used for interactive play and replaying `FF4` files.
-To load the AI into hexgui:
-1.  Go to `Program -> new program`.
-2.  Enter the command to start `play_cli.py`. Since `uv` is required, use a bash script:
-    ```bash
-    #!/bin/bash
-    cd /path/to/hex
-    uv run python -m hexhex.interactive.play_cli
-    ```
-3.  Connect via `Program -> connect local program`.
+## Running Training and Tools
 
-### Testing
-We use [pytest](https://docs.pytest.org/) for unit and integration testing. Run the test suite using:
+```bash
+# Repeated self-training (main training loop)
+uv run python -m hexhex.training.repeated_self_training
+
+# Interactive GUI (play against the agent)
+uv run python -m hexhex.interactive.interactive interactive.model=my_model_name
+
+# Evaluate two models head-to-head
+uv run python -m hexhex.evaluation.evaluate_two_models \
+    evaluate.model1=model_a evaluate.model2=model_b
+
+# Create puzzle data
+uv run python -m hexhex.creation.puzzle
+
+```
+
+## Reference Models
+
+Training uses `reference_models.json`. Use `"random"` for a random-play reference, or a model name string for a previously trained model.
+
+## Visualize Training
+
+```bash
+uv run tensorboard --logdir runs/
+```
+
+## Hyperparameter Sweeps (TODO)
+
+The old `bayesian_optimization.py` (scikit-optimize) has been removed. The recommended replacement is [Hydra's Optuna sweeper](https://hydra.cc/docs/plugins/optuna_sweeper/):
+
+```bash
+pip install hydra-optuna-sweeper
+uv run python -m hexhex.training.repeated_self_training \
+    --multirun \
+    train.learning_rate='interval(1e-5,1e-2)' \
+    model.layers='range(2,12)'
+```
+
+This requires adding `hydra-optuna-sweeper` to `pyproject.toml` and a sweep config at `conf/hydra/sweeper/optuna.yaml`. Not yet wired up in this repo.
+
+## Testing
+
 ```bash
 uv run pytest
 ```
 
 ## Features
 
-* board representation with logic + switch rule
-* network to evaluate positions
-  * output activation of network is sigmoid for each stone
-  * these are probabilities of how likely that stone wins the game
-  * loss function is between prediction of selected stone and outcome of game
-* creating models with hyperparameters
-* batch-wise self-play to generate datasets
-* training and validating models
-* evaluating models against each other
-* ELO rating via `output_ratings` in `hexhex/elo/elo.py`
-* iterative training loop
-* puzzle set for endgame evaluation
-* config to control plenty of hyperparameters
-* Bayesian optimization to tune hyperparameters
-* playable gui
+* Board representation with logic + switch rule
+* CNN to evaluate positions (18 layers, 64 channels, skip connections)
+* Batch-wise self-play for dataset generation
+* Iterative self-play → train → evaluate loop
+* ELO rating via Bradley-Terry model
+* Puzzle set for endgame evaluation
+* Typed YAML config with Hydra CLI overrides
+* Playable GUI (Pygame)

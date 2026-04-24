@@ -8,13 +8,13 @@ from hexhex.utils.utils import device
 def convert_model(model_name):
     checkpoint = torch.load(f'models/{model_name}.pt', map_location=device)
     config = checkpoint['config']
-    if config['model_type'] in ['inception', 'conv']:
+    if config.get('model_type') in ['inception', 'conv']:
         config['model_type'] = 'conv'
 
         weight_key = 'conv.weight'
         while True:
             if weight_key in checkpoint['model_state_dict']:
-                config['reach'] = str(checkpoint['model_state_dict'][weight_key].shape[2] // 2)
+                config['reach'] = int(checkpoint['model_state_dict'][weight_key].shape[2] // 2)
                 break
             weight_key = 'internal_model.' + weight_key
 

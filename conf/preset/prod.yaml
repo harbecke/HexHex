@@ -1,0 +1,57 @@
+# @package _global_
+model:
+  board_size: 11
+  layers: 18
+  intermediate_channels: 64
+  reach: 1
+  switch_model: true
+  rotation_model: true
+  model_name: "11_18_64"
+
+data:
+  num_train_samples: 10000000
+  num_val_samples: 1000
+  batch_size: 256
+  noise: uniform
+  noise_parameters: [0.0]
+  temperature: 4.0
+  temperature_decay: 0.8
+  gamma: 0.0
+  gamma_max: 25
+
+train:
+  epochs: 0.008
+  batch_size: 32
+  optimizer: sgd
+  learning_rate: 1.0e-05
+  momentum: 0.9
+  weight_decay: 1.0e-06
+  print_loss_frequency: 100
+
+elo:
+  number_of_games: 200
+  batch_size: 200
+  num_opened_moves: 1
+  temperature: 0.0
+  temperature_decay: 0.0
+  plot_board: false
+  max_num_opponents: 3
+
+vs_reference:
+  batch_size: 200
+  num_games: 200
+  num_opened_moves: 1
+  temperature: 0.0
+  temperature_decay: 0.0
+  plot_board: false
+
+puzzle:
+  board_size: 11
+  num_samples: 1000
+
+rst:
+  start_index: 0
+  num_iterations: 5000
+  num_data_models: 50
+  load_initial_data: false
+  save_data: true

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from configparser import ConfigParser
+import hydra
+from omegaconf import DictConfig
 
 from hexhex.interactive.gui import Gui
 from hexhex.logic.hexboard import Board
@@ -12,20 +13,18 @@ class InteractiveGame:
     allows to play a game against a model
     """
 
-    def __init__(self, config):
-        self.config = config
-        self.model = load_model(f'models/{self.config.get("INTERACTIVE", "model", fallback="11_2w4_2000")}.pt')
-        self.switch_allowed = self.config.getboolean("INTERACTIVE", 'switch', fallback=True)
+    def __init__(self, cfg):
+        self.model = load_model(f'models/{cfg.model}.pt')
+        self.switch_allowed = cfg.switch
         self.board = Board(size=self.model.board_size, switch_allowed=self.switch_allowed)
-        self.gui = Gui(self.board, self.config.getint("INTERACTIVE", 'gui_radius', fallback=50),
-                       self.config.getboolean("INTERACTIVE", 'dark_mode', fallback=False))
+        self.gui = Gui(self.board, cfg.gui_radius, cfg.dark_mode)
         self.game = MultiHexGame(
             boards=(self.board,),
             models=(self.model,),
             noise=None,
             noise_parameters=None,
-            temperature=self.config.getfloat("INTERACTIVE", 'temperature', fallback=0.1),
-            temperature_decay=self.config.getfloat("INTERACTIVE", 'temperature_decay', fallback=1.)
+            temperature=cfg.temperature,
+            temperature_decay=cfg.temperature_decay
         )
 
     def play_move(self):
@@ -85,12 +84,10 @@ def play_game(interactive):
             break
 
 
-def main():
-    config = ConfigParser()
-    config.read('config.ini')
-
+@hydra.main(version_base=None, config_path="../../conf", config_name="config")
+def main(cfg: DictConfig):
     while True:
-        interactive = InteractiveGame(config)
+        interactive = InteractiveGame(cfg.interactive)
         play_game(interactive)
         interactive.gui.wait_for_pressing_r()  # wait for 'r' to start new game
 

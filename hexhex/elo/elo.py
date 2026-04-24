@@ -7,7 +7,7 @@ from hexhex.evaluation import evaluate_two_models
 from hexhex.utils.utils import load_model
 
 
-def add_to_tournament(model_list, new_model_name, args, old_results):
+def add_to_tournament(model_list, new_model_name, cfg, old_results):
     """
     Adds new_model to existing tournament by playing against all other teams.
     """
@@ -17,19 +17,19 @@ def add_to_tournament(model_list, new_model_name, args, old_results):
     else:
         new_results = copy.deepcopy(old_results)
 
-    sub_model_names = model_list[:args.getint('max_num_opponents', fallback=10)]
+    sub_model_names = model_list[:cfg.max_num_opponents]
     new_model = load_model(f'models/{new_model_name}.pt')
 
     for old_model_file in sub_model_names:
         old_model = load_model(f'models/{old_model_file}.pt')
         result, signed_chi_squared = evaluate_two_models.play_games(
                 models=(old_model, new_model),
-                num_opened_moves=args.getint('num_opened_moves'),
-                number_of_games=args.getint('number_of_games'),
-                batch_size=args.getint('batch_size'),
-                temperature=args.getfloat('temperature'),
-                temperature_decay=args.getfloat('temperature_decay'),
-                plot_board=args.getboolean('plot_board')
+                num_opened_moves=cfg.num_opened_moves,
+                number_of_games=cfg.number_of_games,
+                batch_size=cfg.batch_size,
+                temperature=cfg.temperature,
+                temperature_decay=cfg.temperature_decay,
+                plot_board=cfg.plot_board
         )
 
         new_results[old_model_file][new_model_name] = result[0][0] + result[1][0]

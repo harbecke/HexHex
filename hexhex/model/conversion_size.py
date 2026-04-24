@@ -6,6 +6,7 @@ from hexhex.utils.utils import device
 
 
 def convert_boardsize_of_model(model_name, new_bs):
+    new_bs = int(new_bs)
     checkpoint = torch.load(f'models/{model_name}.pt', map_location=device)
     config = checkpoint['config']
     config['board_size'] = new_bs
@@ -13,7 +14,7 @@ def convert_boardsize_of_model(model_name, new_bs):
     bias_key = 'bias'
     while True:
         if bias_key in checkpoint['model_state_dict']:
-            checkpoint['model_state_dict'][bias_key] = torch.zeros(int(new_bs)**2)
+            checkpoint['model_state_dict'][bias_key] = torch.zeros(new_bs**2)
             break
         bias_key = 'internal_model.' + bias_key
 
