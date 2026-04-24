@@ -1,4 +1,7 @@
 # @package _global_
+# Settings that produced models/11_2w4_2000.pt (the deployed web model).
+# Architecture verified against checkpoint config; data/train params from prod_config.ini.
+# model_name here is descriptive (11x11, 18 layers, 64ch) — the original run used "11_2w4".
 model:
   board_size: 11
   layers: 18

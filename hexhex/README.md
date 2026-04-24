@@ -29,24 +29,32 @@ All hyperparameters live in `conf/` as typed YAML files (via [Hydra](https://hyd
 
 ```
 conf/
-  config.yaml          # top-level defaults
-  model/default.yaml   # architecture: board_size, layers, channels, …
-  data/default.yaml    # self-play: batch_size, temperature, noise, …
-  train/default.yaml   # training: learning_rate, optimizer, epochs, …
-  elo/default.yaml     # tournament settings
-  rst/default.yaml     # repeated self-training loop settings
-  evaluate/default.yaml
-  interactive/default.yaml
+  config.yaml       # shared settings (evaluate, interactive) + defaults to preset: dev
+  preset/
+    dev.yaml        # 3×3 board, small model, 2 RST iterations — default
+    prod.yaml       # 11×11 board, 18-layer model, 5000 iterations — produced models/11_2w4_2000.pt
 ```
 
-Override any value on the command line — no need to edit YAML files for one-off runs:
+Switch presets or override individual values on the command line:
 
 ```bash
-uv run python -m hexhex.training.repeated_self_training \
-    model.board_size=11 \
-    model.layers=18 \
-    model.intermediate_channels=64 \
-    train.learning_rate=3e-4
+# Full production training run
+uv run python -m hexhex.training.repeated_self_training preset=prod
+
+# Override a single value without changing preset
+uv run python -m hexhex.training.repeated_self_training train.learning_rate=3e-4
+```
+
+Hydra writes a resolved copy of the config and logs for each run under `outputs/`:
+
+```
+outputs/
+  YYYY-MM-DD/
+    HH-MM-SS/
+      .hydra/
+        config.yaml   # fully resolved config for this run
+        overrides.yaml
+      hexhex.log      # run log (if file logging is configured)
 ```
 
 ## Running Training and Tools
