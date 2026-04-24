@@ -20,7 +20,7 @@ uv run pytest                                               # Run all tests
 uv run pytest tests/test_file.py::test_name                # Run a single test
 uv run python -m hexhex.training.repeated_self_training    # Run training loop
 uv run python -m hexhex.interactive.interactive             # Launch interactive GUI
-uv run tensorboard.main --logdir runs/                      # Visualize training
+uv run tensorboard --logdir runs/                           # Visualize training
 ```
 
 ### JavaScript (Frontend — app/)
