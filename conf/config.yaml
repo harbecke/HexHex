@@ -4,22 +4,27 @@ defaults:
 
 hydra:
   job:
+    # Keep cwd as the project root; code uses relative paths (models/, data/).
     chdir: false
 
 evaluate:
-  model1: ???
-  model2: ???
+  model1: ??? # Required: path stem under models/ for model 1 (??? = mandatory in Hydra).
+  model2: ??? # Required: path stem under models/ for model 2.
+  # Pre-place this many opening moves before the models start playing; all distinct
+  # N-move openings are enumerated so every game starts from a different position.
   num_opened_moves: 1
+  # Max games played per color assignment (each model plays both colors).
+  # Capped by the number of distinct openings when num_opened_moves > 0.
   number_of_games: 64
-  batch_size: 64
-  temperature: 0.7
-  temperature_decay: 0.7
-  plot_board: false
+  batch_size: 64 # Parallel games per forward-pass batch.
+  temperature: 0.7 # Softmax temperature for move selection: logits/T then sample; 0 = greedy argmax.
+  temperature_decay: 0.7 # Multiplied by temperature after each move: T_eff = temperature * decay^num_moves.
+  plot_board: false # Save a PNG of each finished board to data/images/.
 
 interactive:
-  model: 11_2w4_2000
-  switch: true
-  gui_radius: 50
-  dark_mode: false
-  temperature: 0.0
-  temperature_decay: 1.0
+  model: 11_2w4_2000 # Filename stem under models/ to load for human vs. AI play.
+  switch: true # Allow the swap (pie) rule: second player may swap colors after the first stone.
+  gui_radius: 50 # Pixel radius of each hex cell in the Tkinter GUI.
+  dark_mode: false # Use a dark colour scheme in the Tkinter GUI.
+  temperature: 0.0 # AI move-selection temperature; 0 = always play the highest-rated move.
+  temperature_decay: 1.0 # Temperature multiplier per move; 1.0 = constant temperature throughout.
