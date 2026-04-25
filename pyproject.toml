@@ -34,8 +34,11 @@ line-length = 120
 testpaths = ["tests"]
 pythonpath = ["."]
 
+[tool.uv]
+required-environments = "sys_platform == 'darwin' and platform_machine == 'x86_64'"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
-    "onnxruntime>=1.24.3",
+    "onnxruntime",
 ]

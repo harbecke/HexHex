@@ -4,6 +4,7 @@ from collections import defaultdict
 
 import hydra
 import torch
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
 from hexhex.creation import create_data, create_model
@@ -175,6 +176,21 @@ class RepeatedSelfTrainer:
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: DictConfig):
+    output_dir = HydraConfig.get().runtime.output_dir
+    preset = HydraConfig.get().runtime.choices.get("preset", "unknown")
+    g = "\033[32m"
+    r = "\033[0m"
+    print(f"{g}{'='*50}{r}")
+    print(f"{g}  HexHex self-play training{r}")
+    print(f"{g}{'='*50}{r}")
+    print(f"{g}  This run is logged to:{r}")
+    print(f"{g}    {output_dir}/{r}")
+    print(f"{g}{r}")
+    print(f"{g}  That directory contains:{r}")
+    print(f"{g}    repeated_self_training.log  — full console output{r}")
+    print(f"{g}    .hydra/config.yaml          — fully resolved config (preset: {preset}){r}")
+    print(f"{g}    .hydra/overrides.yaml       — any CLI overrides applied{r}")
+    print(f"{g}{'='*50}{r}")
     trainer = RepeatedSelfTrainer(cfg)
     trainer.repeated_self_training()
 
