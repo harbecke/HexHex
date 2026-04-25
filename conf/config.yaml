@@ -6,6 +6,10 @@ hydra:
   job:
     # Keep cwd as the project root; code uses relative paths (models/, data/).
     chdir: false
+  job_logging:
+    formatters:
+      simple:
+        format: '[%(asctime)s][%(levelname).1s] %(message)s'  # e.g. [2026-04-25 16:09:34,790][I] message
 
 evaluate:
   model1: ??? # Required: path stem under models/ for model 1 (??? = mandatory in Hydra).

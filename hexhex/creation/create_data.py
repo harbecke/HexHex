@@ -85,10 +85,15 @@ def create_self_play_data(args, model, num_samples, verbose=True):
             logits = model(board.board_tensor.unsqueeze(0).to(utils.device)).view(board_size, board_size)
             win_probs = torch.sigmoid(logits)
 
-        with np.printoptions(precision=2, suppress=True, floatmode='fixed'):
-            logger.info("Self-play first move frequency:\n" + str(first_move_frequency.view(board_size, board_size).int().numpy()) + '\n')
-            logger.info("Self-play first move win rate:\n" + str(first_move_win_percentage.view(board_size, board_size).numpy()) + '\n')
-            logger.info("Model predicted first move win probabilities:\n" + str(win_probs.cpu().numpy()))
+        def log_grid(label, grid):
+            logger.info(label)
+            with np.printoptions(precision=2, suppress=True, floatmode='fixed'):
+                for row in grid:
+                    logger.info("  " + str(row))
+
+        log_grid("Self-play first move frequency:", first_move_frequency.view(board_size, board_size).int().numpy())
+        log_grid("Self-play first move win rate:", first_move_win_percentage.view(board_size, board_size).numpy())
+        log_grid("Model predicted first move win probabilities:", win_probs.cpu().numpy())
 
         logger.info(f'=== created self-play data ===')
 
