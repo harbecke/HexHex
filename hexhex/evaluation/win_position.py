@@ -51,7 +51,7 @@ def win_count_3(model_name):
     logger.info(f"Lost {lose_count} / {game_count} games")
 
 
-def win_count(model_name, reference_models, cfg, verbose):
+def win_count(model_name, reference_models, cfg, verbose, step=None):
     if verbose:
         opponents = ', '.join(reference_models.keys())
         logger.info(f"Evaluating {model_name} vs {opponents} ({cfg.num_opened_moves} opened moves)")
@@ -81,6 +81,6 @@ def win_count(model_name, reference_models, cfg, verbose):
             win_count_ = game_count - lose_count
             win_rate = win_count_ / game_count
             logger.info(f"Won {win_count_:4} / {game_count:4} ({round(win_rate * 100):3}%) games against {opponent_name}")
-            writer.add_scalar(f'lose_rate/{opponent_name}', 1 - win_rate)
+            writer.add_scalar(f'win_rate/{opponent_name}', win_rate, step)
 
     return results

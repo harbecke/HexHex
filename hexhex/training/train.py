@@ -98,6 +98,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
 
             train_loss = measure_loss(train_triple, eval_mode=False)
             train_loss.backward()
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), float('inf')).item()
             optimizer.step()
 
             train_loss_avg.add(train_loss.item(), len(train_triple[0]))
@@ -116,6 +117,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
                     f'l2_param_loss: {l2loss:.3f} '
                     f'weighted_param_loss: {weighted_param_loss:.3f}'
                 )
+                writer.add_scalar('train/grad_norm', grad_norm, step)
                 writer.add_scalar('train/puzzle_loss', puzzle_loss.mean(), step)
                 writer.add_scalar('train/l2_weights', l2loss, step)
 

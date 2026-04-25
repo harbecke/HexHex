@@ -53,7 +53,7 @@ class RepeatedSelfTrainer:
         val_samples_per_model = self.val_samples // self.num_data_models
         start = ((i-1) % self.num_data_models)
         new_train_triple = self.create_data_samples(self.get_model_name(i-1),
-            train_samples_per_model)
+            train_samples_per_model, step=i)
         new_val_triple = self.create_data_samples(self.get_model_name(i-1),
             val_samples_per_model, verbose=False)
         for idx in range(3):
@@ -64,7 +64,7 @@ class RepeatedSelfTrainer:
         self.train_model(self.get_model_name(i-1), self.get_model_name(i), self.training_data,
             self.validation_data)
         self.model_names.append(self.get_model_name(i))
-        self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True)
+        self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True, step=i)
 
     def repeated_self_training(self):
         self.prepare_rst()
@@ -81,9 +81,9 @@ class RepeatedSelfTrainer:
     def create_initial_model(self):
         create_model.create_and_store_model(self.cfg.model, self.get_model_name(0))
 
-    def create_data_samples(self, model_name, num_samples, verbose=True):
+    def create_data_samples(self, model_name, num_samples, verbose=True, step=None):
         model = load_model(f'models/{model_name}.pt')
-        return create_data.create_self_play_data(self.cfg.data, model, num_samples, verbose)
+        return create_data.create_self_play_data(self.cfg.data, model, num_samples, verbose, step=step)
 
     def initial_data(self):
         if self.cfg.rst.load_initial_data:
@@ -162,7 +162,7 @@ class RepeatedSelfTrainer:
         logger.info(f"ELO difference between best trained model and best reference model: {diff:0.2f}")
         return diff
 
-    def measure_win_counts(self, model_name, reference_model_names, verbose):
+    def measure_win_counts(self, model_name, reference_model_names, verbose, step=None):
         reference_models = {}
         for model in reference_model_names:
             if model == "random":
@@ -170,7 +170,7 @@ class RepeatedSelfTrainer:
             else:
                 reference_models[model] = load_model(f'models/{model}.pt')
         results = win_position.win_count(model_name, reference_models,
-            self.cfg.vs_reference, verbose)
+            self.cfg.vs_reference, verbose, step=step)
         self.tournament_results = merge_dicts_of_dicts(self.tournament_results, results)
 
 
