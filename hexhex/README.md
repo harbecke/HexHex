@@ -77,7 +77,7 @@ uv run python -m hexhex.creation.puzzle
 
 ## Reference Models
 
-Training uses `reference_models.json`. Use `"random"` for a random-play reference, or a model name string for a previously trained model.
+Reference opponents are configured in `vs_reference.reference_models` in the preset YAML (e.g. `conf/preset/dev.yaml`). Use `"random"` for a random-play baseline, or a model name string for a previously trained checkpoint.
 
 ## Visualize Training
 

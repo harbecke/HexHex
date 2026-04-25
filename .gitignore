@@ -22,7 +22,6 @@ bo_results.p
 ratings.txt
 game_history.pgn
 bo_parameters.json
-reference_models.json
 
 # Legacy dependency management
 Pipfile

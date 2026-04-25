@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-import json
 import math
-import os
 from collections import defaultdict
 
 import hydra
@@ -18,21 +16,6 @@ from hexhex.utils.summary import writer
 from hexhex.utils.utils import load_model, merge_dicts_of_dicts
 
 
-def load_reference_models(board_size):
-    reference_model_path = 'reference_models.json'
-    if not os.path.isfile(reference_model_path):
-        with open(reference_model_path, 'w') as file:
-            file.write("{}")
-    with open(reference_model_path) as file:
-        reference_models = json.load(file)
-    board_size_str = str(board_size)
-    if board_size_str not in reference_models:
-        reference_models[board_size_str] = []
-        with open(reference_model_path, 'w') as file:
-            file.write(json.dumps(reference_models, indent=4))
-    return reference_models[board_size_str]
-
-
 class RepeatedSelfTrainer:
     def __init__(self, cfg):
         self.cfg = cfg
@@ -43,7 +26,7 @@ class RepeatedSelfTrainer:
         self.model_names = []
         self.start_index = cfg.rst.start_index
         self.tournament_results = defaultdict(lambda: defaultdict(int))
-        self.reference_models = load_reference_models(cfg.model.board_size)
+        self.reference_models = list(cfg.vs_reference.reference_models)
         self.total_epochs_trained = 0
 
     def get_model_name(self, i):
