@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import math
+import time
 from collections import defaultdict
 
 import hydra
@@ -49,22 +50,36 @@ class RepeatedSelfTrainer:
         self.validation_data = self.check_enough_data(validation_data, self.val_samples)
 
     def rst_loop(self, i):
+        t_rst = time.time()
         train_samples_per_model = self.train_samples // self.num_data_models
         val_samples_per_model = self.val_samples // self.num_data_models
         start = ((i-1) % self.num_data_models)
+
+        t_data = time.time()
         new_train_triple = self.create_data_samples(self.get_model_name(i-1),
             train_samples_per_model, step=i)
         new_val_triple = self.create_data_samples(self.get_model_name(i-1),
             val_samples_per_model, verbose=False)
+        writer.add_scalar('time/data_generation', time.time() - t_data, i)
+
         for idx in range(3):
             self.training_data[idx][start*train_samples_per_model : (start+1) * \
                 train_samples_per_model] = new_train_triple[idx]
             self.validation_data[idx][start*val_samples_per_model : (start+1) * \
                 val_samples_per_model] = new_val_triple[idx]
+
+        t_train = time.time()
         self.train_model(self.get_model_name(i-1), self.get_model_name(i), self.training_data,
             self.validation_data)
+        writer.add_scalar('time/training', time.time() - t_train, i)
+
         self.model_names.append(self.get_model_name(i))
+
+        t_eval = time.time()
         self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True, step=i)
+        writer.add_scalar('time/evaluation', time.time() - t_eval, i)
+
+        writer.add_scalar('time/rst_iteration', time.time() - t_rst, i)
 
     def repeated_self_training(self):
         self.prepare_rst()
