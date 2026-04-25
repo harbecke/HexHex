@@ -54,7 +54,7 @@ outputs/
       .hydra/
         config.yaml   # fully resolved config for this run
         overrides.yaml
-      hexhex.log      # run log (if file logging is configured)
+      repeated_self_training.log  # full console output (written by Hydra)
 ```
 
 ## Running Training and Tools

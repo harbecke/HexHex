@@ -17,11 +17,8 @@ outputs/
 *.ipynb
 
 # Local configuration and game results
-config.ini
-bo_results.p
 ratings.txt
 game_history.pgn
-bo_parameters.json
 
 # Legacy dependency management
 Pipfile
