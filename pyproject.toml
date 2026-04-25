@@ -9,7 +9,7 @@ dependencies = [
     "numpy<2", # Also macos x86_64 issue, maybe can be worked around.
     "pygame",
     "tensorboard",
-    "scikit-optimize",
+    "hydra-core>=1.3.0",
     "matplotlib",
     "jupyter",
     "image",
@@ -34,8 +34,11 @@ line-length = 120
 testpaths = ["tests"]
 pythonpath = ["."]
 
+[tool.uv]
+required-environments = "sys_platform == 'darwin' and platform_machine == 'x86_64'"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
-    "onnxruntime>=1.24.3",
+    "onnxruntime",
 ]

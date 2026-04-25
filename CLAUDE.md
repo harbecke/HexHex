@@ -20,7 +20,7 @@ uv run pytest                                               # Run all tests
 uv run pytest tests/test_file.py::test_name                # Run a single test
 uv run python -m hexhex.training.repeated_self_training    # Run training loop
 uv run python -m hexhex.interactive.interactive             # Launch interactive GUI
-uv run tensorboard.main --logdir runs/                      # Visualize training
+uv run tensorboard --logdir runs/                           # Visualize training
 ```
 
 ### JavaScript (Frontend — app/)
@@ -63,14 +63,13 @@ Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint co
 - Wrapper classes for rotation invariance and switch rule handling
 
 **`hexhex/creation/`** — Data and model factory
-- `create_model.py`: instantiates models from `config.ini` hyperparameters
+- `create_model.py`: instantiates models from Hydra/OmegaConf config
 - `create_data.py`: generates batches of self-play games
 - `noise.py`: exploration noise for move selection
 
 **`hexhex/training/`** — Training pipeline
 - `train.py`: core training loop
 - `repeated_self_training.py`: iterative self-play → train → evaluate loop
-- `bayesian_optimization.py`: hyperparameter search via scikit-optimize
 
 **`hexhex/evaluation/` + `hexhex/elo/`** — Model ranking
 - `evaluate_two_models.py`: head-to-head match
@@ -140,7 +139,8 @@ idle  ──PLAYER_MOVE──►  thinking  ──AI_MOVE / AI_SURE_WIN──►
 After the human's first stone, clicking that same occupied cell triggers `SWAP` — the human effectively takes the agent's perspective (colors flip). When the **AI** decides to swap (it evaluates whether the first stone is too strong), it returns the occupied cell id as its move; the reducer detects `cells[cellId] !== null` with `numMoves === 1` and flips `agentIsBlue` without placing a new stone. `aiSwapped` is set in state so the UI can inform the player.
 
 ### Configuration
-All training and model hyperparameters live in `config.ini`. Template with defaults is in `sample_files/config.ini`. Key sections: `[CREATE MODEL]`, `[CREATE DATA]`, `[TRAIN]`, `[REPEATED SELF TRAINING]`, `[ELO]`.
+All training and model hyperparameters live in `conf/` as Hydra/OmegaConf YAML files. Two self-contained presets: `conf/preset/dev.yaml` (3×3, small model, 2 iterations — default) and `conf/preset/prod.yaml` (11×11, 18-layer model, 5000 iterations). Switch with `preset=prod`; override individual values with e.g. `train.learning_rate=3e-4`. Hydra writes a fully resolved config + logs for each run under `outputs/YYYY-MM-DD/HH-MM-SS/.hydra/`.
+**Hyperparameter sweeps (TODO):** `bayesian_optimization.py` (scikit-optimize) was removed. The replacement is [Hydra's Optuna sweeper](https://hydra.cc/docs/plugins/optuna_sweeper/) — `hydra-optuna-sweeper` needs to be added to `pyproject.toml` and a sweep config written at `conf/hydra/sweeper/optuna.yaml`.
 
 ### Python board representation
 Input: 2-channel tensor (red stones, blue stones) with border padding to help convolutions handle edge conditions.

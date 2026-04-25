@@ -1,0 +1,88 @@
+# @package _global_
+model:
+  board_size: 3 # NxN board dimensions.
+  layers: 2 # Number of residual skip-connection conv layers in the CNN.
+  intermediate_channels: 5 # Feature-map depth in hidden convolutional layers.
+  # Conv kernel half-size: kernels are (2*reach+1)^2; reach=1 gives 3x3 kernels.
+  reach: 1
+  # If false, wraps the model in NoSwitchWrapperModel to make the swap move always illegal.
+  switch_model: false
+  # If true, wraps model in RotationWrapperModel to average 0° and 180°-rotated predictions.
+  rotation_model: true
+  model_name: 3_2l_5c # Stem for checkpoint filenames: models/<model_name>_NNNN.pt.
+
+data:
+  # Size of the rolling training buffer, spread evenly across num_data_models recent generations.
+  num_train_samples: 1000
+  num_val_samples: 100 # Held-out positions used only for validation-loss logging.
+  batch_size: 32 # Parallel games per self-play batch.
+  # Exploration noise added to model logits before move selection.
+  # "none"    — no noise
+  # "uniform" — each cell's logit gets +1000 with probability noise_parameters[0]
+  # "singh"   — one random cell gets a Singh-Maddala heavy-tail sample (Burr distribution)
+  noise: "none"
+  # Parameters for the chosen noise type.
+  # singh:   [alpha, beta, lambda]  (shape params of the Burr distribution)
+  # uniform: [probability]
+  # none:    ignored
+  noise_parameters: [3.0, 0.5, 1.0]
+  # Softmax temperature for move selection during self-play; higher = more exploratory games.
+  temperature: 0.67
+  # Multiplied by temperature after each move: T_eff = temperature * decay^num_moves.
+  # 1.0 = constant temperature throughout the game.
+  temperature_decay: 1.0
+  # Temporal discount for training targets. Target for a move k steps before game end:
+  #   0.5 ± 0.5 * (1 - gamma)^(2*(k//2))
+  # 0.0 = every move receives the raw final outcome (won=1, lost=0) with no discounting.
+  gamma: 0.0
+
+train:
+  # Fraction of the rolling training buffer to train on per RST iteration.
+  # Kept well below 1 so each sample is seen roughly once across its window of num_data_models
+  # iterations, avoiding over-fitting to stale self-play data.
+  epochs: 1
+  batch_size: 32 # Mini-batch size for gradient updates.
+  optimizer: adam # "adam" or "sgd".
+  learning_rate: 0.0001
+  momentum: 0.9 # SGD momentum (ignored by Adam).
+  weight_decay: 0.0 # L2 regularisation coefficient (applied manually as weight_decay * sum(p^2)).
+  print_loss_frequency: 1000 # Log puzzle loss and L2 weight norm every N mini-batches.
+
+elo:
+  number_of_games: 16 # Max games per color assignment in ELO tournament matchups.
+  batch_size: 16 # Parallel games per batch during ELO evaluation.
+  num_opened_moves: 1 # Pre-placed opening moves for positional diversity in ELO matches.
+  temperature: 0.0 # Move-selection temperature during ELO games; 0 = deterministic/greedy.
+  temperature_decay: 0.7 # Temperature decay per move in ELO games.
+  plot_board: false # Save PNG board images from ELO games.
+  # Each new model only faces the top N opponents from the sorted rating list.
+  # Avoids O(n²) tournament cost as the model pool grows.
+  max_num_opponents: 3
+
+vs_reference:
+  batch_size: 32 # Parallel games per batch against reference models.
+  # Total games per reference model, split equally between both starting colors.
+  num_games: 256
+  num_opened_moves: 1 # Pre-placed opening moves for these evaluation games.
+  temperature: 0.0 # Move temperature; 0 = greedy.
+  temperature_decay: 0.0 # Temperature decay; 0.0 = no decay (irrelevant when temperature=0).
+  plot_board: false # Save PNG board images.
+  # List of reference model names. "random" instantiates RandomModel;
+  # other names are loaded from models/<name>.pt.
+  reference_models:
+    - random
+
+puzzle:
+  board_size: 3 # Board size for the puzzle file (data/<board_size>_puzzle.pt); must match model.board_size.
+  num_samples: 1000 # Random-play games to generate; each contributes 2 positions (the last 2 board states).
+
+rst:
+  start_index: 0 # Resume from this iteration index; 0 = create a fresh model_0000.pt first.
+  num_iterations: 2 # Total self-play → train → evaluate cycles to run.
+  # Number of recent model generations whose self-play data are pooled in the rolling buffer.
+  # Each generation contributes num_train_samples / num_data_models positions.
+  num_data_models: 2
+  # If true, load pre-existing data from data/<model_name>.pt instead of generating from a random model.
+  load_initial_data: false
+  # If true, save the final training/validation buffers to data/<model_name>.pt at the end of training.
+  save_data: false

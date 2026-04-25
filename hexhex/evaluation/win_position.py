@@ -42,7 +42,7 @@ def win_count_3(model_name):
             board = Board(board_size)
             counter_model = TestModel(xs)
             models = (counter_model, model) if test_model_starts else (model, counter_model)
-            game = MultiHexGame((board,), models, noise=None, noise_parameters=None, 
+            game = MultiHexGame((board,), models, noise=None, noise_parameters=None,
                 temperature=0, temperature_decay=0)
             game.play_moves()
             if board.winner == [1 - int(test_model_starts)]:
@@ -51,7 +51,7 @@ def win_count_3(model_name):
     logger.info(f"Lost {lose_count} / {game_count} games")
 
 
-def win_count(model_name, reference_models, config, verbose):
+def win_count(model_name, reference_models, cfg, verbose):
     if verbose:
         logger.info("Determining win count against test model")
 
@@ -65,12 +65,12 @@ def win_count(model_name, reference_models, config, verbose):
     for opponent_name, opponent_model in reference_models.items():
         result, _ = evaluate_two_models.play_games(
             models=(model, opponent_model),
-            num_opened_moves=config.getint('num_opened_moves', 1),
-            number_of_games=config.getint('num_games', 100) // 2,
-            batch_size=config.getint('batch_size', 32),
-            temperature=config.getfloat('temperature', 0),
-            temperature_decay=config.getfloat('temperature_decay', 0),
-            plot_board=config.getboolean('plot_board', False)
+            num_opened_moves=cfg.num_opened_moves,
+            number_of_games=cfg.num_games // 2,
+            batch_size=cfg.batch_size,
+            temperature=cfg.temperature,
+            temperature_decay=cfg.temperature_decay,
+            plot_board=cfg.plot_board
         )
 
         results[model_name][opponent_name] = result[0][0] + result[1][0]

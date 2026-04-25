@@ -9,6 +9,7 @@ __pycache__/
 
 # Logs and training output
 runs/
+outputs/
 *.log
 *.profile
 
@@ -16,12 +17,8 @@ runs/
 *.ipynb
 
 # Local configuration and game results
-config.ini
-bo_results.p
 ratings.txt
 game_history.pgn
-bo_parameters.json
-reference_models.json
 
 # Legacy dependency management
 Pipfile

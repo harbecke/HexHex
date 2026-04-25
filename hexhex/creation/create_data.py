@@ -22,15 +22,16 @@ class SelfPlayGenerator:
         - move
         - result of game for active player
         """
-        boards = [Board(size=self.board_size) for _ in range(self.args.getint('batch_size'))]
+        boards = [Board(size=self.board_size) for _ in range(self.args.batch_size)]
+        noise = self.args.noise if self.args.noise != "none" else None
         multihexgame = MultiHexGame(
             boards=boards,
             models=(self.model,),
-            noise=self.args.get('noise'),
-            noise_parameters=[float(parameter) for parameter in self.args.get('noise_parameters').split(",")],
-            temperature=self.args.getfloat('temperature'),
-            temperature_decay=self.args.getfloat('temperature_decay'),
-            gamma=self.args.getfloat('gamma')
+            noise=noise,
+            noise_parameters=list(self.args.noise_parameters),
+            temperature=self.args.temperature,
+            temperature_decay=self.args.temperature_decay,
+            gamma=self.args.gamma
         )
         board_states, moves, targets = multihexgame.play_moves()
         output_list = list(zip(board_states, moves, targets))
