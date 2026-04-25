@@ -76,7 +76,7 @@ class RepeatedSelfTrainer:
             torch.save((self.training_data, self.validation_data), f'data/{self.model_name}.pt')
             logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
 
-        logger.info('=== finished training ===')
+        logger.info('=== finished repeated self-training ===')
 
     def create_initial_model(self):
         create_model.create_and_store_model(self.cfg.model, self.get_model_name(0))
@@ -93,7 +93,7 @@ class RepeatedSelfTrainer:
 
         else:
             logger.info("")
-            logger.info('=== creating random initial data ===')
+            logger.info(f'=== creating random initial data ({self.train_samples} train, {self.val_samples} val samples from random self-play) ===')
             model = RandomModel(self.cfg.model.board_size)
             training_data = create_data.create_self_play_data(self.cfg.data, model,
                 self.train_samples, verbose=False)
