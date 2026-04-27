@@ -1,5 +1,0 @@
-# Reference models live here permanently. Only the deployed web model is tracked;
-# any other baselines you drop in are local-only.
-*
-!.gitignore
-!11_2w4_2000.pt
