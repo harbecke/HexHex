@@ -4,6 +4,7 @@ from collections import defaultdict
 import torch
 
 from hexhex.evaluation import evaluate_two_models
+from hexhex.logic import temperature
 from hexhex.logic.hexboard import Board
 from hexhex.logic.hexgame import MultiHexGame
 from hexhex.utils.logger import logger
@@ -43,8 +44,7 @@ def win_count_3(model_name):
             board = Board(board_size)
             counter_model = TestModel(xs)
             models = (counter_model, model) if test_model_starts else (model, counter_model)
-            game = MultiHexGame((board,), models, noise=None, noise_parameters=None,
-                temperature=0, temperature_decay=0)
+            game = MultiHexGame((board,), models, temperature_schedule=temperature.Fixed(0.0))
             game.play_moves()
             if board.winner == [1 - int(test_model_starts)]:
                 lose_count += 1
@@ -67,8 +67,7 @@ def win_count(model_name, reference_models, cfg, verbose, step=None):
             num_opened_moves=cfg.num_opened_moves,
             number_of_games=cfg.num_games // 2,
             batch_size=cfg.batch_size,
-            temperature=cfg.temperature,
-            temperature_decay=cfg.temperature_decay,
+            temperature_schedule=temperature.from_config(cfg.temperature),
             plot_board=cfg.plot_board
         )
 

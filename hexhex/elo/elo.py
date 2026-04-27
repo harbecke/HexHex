@@ -4,6 +4,7 @@ import math
 from collections import defaultdict
 
 from hexhex.evaluation import evaluate_two_models
+from hexhex.logic import temperature
 from hexhex.utils.paths import run_model_path
 from hexhex.utils.utils import load_model
 
@@ -28,8 +29,7 @@ def add_to_tournament(model_list, new_model_name, cfg, old_results):
                 num_opened_moves=cfg.num_opened_moves,
                 number_of_games=cfg.number_of_games,
                 batch_size=cfg.batch_size,
-                temperature=cfg.temperature,
-                temperature_decay=cfg.temperature_decay,
+                temperature_schedule=temperature.from_config(cfg.temperature),
                 plot_board=cfg.plot_board
         )
 

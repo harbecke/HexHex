@@ -32,8 +32,14 @@ evaluate:
   # Capped by the number of distinct openings when num_opened_moves > 0.
   number_of_games: 64
   batch_size: 64 # Parallel games per forward-pass batch.
-  temperature: 0.7 # Softmax temperature for move selection: logits/T then sample; 0 = greedy argmax.
-  temperature_decay: 0.7 # Multiplied by temperature after each move: T_eff = temperature * decay^num_moves.
+  # Move-selection temperature schedule. type: fixed | exp_decay | step.
+  # T = 0 → argmax; T = .inf → uniform random over cells; otherwise sample from softmax(logits/T).
+  # random_first_moves: number of opening moves forced to uniform random regardless of schedule.
+  temperature:
+    type: exp_decay
+    base: 0.7
+    decay: 0.7
+    random_first_moves: 0
   plot_board: false # Save a PNG of each finished board to data/images/.
 
 interactive:
@@ -41,5 +47,6 @@ interactive:
   switch: true # Allow the swap (pie) rule: second player may swap colors after the first stone.
   gui_radius: 50 # Pixel radius of each hex cell in the Tkinter GUI.
   dark_mode: false # Use a dark colour scheme in the Tkinter GUI.
-  temperature: 0.0 # AI move-selection temperature; 0 = always play the highest-rated move.
-  temperature_decay: 1.0 # Temperature multiplier per move; 1.0 = constant temperature throughout.
+  temperature:
+    type: fixed
+    value: 0.0  # 0 = always play the highest-rated move.

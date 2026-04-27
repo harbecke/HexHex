@@ -3,6 +3,7 @@ import hydra
 from omegaconf import DictConfig
 
 from hexhex.interactive.gui import Gui
+from hexhex.logic import temperature
 from hexhex.logic.hexboard import Board
 from hexhex.logic.hexgame import MultiHexGame
 from hexhex.utils.paths import reference_model_path
@@ -22,10 +23,7 @@ class InteractiveGame:
         self.game = MultiHexGame(
             boards=(self.board,),
             models=(self.model,),
-            noise=None,
-            noise_parameters=None,
-            temperature=cfg.temperature,
-            temperature_decay=cfg.temperature_decay
+            temperature_schedule=temperature.from_config(cfg.temperature),
         )
 
     def play_move(self):
