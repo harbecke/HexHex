@@ -28,7 +28,8 @@ _run_dir: str | None = None
 
 
 def auto_model_name(model_cfg) -> str:
-    return f"b{model_cfg.board_size}_l{model_cfg.layers}_c{model_cfg.intermediate_channels}"
+    bs = model_cfg.board_size
+    return f"{bs}x{bs}_l{model_cfg.layers}_c{model_cfg.intermediate_channels}"
 
 
 def _suffix(value) -> str:

@@ -12,7 +12,7 @@ hydra:
   run:
     # Single per-run dir under runs/. The `${suffix:...}` resolver is registered in
     # hexhex/utils/paths.py and prepends an underscore when exp_name is non-null.
-    dir: runs/${now:%Y-%m-%d}_${now:%H-%M-%S}_${hydra:runtime.choices.preset}_b${model.board_size}_l${model.layers}_c${model.intermediate_channels}${suffix:${oc.select:exp_name,}}
+    dir: runs/${now:%Y-%m-%d}_${now:%H-%M-%S}_${hydra:runtime.choices.preset}_${model.board_size}x${model.board_size}_l${model.layers}_c${model.intermediate_channels}${suffix:${oc.select:exp_name,}}
   job:
     # Keep cwd as the project root; code writes via paths.py helpers (which already
     # resolve relative to runs/<exp_id>/) and reference models load from reference_models/.
