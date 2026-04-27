@@ -79,6 +79,10 @@ puzzle:
 
 rst:
   start_index: 0 # Resume from this iteration index; 0 = create a fresh checkpoint 0000 first.
+  # Required when start_index > 0: exp_id of a prior run whose checkpoint at
+  # `models/<auto_model_name>_<start_index>.pt` will be copied into this run's
+  # models/ dir as the starting point. Ignored when start_index == 0.
+  resume_from: null
   num_iterations: 5000 # Total self-play → train → evaluate cycles to run.
   # Number of recent model generations whose self-play data are pooled in the rolling buffer.
   # Each generation contributes num_train_samples / num_data_models positions.

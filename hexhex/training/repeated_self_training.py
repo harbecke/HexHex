@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import math
 import os
+import shutil
 import time
 from collections import defaultdict
 
@@ -16,10 +17,12 @@ from hexhex.model.hexconvolution import RandomModel
 from hexhex.training import train
 from hexhex.utils.logger import logger
 from hexhex.utils.paths import (
+    RUNS_DIR,
     auto_model_name,
     reference_model_path,
     run_data_path,
     run_model_path,
+    run_models_dir,
     saved_data_path,
     set_run_dir,
 )
@@ -52,6 +55,8 @@ class RepeatedSelfTrainer:
 
         if self.start_index == 0:
             self.create_initial_model()
+        else:
+            self._resume_from_prior_run()
 
         self.model_names.append(self.get_model_name(self.start_index))
         self.sorted_model_names = self.model_names[:]
@@ -110,6 +115,24 @@ class RepeatedSelfTrainer:
 
     def create_initial_model(self):
         create_model.create_and_store_model(self.cfg.model, self.get_model_name(0))
+
+    def _resume_from_prior_run(self):
+        resume_from = self.cfg.rst.resume_from
+        if not resume_from:
+            raise ValueError(
+                f"rst.start_index={self.start_index} requires rst.resume_from=<prior_exp_id> "
+                "so the checkpoint can be copied into this run's models/ dir"
+            )
+        src_path = os.path.join(RUNS_DIR, resume_from, "models",
+                                f"{self.get_model_name(self.start_index)}.pt")
+        if not os.path.exists(src_path):
+            raise FileNotFoundError(
+                f"resume checkpoint not found: {src_path}. "
+                f"Verify rst.resume_from='{resume_from}' and rst.start_index={self.start_index}."
+            )
+        dst_path = run_model_path(self.get_model_name(self.start_index))
+        shutil.copy2(src_path, dst_path)
+        logger.info(f"resumed from {src_path} -> {dst_path}")
 
     def create_data_samples(self, model_name, num_samples, verbose=True, step=None):
         model = load_model(run_model_path(model_name))

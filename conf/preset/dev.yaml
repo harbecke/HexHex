@@ -12,7 +12,7 @@ model:
 
 data:
   # Size of the rolling training buffer, spread evenly across num_data_models recent generations.
-  num_train_samples: 10000
+  num_train_samples: 1000
   num_val_samples: 100 # Held-out positions used only for validation-loss logging.
   batch_size: 32 # Parallel games per self-play batch.
   # Exploration noise added to model logits before move selection.
@@ -77,7 +77,11 @@ puzzle:
 
 rst:
   start_index: 0 # Resume from this iteration index; 0 = create a fresh checkpoint 0000 first.
-  num_iterations: 10 # Total self-play → train → evaluate cycles to run.
+  # Required when start_index > 0: exp_id of a prior run whose checkpoint at
+  # `models/<auto_model_name>_<start_index>.pt` will be copied into this run's
+  # models/ dir as the starting point. Ignored when start_index == 0.
+  resume_from: null
+  num_iterations: 2 # Total self-play → train → evaluate cycles to run.
   # Number of recent model generations whose self-play data are pooled in the rolling buffer.
   # Each generation contributes num_train_samples / num_data_models positions.
   num_data_models: 2
