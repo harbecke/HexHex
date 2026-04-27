@@ -9,11 +9,10 @@ model:
   switch_model: false
   # If true, wraps model in RotationWrapperModel to average 0° and 180°-rotated predictions.
   rotation_model: true
-  model_name: 3_2l_5c # Stem for checkpoint filenames: models/<model_name>_NNNN.pt.
 
 data:
   # Size of the rolling training buffer, spread evenly across num_data_models recent generations.
-  num_train_samples: 1000
+  num_train_samples: 10000
   num_val_samples: 100 # Held-out positions used only for validation-loss logging.
   batch_size: 32 # Parallel games per self-play batch.
   # Exploration noise added to model logits before move selection.
@@ -68,7 +67,7 @@ vs_reference:
   temperature_decay: 0.0 # Temperature decay; 0.0 = no decay (irrelevant when temperature=0).
   plot_board: false # Save PNG board images.
   # List of reference model names. "random" instantiates RandomModel;
-  # other names are loaded from models/<name>.pt.
+  # other names are loaded from reference_models/<name>.pt.
   reference_models:
     - random
 
@@ -77,12 +76,13 @@ puzzle:
   num_samples: 1000 # Random-play games to generate; each contributes 2 positions (the last 2 board states).
 
 rst:
-  start_index: 0 # Resume from this iteration index; 0 = create a fresh model_0000.pt first.
-  num_iterations: 2 # Total self-play → train → evaluate cycles to run.
+  start_index: 0 # Resume from this iteration index; 0 = create a fresh checkpoint 0000 first.
+  num_iterations: 10 # Total self-play → train → evaluate cycles to run.
   # Number of recent model generations whose self-play data are pooled in the rolling buffer.
   # Each generation contributes num_train_samples / num_data_models positions.
   num_data_models: 2
-  # If true, load pre-existing data from data/<model_name>.pt instead of generating from a random model.
-  load_initial_data: false
-  # If true, save the final training/validation buffers to data/<model_name>.pt at the end of training.
+  # null = generate fresh data from a random model; otherwise a name (e.g. a previous exp_id)
+  # to load data/<name>.pt as the initial training/validation buffer.
+  load_initial_data: null
+  # If true, save the final training/validation buffers to data/<exp_id>.pt at the end of training.
   save_data: false

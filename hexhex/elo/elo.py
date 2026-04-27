@@ -4,6 +4,7 @@ import math
 from collections import defaultdict
 
 from hexhex.evaluation import evaluate_two_models
+from hexhex.utils.paths import run_model_path
 from hexhex.utils.utils import load_model
 
 
@@ -18,10 +19,10 @@ def add_to_tournament(model_list, new_model_name, cfg, old_results):
         new_results = copy.deepcopy(old_results)
 
     sub_model_names = model_list[:cfg.max_num_opponents]
-    new_model = load_model(f'models/{new_model_name}.pt')
+    new_model = load_model(run_model_path(new_model_name))
 
     for old_model_file in sub_model_names:
-        old_model = load_model(f'models/{old_model_file}.pt')
+        old_model = load_model(run_model_path(old_model_file))
         result, signed_chi_squared = evaluate_two_models.play_games(
                 models=(old_model, new_model),
                 num_opened_moves=cfg.num_opened_moves,

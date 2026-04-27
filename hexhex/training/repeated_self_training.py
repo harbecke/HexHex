@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import math
+import os
 import time
 from collections import defaultdict
 
 import hydra
 import torch
 from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from hexhex.creation import create_data, create_model
 from hexhex.elo import elo
@@ -14,6 +15,14 @@ from hexhex.evaluation import win_position
 from hexhex.model.hexconvolution import RandomModel
 from hexhex.training import train
 from hexhex.utils.logger import logger
+from hexhex.utils.paths import (
+    auto_model_name,
+    reference_model_path,
+    run_data_path,
+    run_model_path,
+    saved_data_path,
+    set_run_dir,
+)
 from hexhex.utils.summary import writer
 from hexhex.utils.utils import load_model, merge_dicts_of_dicts
 
@@ -24,12 +33,13 @@ class RepeatedSelfTrainer:
         self.num_data_models = cfg.rst.num_data_models
         self.train_samples = cfg.data.num_train_samples
         self.val_samples = cfg.data.num_val_samples
-        self.model_name = cfg.model.model_name
+        self.model_name = auto_model_name(cfg.model)
         self.model_names = []
         self.start_index = cfg.rst.start_index
         self.tournament_results = defaultdict(lambda: defaultdict(int))
         self.reference_models = list(cfg.vs_reference.reference_models)
         self.total_epochs_trained = 0
+        self.ratings_file = 'ratings.txt'
 
     def get_model_name(self, i):
         return '%s_%04d' % (self.model_name, i)
@@ -79,6 +89,10 @@ class RepeatedSelfTrainer:
         self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True, step=i)
         writer.add_scalar('time/evaluation', time.time() - t_eval, i)
 
+        t_elo = time.time()
+        self.create_all_elo_ratings()
+        writer.add_scalar('time/elo_tournament', time.time() - t_elo, i)
+
         writer.add_scalar('time/rst_iteration', time.time() - t_rst, i)
 
     def repeated_self_training(self):
@@ -88,8 +102,9 @@ class RepeatedSelfTrainer:
             self.rst_loop(i)
 
         if self.cfg.rst.save_data:
-            torch.save((self.training_data, self.validation_data), f'data/{self.model_name}.pt')
-            logger.info(f'self-play data generation wrote data/{self.model_name}.pt')
+            data_file = run_data_path()
+            torch.save((self.training_data, self.validation_data), data_file)
+            logger.info(f'self-play data generation wrote {data_file}')
 
         logger.info('=== finished repeated self-training ===')
 
@@ -97,14 +112,15 @@ class RepeatedSelfTrainer:
         create_model.create_and_store_model(self.cfg.model, self.get_model_name(0))
 
     def create_data_samples(self, model_name, num_samples, verbose=True, step=None):
-        model = load_model(f'models/{model_name}.pt')
+        model = load_model(run_model_path(model_name))
         return create_data.create_self_play_data(self.cfg.data, model, num_samples, verbose, step=step)
 
     def initial_data(self):
         if self.cfg.rst.load_initial_data:
+            data_file = saved_data_path(self.cfg.rst.load_initial_data)
             logger.info("")
-            logger.info('=== loading initial data ===')
-            return torch.load(f'data/{self.model_name}.pt')
+            logger.info(f'=== loading initial data from {data_file} ===')
+            return torch.load(data_file)
 
         else:
             logger.info("")
@@ -142,28 +158,43 @@ class RepeatedSelfTrainer:
         """
         Incrementally updates ELO ratings by playing all games between latest model and all other models.
         """
+        new_model = self.model_names[-1]
+        opponents = self.sorted_model_names[:self.cfg.elo.max_num_opponents]
         logger.info("")
         logger.info("=== updating ELO ratings ===")
 
         self.tournament_results = elo.add_to_tournament(
             self.sorted_model_names,
-            self.model_names[-1],
+            new_model,
             self.cfg.elo,
             self.tournament_results
         )
         ratings = elo.create_ratings(self.tournament_results)
-        writer.add_scalar('elo', ratings[self.model_names[-1]], len(self.model_names) - 1)
+        writer.add_scalar('elo', ratings[new_model], len(self.model_names) - 1)
+
+        for opponent in opponents:
+            new_wins = self.tournament_results[new_model][opponent]
+            opp_wins = self.tournament_results[opponent][new_model]
+            logger.info(f'  {new_model} vs {opponent}: {new_wins} - {opp_wins}')
 
         self.sorted_model_names.append(self.model_names[-1])
         self.sorted_model_names.sort(key=lambda name: ratings[name], reverse=True)
 
-        output = ['{:6} {}'.format(int(ratings[model]), model) for model in self.sorted_model_names]
-        for line in output:
-            logger.info(line)
+        top5 = self.sorted_model_names[:5]
+        total = len(self.sorted_model_names)
+        for model in top5:
+            logger.info('  {:6} {}'.format(int(ratings[model]), model))
+        if total > 5:
+            logger.info(f'  ... ({total - 5} more not shown)')
 
-        with open('ratings.txt', 'w') as file:
+        with open(self.ratings_file, 'w') as file:
             file.write('   ELO Model\n')
-            file.write('\n'.join(output))
+            file.write('\n'.join('{:6} {}'.format(int(ratings[m]), m) for m in self.sorted_model_names))
+
+        table = ['| ELO | Model |', '|--:|---|']
+        for model in self.sorted_model_names:
+            table.append(f'| {int(ratings[model])} | {model} |')
+        writer.add_text('elo_table', '\n'.join(table), len(self.model_names) - 1)
 
     def get_best_rating(self):
         for reference_idx in range(1, len(self.reference_models)):
@@ -183,7 +214,7 @@ class RepeatedSelfTrainer:
             if model == "random":
                 reference_models["random"] = RandomModel(self.cfg.model.board_size)
             else:
-                reference_models[model] = load_model(f'models/{model}.pt')
+                reference_models[model] = load_model(reference_model_path(model))
         results = win_position.win_count(model_name, reference_models,
             self.cfg.vs_reference, verbose, step=step)
         self.tournament_results = merge_dicts_of_dicts(self.tournament_results, results)
@@ -191,25 +222,35 @@ class RepeatedSelfTrainer:
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: DictConfig):
-    output_dir = HydraConfig.get().runtime.output_dir
-    preset = HydraConfig.get().runtime.choices.get("preset", "unknown")
+    run_dir = HydraConfig.get().runtime.output_dir  # runs/<exp_id>
+    exp_id = os.path.basename(run_dir)
+
+    set_run_dir(run_dir)
+    writer.init(log_dir=run_dir)
+    writer.add_text("config", f"```yaml\n{OmegaConf.to_yaml(cfg, resolve=True)}\n```")
+    writer.add_text("exp_id", exp_id)
+
     g = "\033[32m"
     r = "\033[0m"
-    print(f"{g}{'='*50}{r}")
+    print(f"{g}{'='*60}{r}")
     print(f"{g}  HexHex self-play training{r}")
-    print(f"{g}{'='*50}{r}")
-    print(f"{g}  This run is logged to:{r}")
-    print(f"{g}    {output_dir}/{r}")
+    print(f"{g}{'='*60}{r}")
+    print(f"{g}  Experiment id: {exp_id}{r}")
     print(f"{g}{r}")
-    print(f"{g}  That directory contains:{r}")
-    print(f"{g}    repeated_self_training.log  — full console output{r}")
-    print(f"{g}    .hydra/config.yaml          — fully resolved config (preset: {preset}){r}")
-    print(f"{g}    .hydra/overrides.yaml       — any CLI overrides applied{r}")
+    print(f"{g}  All artifacts under: {run_dir}/{r}")
+    print(f"{g}    repeated_self_training.log     — full console output{r}")
+    print(f"{g}    ratings.txt                    — final ELO ranking{r}")
+    print(f"{g}    models/{auto_model_name(cfg.model)}_NNNN.pt          — per-iteration checkpoints{r}")
+    print(f"{g}    events.out.tfevents.*          — TensorBoard scalars/text{r}")
+    print(f"{g}    .hydra/config.yaml             — fully resolved config{r}")
+    print(f"{g}    .hydra/overrides.yaml          — CLI overrides applied{r}")
     print(f"{g}{r}")
     print(f"{g}  To visualize training:{r}")
     print(f"{g}    uv run tensorboard --logdir runs/{r}")
-    print(f"{g}{'='*50}{r}")
+    print(f"{g}{'='*60}{r}")
+
     trainer = RepeatedSelfTrainer(cfg)
+    trainer.ratings_file = os.path.join(run_dir, "ratings.txt")
     trainer.repeated_self_training()
 
 

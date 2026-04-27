@@ -2,11 +2,13 @@ import sys
 
 import torch
 
+from hexhex.utils.paths import reference_model_path
 from hexhex.utils.utils import device
 
 
 def convert_model(model_name):
-    checkpoint = torch.load(f'models/{model_name}.pt', map_location=device)
+    model_path = reference_model_path(model_name)
+    checkpoint = torch.load(model_path, map_location=device)
     config = checkpoint['config']
     if config.get('model_type') in ['inception', 'conv']:
         config['model_type'] = 'conv'
@@ -22,7 +24,7 @@ def convert_model(model_name):
         'model_state_dict': checkpoint['model_state_dict'],
         'config': config,
         'optimizer': False
-        }, f'models/{model_name}.pt')
+        }, model_path)
         print('=== converted model type ===')
     else:
         print('=== model type is not "inception" or "conv" ===')

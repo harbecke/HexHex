@@ -5,6 +5,7 @@ from omegaconf import DictConfig
 from hexhex.interactive.gui import Gui
 from hexhex.logic.hexboard import Board
 from hexhex.logic.hexgame import MultiHexGame
+from hexhex.utils.paths import reference_model_path
 from hexhex.utils.utils import load_model
 
 
@@ -14,7 +15,7 @@ class InteractiveGame:
     """
 
     def __init__(self, cfg):
-        self.model = load_model(f'models/{cfg.model}.pt')
+        self.model = load_model(reference_model_path(cfg.model))
         self.switch_allowed = cfg.switch
         self.board = Board(size=self.model.board_size, switch_allowed=self.switch_allowed)
         self.gui = Gui(self.board, cfg.gui_radius, cfg.dark_mode)

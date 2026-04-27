@@ -8,6 +8,7 @@ from omegaconf import DictConfig
 from hexhex.logic import hexboard
 from hexhex.logic.hexgame import MultiHexGame
 from hexhex.utils.logger import logger
+from hexhex.utils.paths import reference_model_path
 from hexhex.utils.utils import load_model
 from hexhex.visualization.image import draw_board_image
 
@@ -73,8 +74,8 @@ def evaluate(cfg):
     logger.info("")
     logger.info("=== evaluating two models ===")
 
-    model1 = load_model(f"models/{cfg.evaluate.model1}.pt")
-    model2 = load_model(f"models/{cfg.evaluate.model2}.pt")
+    model1 = load_model(reference_model_path(cfg.evaluate.model1))
+    model2 = load_model(reference_model_path(cfg.evaluate.model2))
 
     play_games(
             models=(model1, model2),

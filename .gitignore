@@ -7,7 +7,7 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# Logs and training output
+# Logs and training output (all per-run artifacts live under runs/<exp_id>/)
 runs/
 outputs/
 *.log
@@ -16,7 +16,8 @@ outputs/
 # Jupyter notebooks
 *.ipynb
 
-# Local configuration and game results
+# Local game results (per-run ratings.txt now lives inside outputs/<date>/<time>/;
+# the root-level ratings.txt is legacy from older runs and ignored)
 ratings.txt
 game_history.pgn
 
