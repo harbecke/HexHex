@@ -7,17 +7,14 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# Logs and training output (all per-run artifacts live under runs/<exp_id>/)
+# Per-run training artifacts (config, log, TensorBoard, checkpoints, ratings.txt)
 runs/
-outputs/
-*.log
 *.profile
 
 # Jupyter notebooks
 *.ipynb
 
-# Local game results (per-run ratings.txt now lives inside outputs/<date>/<time>/;
-# the root-level ratings.txt is legacy from older runs and ignored)
+# Local game results
 ratings.txt
 game_history.pgn
 
