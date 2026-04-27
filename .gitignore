@@ -15,7 +15,6 @@ runs/
 *.ipynb
 
 # Local game results
-ratings.txt
 game_history.pgn
 
 # Legacy dependency management
