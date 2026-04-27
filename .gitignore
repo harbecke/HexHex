@@ -7,17 +7,14 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# Logs and training output
+# Per-run training artifacts (config, log, TensorBoard, checkpoints, ratings.txt)
 runs/
-outputs/
-*.log
 *.profile
 
 # Jupyter notebooks
 *.ipynb
 
-# Local configuration and game results
-ratings.txt
+# Local game results
 game_history.pgn
 
 # Legacy dependency management

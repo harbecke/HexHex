@@ -9,6 +9,7 @@ from torch.utils.data.dataset import TensorDataset
 
 from hexhex.creation import puzzle
 from hexhex.utils.logger import logger
+from hexhex.utils.paths import run_model_path
 from hexhex.utils.summary import writer
 from hexhex.utils.utils import device, load_model, create_optimizer, Average
 
@@ -161,7 +162,7 @@ def train(cfg, training_data, validation_data, load_model_name, save_model_name,
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size)
 
-    model_file = f'models/{load_model_name}.pt'
+    model_file = run_model_path(load_model_name)
     model = load_model(model_file)
     nn.DataParallel(model).to(device)
 
@@ -191,6 +192,6 @@ def train(cfg, training_data, validation_data, load_model_name, save_model_name,
 
     checkpoint = torch.load(model_file, map_location=device)
     checkpoint['model_state_dict'] = trained_model.state_dict()
-    file_name = f'models/{save_model_name}.pt'
+    file_name = run_model_path(save_model_name)
     torch.save(checkpoint, file_name)
     logger.info(f'wrote {file_name}')

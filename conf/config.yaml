@@ -2,9 +2,20 @@ defaults:
   - _self_
   - preset: dev
 
+# Optional human-readable suffix appended to the experiment id (e.g. exp_name=lr_sweep_3e4).
+# The full exp_id is `<date>_<time>_<preset>_<auto_model_name>[_<exp_name>]` and is the
+# directory name under runs/ that holds *all* artifacts for this run (Hydra config,
+# log, TensorBoard events, model checkpoints, ratings.txt, optional saved data).
+exp_name: null
+
 hydra:
+  run:
+    # Single per-run dir under runs/. The `${suffix:...}` resolver is registered in
+    # hexhex/utils/paths.py and prepends an underscore when exp_name is non-null.
+    dir: runs/${now:%Y-%m-%d}_${now:%H-%M-%S}_${hydra:runtime.choices.preset}_${model.board_size}x${model.board_size}_l${model.layers}_c${model.intermediate_channels}${suffix:${oc.select:exp_name,''}}
   job:
-    # Keep cwd as the project root; code uses relative paths (models/, data/).
+    # Keep cwd as the project root; code writes via paths.py helpers (which already
+    # resolve relative to runs/<exp_id>/) and reference models load from reference_models/.
     chdir: false
   job_logging:
     formatters:
@@ -12,8 +23,8 @@ hydra:
         format: '[%(asctime)s][%(levelname).1s] %(message)s'  # e.g. [2026-04-25 16:09:34,790][I] message
 
 evaluate:
-  model1: ??? # Required: path stem under models/ for model 1 (??? = mandatory in Hydra).
-  model2: ??? # Required: path stem under models/ for model 2.
+  model1: ??? # Required: name of a model under reference_models/ (??? = mandatory in Hydra).
+  model2: ??? # Required: name of a model under reference_models/.
   # Pre-place this many opening moves before the models start playing; all distinct
   # N-move openings are enumerated so every game starts from a different position.
   num_opened_moves: 1
@@ -26,7 +37,7 @@ evaluate:
   plot_board: false # Save a PNG of each finished board to data/images/.
 
 interactive:
-  model: 11_2w4_2000 # Filename stem under models/ to load for human vs. AI play.
+  model: 11_2w4_2000 # Name of a model under reference_models/ to load for human vs. AI play.
   switch: true # Allow the swap (pie) rule: second player may swap colors after the first stone.
   gui_radius: 50 # Pixel radius of each hex cell in the Tkinter GUI.
   dark_mode: false # Use a dark colour scheme in the Tkinter GUI.

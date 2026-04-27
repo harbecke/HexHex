@@ -7,6 +7,7 @@ from hexhex.evaluation import evaluate_two_models
 from hexhex.logic.hexboard import Board
 from hexhex.logic.hexgame import MultiHexGame
 from hexhex.utils.logger import logger
+from hexhex.utils.paths import run_model_path
 from hexhex.utils.summary import writer
 from hexhex.utils.utils import load_model
 
@@ -27,7 +28,7 @@ class TestModel:
 
 
 def win_count_3(model_name):
-    model = load_model(f'models/{model_name}.pt')
+    model = load_model(run_model_path(model_name))
     board_size = model.board_size
 
     lose_count = 0
@@ -56,7 +57,7 @@ def win_count(model_name, reference_models, cfg, verbose, step=None):
         opponents = ', '.join(reference_models.keys())
         logger.info(f"Evaluating {model_name} vs {opponents} ({cfg.num_opened_moves} opened moves)")
 
-    model = load_model(f'models/{model_name}.pt')
+    model = load_model(run_model_path(model_name))
     board_size = model.board_size
     results = defaultdict(lambda: defaultdict(int))
 

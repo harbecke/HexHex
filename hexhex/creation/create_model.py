@@ -5,6 +5,7 @@ from omegaconf import OmegaConf, DictConfig
 
 from hexhex.model import hexconvolution
 from hexhex.utils.logger import logger
+from hexhex.utils.paths import run_model_path
 
 
 def create_model(config, export_mode=False):
@@ -33,7 +34,7 @@ def create_model(config, export_mode=False):
 
 def create_and_store_model(config, name):
     model = create_model(config)
-    model_file = f'models/{name}.pt'
+    model_file = run_model_path(name)
     torch.save({
         'model_state_dict': model.state_dict(),
         'config': OmegaConf.to_container(config, resolve=True)

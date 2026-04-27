@@ -1,7 +1,6 @@
 # @package _global_
-# Settings that produced models/11_2w4_2000.pt (the deployed web model).
+# Settings that produced reference_models/11_2w4_2000.pt (the deployed web model).
 # Architecture verified against checkpoint config; data/train params from prod_config.ini.
-# model_name here is descriptive (11x11, 18 layers, 64ch) — the original run used "11_2w4".
 model:
   board_size: 11 # NxN board dimensions.
   layers: 18 # Number of residual skip-connection conv layers in the CNN.
@@ -12,7 +11,6 @@ model:
   switch_model: true
   # If true, wraps model in RotationWrapperModel to average 0° and 180°-rotated predictions.
   rotation_model: true
-  model_name: "11_18_64" # Stem for checkpoint filenames: models/<model_name>_NNNN.pt.
 
 data:
   # Size of the rolling training buffer, spread evenly across num_data_models recent generations.
@@ -71,7 +69,7 @@ vs_reference:
   temperature_decay: 0.0 # Temperature decay; 0.0 = no decay (irrelevant when temperature=0).
   plot_board: false # Save PNG board images.
   # List of reference model names. "random" instantiates RandomModel;
-  # other names are loaded from models/<name>.pt.
+  # other names are loaded from reference_models/<name>.pt.
   reference_models:
     - random
 
@@ -80,12 +78,17 @@ puzzle:
   num_samples: 1000 # Random-play games to generate; each contributes 2 positions (the last 2 board states).
 
 rst:
-  start_index: 0 # Resume from this iteration index; 0 = create a fresh model_0000.pt first.
+  start_index: 0 # Resume from this iteration index; 0 = create a fresh checkpoint 0000 first.
+  # Required when start_index > 0: exp_id of a prior run whose checkpoint at
+  # `models/<auto_model_name>_<start_index>.pt` will be copied into this run's
+  # models/ dir as the starting point. Ignored when start_index == 0.
+  resume_from: null
   num_iterations: 5000 # Total self-play → train → evaluate cycles to run.
   # Number of recent model generations whose self-play data are pooled in the rolling buffer.
   # Each generation contributes num_train_samples / num_data_models positions.
   num_data_models: 50
-  # If true, load pre-existing data from data/<model_name>.pt instead of generating from a random model.
-  load_initial_data: false
-  # If true, save the final training/validation buffers to data/<model_name>.pt at the end of training.
+  # null = generate fresh data from a random model; otherwise a name (e.g. a previous exp_id)
+  # to load data/<name>.pt as the initial training/validation buffer.
+  load_initial_data: null
+  # If true, save the final training/validation buffers to data/<exp_id>.pt at the end of training.
   save_data: true

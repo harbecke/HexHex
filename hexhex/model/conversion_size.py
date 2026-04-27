@@ -1,13 +1,16 @@
 import sys
 
+import os
+
 import torch
 
+from hexhex.utils.paths import REFERENCE_MODELS_DIR, reference_model_path
 from hexhex.utils.utils import device
 
 
 def convert_boardsize_of_model(model_name, new_bs):
     new_bs = int(new_bs)
-    checkpoint = torch.load(f'models/{model_name}.pt', map_location=device)
+    checkpoint = torch.load(reference_model_path(model_name), map_location=device)
     config = checkpoint['config']
     config['board_size'] = new_bs
 
@@ -18,13 +21,14 @@ def convert_boardsize_of_model(model_name, new_bs):
             break
         bias_key = 'internal_model.' + bias_key
 
+    out_path = os.path.join(REFERENCE_MODELS_DIR, f'{new_bs}_{model_name}.pt')
     torch.save({
     'model_state_dict': checkpoint['model_state_dict'],
     'config': config,
     'optimizer': False
-    }, f'models/{new_bs}_{model_name}.pt')
+    }, out_path)
     print('=== converted model size ===')
-    print(f'wrote models/{new_bs}_{model_name}.pt')
+    print(f'wrote {out_path}')
 
 if __name__ == '__main__':
     old_model_name = sys.argv[1]
