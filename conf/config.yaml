@@ -20,7 +20,7 @@ hydra:
   job_logging:
     formatters:
       simple:
-        format: '[%(asctime)s][%(levelname).1s] %(message)s'  # e.g. [2026-04-25 16:09:34,790][I] message
+        format: "[%(asctime)s][%(levelname).1s] %(message)s" # e.g. [2026-04-25 16:09:34,790][I] message
 
 evaluate:
   model1: ??? # Required: name of a model under reference_models/ (??? = mandatory in Hydra).
@@ -49,4 +49,4 @@ interactive:
   dark_mode: false # Use a dark colour scheme in the Tkinter GUI.
   temperature:
     type: fixed
-    value: 0.0  # 0 = always play the highest-rated move.
+    value: 0.0 # 0 = always play the highest-rated move.
