@@ -29,22 +29,15 @@ def test_board_to_masks_after_moves():
     assert blue == 1 << 2
 
 
-def test_optimality_checker_centre_first_move_is_winning():
+def test_optimality_checker_skips_opening_move():
+    """The first move on an empty board is excluded from the metric: it has
+    no prior moves whose labels it could influence."""
     n = 3
     with tempfile.TemporaryDirectory() as tmp:
         checker = OptimalityChecker(_build_table(n, Path(tmp)))
     board = Board(size=n, switch_allowed=False)
-    # Red plays centre (1, 1) -> idx 4. Known winning first move.
-    assert checker.is_optimal(board, 4) is True
-
-
-def test_optimality_checker_acute_corner_is_losing():
-    n = 3
-    with tempfile.TemporaryDirectory() as tmp:
-        checker = OptimalityChecker(_build_table(n, Path(tmp)))
-    board = Board(size=n, switch_allowed=False)
-    # (0, 0) is the acute corner, a losing first move.
-    assert checker.is_optimal(board, 0) is False
+    for idx in range(n * n):
+        assert checker.is_optimal(board, idx) is None
 
 
 def test_optimality_checker_immediate_win():
@@ -62,30 +55,40 @@ def test_optimality_checker_immediate_win():
     assert checker.is_optimal(board, move_idx) is True
 
 
-def test_optimality_checker_blue_to_move():
-    """Verify the checker correctly handles blue-to-move positions without
-    needing to invert any perspective transform."""
+def test_optimality_checker_blue_to_move_losing_position_skipped():
+    """After red plays the winning centre move, blue is in a losing position;
+    the checker should skip every blue response by returning None."""
     n = 3
     with tempfile.TemporaryDirectory() as tmp:
         checker = OptimalityChecker(_build_table(n, Path(tmp)))
     board = Board(size=n, switch_allowed=False)
-    board.set_stone((1, 1))  # red plays centre. Now blue to move.
+    board.set_stone((1, 1))  # red plays centre. Now blue to move from a losing position.
     assert board.player == 1
-    # For each possible blue first response, the checker should return True/False
-    # consistent with the table — and at least one move must be optimal in any
-    # non-terminal position.
-    any_optimal = False
     for idx in range(n * n):
         if idx == 4:
             continue  # occupied
-        verdict = checker.is_optimal(board, idx)
-        assert verdict is not None
-        if verdict:
-            any_optimal = True
-    # Since red's centre move puts the position into a state where red wins,
-    # blue is in a losing position — so every blue move is suboptimal.
-    # (Centre as red's first move was confirmed to be winning by test_3x3_starting_moves.)
-    assert any_optimal is False
+        assert checker.is_optimal(board, idx) is None
+
+
+def test_optimality_checker_blue_to_move_winning_position():
+    """If blue is to move in a position where blue is winning, the checker
+    should distinguish optimal from mistake responses."""
+    n = 3
+    with tempfile.TemporaryDirectory() as tmp:
+        checker = OptimalityChecker(_build_table(n, Path(tmp)))
+    board = Board(size=n, switch_allowed=False)
+    # Red opens with the acute corner (0, 0) — a known losing first move.
+    # So blue is now to move in a winning position.
+    board.set_stone((0, 0))
+    assert board.player == 1
+    optimal = sum(1 for idx in range(n * n)
+                  if idx != 0 and checker.is_optimal(board, idx) is True)
+    mistakes = sum(1 for idx in range(n * n)
+                   if idx != 0 and checker.is_optimal(board, idx) is False)
+    # Some responses keep blue winning, others throw it away.
+    assert optimal > 0
+    assert mistakes > 0
+    assert optimal + mistakes == n * n - 1
 
 
 def test_optimality_checker_wrong_size_returns_none():
@@ -96,15 +99,14 @@ def test_optimality_checker_wrong_size_returns_none():
     assert checker.is_optimal(board, 0) is None
 
 
-def test_first_move_optimality_count_matches_known_pattern():
-    """For each of the 9 first moves on 3x3, the checker should agree with the
-    pattern from test_3x3_starting_moves: exactly 5 winning moves."""
+def test_second_move_optimality_count_after_centre_opening():
+    """After red opens with the winning centre move, blue is in a losing
+    position so every blue response should be skipped (None)."""
     n = 3
     with tempfile.TemporaryDirectory() as tmp:
         checker = OptimalityChecker(_build_table(n, Path(tmp)))
-    optimal = 0
-    for idx in range(n * n):
-        board = Board(size=n, switch_allowed=False)
-        if checker.is_optimal(board, idx):
-            optimal += 1
-    assert optimal == 5
+    board = Board(size=n, switch_allowed=False)
+    board.set_stone((1, 1))  # red centre
+    skipped = sum(1 for idx in range(n * n)
+                  if idx != 4 and checker.is_optimal(board, idx) is None)
+    assert skipped == n * n - 1

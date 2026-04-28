@@ -152,7 +152,8 @@ def create_self_play_data(args, model, num_samples, verbose=True, step=None,
         writer.add_scalar('data/optimality_rate', rate, step)
         logger.info(
             f"data/optimality_rate = {rate:.3f} "
-            f"({self_play_generator.optimal_count:,}/{self_play_generator.evaluated_count:,} moves)"
+            f"({self_play_generator.optimal_count:,}/{self_play_generator.evaluated_count:,} "
+            "moves from winning positions kept the win)"
         )
 
     return [all_boards_tensor, all_moves, all_results]

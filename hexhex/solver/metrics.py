@@ -1,7 +1,9 @@
 """Ground-truth optimality lookup for a self-play move.
 
 Given a `Board` and a move index in original coordinates, decides whether the
-move leads to a position where the opponent loses (per a solved-position table).
+move was a mistake. Only moves from winning positions are judged: if the
+player-to-move is already in a losing position then every move loses, so move
+quality is undefined and we skip the position.
 """
 
 from __future__ import annotations
@@ -46,27 +48,54 @@ class OptimalityChecker:
         self.red_top, self.red_bottom, self.blue_left, self.blue_right = edge_masks(n)
 
     def is_optimal(self, board: Board, move_idx: int) -> bool | None:
-        """Return True iff playing `move_idx` (in original coords) at `board` leads to a
-        position where the opponent loses. None if the resulting position isn't in the
-        table (shouldn't happen for reachable positions on the right size board)."""
+        """Judge `move_idx` (in original coords) at `board` against the solved table.
+
+        Returns:
+            True  — winning move from a winning position (optimal).
+            False — losing move from a winning position (mistake).
+            None  — the position is a loss for the side-to-move (skip; every move
+                    loses so move quality is undefined), or the position/board size
+                    isn't covered by the table.
+
+        Raises AssertionError if a move appears to win from a losing position —
+        that would mean the table is inconsistent.
+        """
         if board.size != self.table.board_size:
             return None
+        n = self.table.board_size
         red_mask, blue_mask = board_to_masks(board)
         red_to_move = (board.player == 0)
+
+        # Skip the opening move on an empty board: there are no prior moves whose
+        # labels it could influence, so its quality has no effect on training signal.
+        if red_mask == 0 and blue_mask == 0:
+            return None
+
+        cur_key = base3_key(red_mask, blue_mask, n)
+        if cur_key not in self.table:
+            return None
+        cur_winning = self.table.winning(cur_key)
+
         if red_to_move:
             new_red = red_mask | (1 << move_idx)
             new_blue = blue_mask
-            if player_wins_with_move(new_red, move_idx, self.neighbors,
-                                     self.red_top, self.red_bottom):
-                return True
+            immediate_win = player_wins_with_move(
+                new_red, move_idx, self.neighbors, self.red_top, self.red_bottom)
         else:
             new_red = red_mask
             new_blue = blue_mask | (1 << move_idx)
-            if player_wins_with_move(new_blue, move_idx, self.neighbors,
-                                     self.blue_left, self.blue_right):
-                return True
+            immediate_win = player_wins_with_move(
+                new_blue, move_idx, self.neighbors, self.blue_left, self.blue_right)
 
-        key = base3_key(new_red, new_blue, self.table.board_size)
-        if key not in self.table:
+        if immediate_win:
+            assert cur_winning, "winning move from a losing position — solver table bug"
+            return True
+
+        if not cur_winning:
             return None
-        return not self.table.winning(key)
+
+        new_key = base3_key(new_red, new_blue, n)
+        if new_key not in self.table:
+            return None
+        # opponent is now to move; if opponent loses the move kept us winning
+        return not self.table.winning(new_key)
