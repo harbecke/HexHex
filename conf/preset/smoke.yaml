@@ -74,10 +74,10 @@ rst:
   # `models/<auto_model_name>_<start_index>.pt` will be copied into this run's
   # models/ dir as the starting point. Ignored when start_index == 0.
   resume_from: null
-  num_iterations: 50 # Total self-play → train → evaluate cycles to run.
+  num_iterations: 2 # Total self-play → train → evaluate cycles to run.
   # Number of recent model generations whose self-play data are pooled in the rolling buffer.
   # Each generation contributes num_train_samples / num_data_models positions.
-  num_data_models: 5
+  num_data_models: 2
   # null = generate fresh data from a random model; otherwise a name (e.g. a previous exp_id)
   # to load data/<name>.pt as the initial training/validation buffer.
   load_initial_data: null
