@@ -21,6 +21,7 @@ uv run pytest tests/test_file.py::test_name                # Run a single test
 uv run python -m hexhex.training.repeated_self_training    # Run training loop
 uv run python -m hexhex.interactive.interactive             # Launch interactive GUI
 uv run tensorboard --logdir runs/                           # Visualize training
+uv run python -m hexhex.solver.solve --size 3 --out tables/3x3.bin  # Solve small board
 ```
 
 ### JavaScript (Frontend — app/)
@@ -76,6 +77,12 @@ Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint co
 - `elo.py`: Bradley-Terry model for multi-agent ranking
 
 **`hexhex/export/onnx_export.py`** — Converts trained PyTorch model to ONNX for web deployment
+
+**`hexhex/solver/`** — Exact ground-truth solver for small boards (used to produce reference tables for training metrics)
+- `encoding.py`: base-3 position keys, neighbour bitmasks, win detection
+- `solve.py`: negamax with transposition table (no pie rule, no alpha-beta — explores every legal move from every position so the table covers the full reachable state space). CLI writes a binary table.
+- `table.py`: `SolutionTable` loader; `winning(key) -> bool` returns "side-to-move wins" for any key in the table.
+- Tables are stored as `tables/NxN.bin` (gitignored, regenerable). 3×3 solves in ~30 ms (44 KB), 4×4 in ~3 min (72 MB). 5×5 is not feasible in pure Python (~50–150 GB and tens of hours).
 
 **`app/src/`** — React frontend (Vite + React 19 + TypeScript)
 - `game/`: pure game logic (coords, rules, encoding) — fully unit-tested with Vitest
@@ -144,3 +151,15 @@ All training and model hyperparameters live in `conf/` as Hydra/OmegaConf YAML f
 
 ### Python board representation
 Input: 2-channel tensor (red stones, blue stones) with border padding to help convolutions handle edge conditions.
+
+### Solver tables: file format
+
+Solver output (`hexhex/solver/solve.py` → `tables/NxN.bin`) is a single binary file with three sections:
+
+1. **Header (14 B)** — `struct.pack("<4sHQ", b"HXSV", board_size, num_entries)`.
+2. **Keys** — `uint64[num_entries]`, **sorted ascending**, written as raw little-endian bytes. Each key is the base-3 encoding of one position: `key = sum_i digit(i) * 3^i` where cell index `i = x * n + y` and digit is 0 (empty), 1 (red), 2 (blue). Fits in u64 for `n ≤ 5`.
+3. **Values** — packed bitarray (`numpy.packbits(..., bitorder="little")`) of length `num_entries` bits, padded to a whole byte. Bit `i` is 1 iff side-to-move wins from position `keys[i]`.
+
+Lookup is `np.searchsorted(keys, key)` then a bit check; missing keys (positions never reached, e.g. illegal stone-count parity) raise `KeyError`. Storage cost is dominated by keys (~8.1 B per entry); to scale up further the keys + searchsorted layer can be swapped for a minimal perfect hash without touching the consumer interface.
+
+Pie rule is intentionally **disabled** in the solver: with the pie rule the second player trivially wins on solved boards (they swap whenever the first move is too strong), so the table would only ever record losses for red.

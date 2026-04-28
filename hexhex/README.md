@@ -85,6 +85,29 @@ Reference opponents are configured in `vs_reference.reference_models` in the pre
 uv run tensorboard --logdir runs/
 ```
 
+## Ground-truth solver (small boards)
+
+For boards small enough to solve exactly we ship an offline solver that builds a per-position win/loss table, used for ground-truth training metrics (data-quality and model-quality vs. optimal play).
+
+```bash
+# 3x3: ~30 ms, 44 KB
+uv run python -m hexhex.solver.solve --size 3 --out tables/3x3.bin
+
+# 4x4: ~3 min, 72 MB
+uv run python -m hexhex.solver.solve --size 4 --out tables/4x4.bin
+```
+
+Tables are written under `tables/` (gitignored, regenerable). The pie rule is intentionally disabled — with it the second player trivially wins on solved boards. 5×5 and larger are not feasible in pure Python (5×5 would be tens of hours and ~50–150 GB).
+
+Lookup interface:
+
+```python
+from hexhex.solver.table import SolutionTable
+
+table = SolutionTable("tables/3x3.bin")
+won = table.winning_from_masks(red_mask, blue_mask)   # True if side-to-move wins
+```
+
 ## Hyperparameter Sweeps (TODO)
 
 The old `bayesian_optimization.py` (scikit-optimize) has been removed. The recommended replacement is [Hydra's Optuna sweeper](https://hydra.cc/docs/plugins/optuna_sweeper/):
