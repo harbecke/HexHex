@@ -78,7 +78,7 @@ class SelfPlayGenerator:
 
 
 def create_self_play_data(args, model, num_samples, verbose=True, step=None,
-                          optimality_checker=None, optimality_label=None):
+                          optimality_checker=None):
     if verbose:
         logger.info("")
         logger.info("=== creating data from self play ===")
@@ -149,11 +149,9 @@ def create_self_play_data(args, model, num_samples, verbose=True, step=None,
 
     if optimality_checker is not None and self_play_generator.evaluated_count > 0:
         rate = self_play_generator.optimal_count / self_play_generator.evaluated_count
-        scalar_name = (f'data/optimality_{optimality_label}'
-                       if optimality_label else 'data/optimality')
-        writer.add_scalar(scalar_name, rate, step)
+        writer.add_scalar('data/optimality_rate', rate, step)
         logger.info(
-            f"{scalar_name} = {rate:.3f} "
+            f"data/optimality_rate = {rate:.3f} "
             f"({self_play_generator.optimal_count:,}/{self_play_generator.evaluated_count:,} moves)"
         )
 

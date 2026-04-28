@@ -59,7 +59,7 @@ class RepeatedSelfTrainer:
         table = SolutionTable(path)
         logger.info(
             f"loaded solution table {path} ({table.num_entries:,} positions); "
-            "will log data/optimality_train and data/optimality_val each iteration"
+            "will log data/optimality_rate each iteration"
         )
         return OptimalityChecker(table)
 
@@ -91,9 +91,9 @@ class RepeatedSelfTrainer:
 
         t_data = time.time()
         new_train_triple = self.create_data_samples(self.get_model_name(i-1),
-            train_samples_per_model, step=i, optimality_label='train')
+            train_samples_per_model, step=i, measure_optimality=True)
         new_val_triple = self.create_data_samples(self.get_model_name(i-1),
-            val_samples_per_model, verbose=False, step=i, optimality_label='val')
+            val_samples_per_model, verbose=False, step=i)
         writer.add_scalar('time/data_generation', time.time() - t_data, i)
 
         for idx in range(3):
@@ -154,12 +154,11 @@ class RepeatedSelfTrainer:
         logger.info(f"resumed from {src_path} -> {dst_path}")
 
     def create_data_samples(self, model_name, num_samples, verbose=True, step=None,
-                            optimality_label=None):
+                            measure_optimality=False):
         model = load_model(run_model_path(model_name))
         return create_data.create_self_play_data(
             self.cfg.data, model, num_samples, verbose, step=step,
-            optimality_checker=self.optimality_checker,
-            optimality_label=optimality_label,
+            optimality_checker=self.optimality_checker if measure_optimality else None,
         )
 
     def initial_data(self):
