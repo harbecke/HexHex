@@ -51,7 +51,7 @@ class Conv(nn.Module):
 class RandomModel(nn.Module):
     '''
     outputs negative values for every illegal move, 0 otherwise
-    only makes completely random moves if temperature*temperature_decay > 0
+    only makes completely random moves if used with a positive-temperature schedule
     '''
     def __init__(self, board_size):
         super(RandomModel, self).__init__()

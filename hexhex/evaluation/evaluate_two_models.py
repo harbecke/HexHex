@@ -5,7 +5,7 @@ from time import gmtime, strftime
 import hydra
 from omegaconf import DictConfig
 
-from hexhex.logic import hexboard
+from hexhex.logic import hexboard, temperature as temp_module
 from hexhex.logic.hexgame import MultiHexGame
 from hexhex.utils.logger import logger
 from hexhex.utils.paths import reference_model_path
@@ -13,7 +13,7 @@ from hexhex.utils.utils import load_model
 from hexhex.visualization.image import draw_board_image
 
 
-def play_games(models, num_opened_moves, number_of_games, batch_size, temperature, temperature_decay, plot_board, verbose=False):
+def play_games(models, num_opened_moves, number_of_games, batch_size, temperature_schedule, plot_board, verbose=False):
     assert(len(models) == 2)
     assert(models[0].board_size == models[1].board_size)
     board_size = models[0].board_size
@@ -42,10 +42,7 @@ def play_games(models, num_opened_moves, number_of_games, batch_size, temperatur
             multihexgame = MultiHexGame(
                     boards,
                     ordered_models,
-                    noise=None,
-                    noise_parameters=None,
-                    temperature=temperature,
-                    temperature_decay=temperature_decay,
+                    temperature_schedule=temperature_schedule,
             )
             multihexgame.play_moves()
             for board in multihexgame.boards:
@@ -82,8 +79,7 @@ def evaluate(cfg):
             num_opened_moves=cfg.evaluate.num_opened_moves,
             number_of_games=cfg.evaluate.number_of_games,
             batch_size=cfg.evaluate.batch_size,
-            temperature=cfg.evaluate.temperature,
-            temperature_decay=cfg.evaluate.temperature_decay,
+            temperature_schedule=temp_module.from_config(cfg.evaluate.temperature),
             plot_board=cfg.evaluate.plot_board,
             verbose=True
         )

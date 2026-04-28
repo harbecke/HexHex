@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from hexhex.logic import temperature
 from hexhex.logic.hexboard import Board
 from hexhex.logic.hexgame import MultiHexGame
 from hexhex.utils import utils
@@ -50,15 +51,11 @@ class SelfPlayGenerator:
         - result of game for active player
         """
         boards = [Board(size=self.board_size) for _ in range(self.args.batch_size)]
-        noise = self.args.noise if self.args.noise != "none" else None
         multihexgame = MultiHexGame(
             boards=boards,
             models=(self.model,),
-            noise=noise,
-            noise_parameters=list(self.args.noise_parameters),
-            temperature=self.args.temperature,
-            temperature_decay=self.args.temperature_decay,
-            gamma=self.args.gamma
+            temperature_schedule=temperature.from_config(self.args.temperature),
+            gamma=self.args.gamma,
         )
         board_states, moves, targets = multihexgame.play_moves()
         self.game_lengths.extend([len(board.made_moves) for board in boards])

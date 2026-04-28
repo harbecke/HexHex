@@ -68,13 +68,16 @@ class TrainingStats:
 def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_triple, cfg, global_step_offset=0):
     criterion = lambda pred, y: 0.8*nn.L1Loss(reduction='sum')(pred, y)+0.2*nn.BCELoss(reduction='sum')(pred, y)
 
-    def measure_loss(data_triple, eval_mode):
+    def measure_loss(data_triple, eval_mode, return_predictions=False):
         def _measure_loss_impl(data_triple):
             board_states, moves, labels = data_triple
             board_states, moves, labels = board_states.to(device), moves.to(device), labels.to(device)
             outputs = torch.sigmoid(model(board_states))
-            output_values = torch.gather(outputs, 1, moves)
-            return criterion(output_values.view(-1), labels)
+            output_values = torch.gather(outputs, 1, moves).view(-1)
+            loss = criterion(output_values, labels)
+            if return_predictions:
+                return loss, output_values, labels
+            return loss
 
         if eval_mode:
             model.eval()
@@ -109,17 +112,23 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, puzzle_tripl
                 weighted_param_loss = weight_decay * l2loss
 
                 puzzle_loss = Average()
+                puzzle_accuracy = Average()
                 if puzzle_triple is not None:
-                    puzzle_loss.add(measure_loss(puzzle_triple, eval_mode=True), len(puzzle_triple[0]))
+                    n = len(puzzle_triple[0])
+                    loss, preds, labels = measure_loss(puzzle_triple, eval_mode=True, return_predictions=True)
+                    puzzle_loss.add(loss, n)
+                    puzzle_accuracy.add(((preds > 0.5) == (labels > 0.5)).sum().item(), n)
 
                 logger.info(
                     f'batch {i + 1:3} / {len(train_dataloader):3} '
                     f'puzzle_loss: {puzzle_loss.mean():.3f} '
+                    f'puzzle_acc: {puzzle_accuracy.mean():.3f} '
                     f'l2_param_loss: {l2loss:.3f} '
                     f'weighted_param_loss: {weighted_param_loss:.3f}'
                 )
                 writer.add_scalar('train/grad_norm', grad_norm, step)
                 writer.add_scalar('train/puzzle_loss', puzzle_loss.mean(), step)
+                writer.add_scalar('train/puzzle_accuracy', puzzle_accuracy.mean(), step)
                 writer.add_scalar('train/l2_weights', l2loss, step)
 
         val_loss = Average()

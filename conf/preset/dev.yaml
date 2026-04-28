@@ -15,21 +15,12 @@ data:
   num_train_samples: 1000
   num_val_samples: 100 # Held-out positions used only for validation-loss logging.
   batch_size: 32 # Parallel games per self-play batch.
-  # Exploration noise added to model logits before move selection.
-  # "none"    — no noise
-  # "uniform" — each cell's logit gets +1000 with probability noise_parameters[0]
-  # "singh"   — one random cell gets a Singh-Maddala heavy-tail sample (Burr distribution)
-  noise: "none"
-  # Parameters for the chosen noise type.
-  # singh:   [alpha, beta, lambda]  (shape params of the Burr distribution)
-  # uniform: [probability]
-  # none:    ignored
-  noise_parameters: [3.0, 0.5, 1.0]
-  # Softmax temperature for move selection during self-play; higher = more exploratory games.
-  temperature: 0.67
-  # Multiplied by temperature after each move: T_eff = temperature * decay^num_moves.
-  # 1.0 = constant temperature throughout the game.
-  temperature_decay: 1.0
+  # Move-selection temperature schedule.
+  # type: fixed | exp_decay | step. random_first_moves forces uniform-random opening moves.
+  temperature:
+    type: fixed
+    value: 0.67
+    random_first_moves: 1
   # Temporal discount for training targets. Target for a move k steps before game end:
   #   0.5 ± 0.5 * (1 - gamma)^(2*(k//2))
   # 0.0 = every move receives the raw final outcome (won=1, lost=0) with no discounting.
@@ -51,8 +42,9 @@ elo:
   number_of_games: 16 # Max games per color assignment in ELO tournament matchups.
   batch_size: 16 # Parallel games per batch during ELO evaluation.
   num_opened_moves: 1 # Pre-placed opening moves for positional diversity in ELO matches.
-  temperature: 0.0 # Move-selection temperature during ELO games; 0 = deterministic/greedy.
-  temperature_decay: 0.7 # Temperature decay per move in ELO games.
+  temperature:
+    type: fixed
+    value: 0.0  # 0 = deterministic/greedy.
   plot_board: false # Save PNG board images from ELO games.
   # Each new model only faces the top N opponents from the sorted rating list.
   # Avoids O(n²) tournament cost as the model pool grows.
@@ -63,8 +55,9 @@ vs_reference:
   # Total games per reference model, split equally between both starting colors.
   num_games: 256
   num_opened_moves: 1 # Pre-placed opening moves for these evaluation games.
-  temperature: 0.0 # Move temperature; 0 = greedy.
-  temperature_decay: 0.0 # Temperature decay; 0.0 = no decay (irrelevant when temperature=0).
+  temperature:
+    type: fixed
+    value: 0.0  # 0 = greedy.
   plot_board: false # Save PNG board images.
   # List of reference model names. "random" instantiates RandomModel;
   # other names are loaded from reference_models/<name>.pt.
