@@ -36,11 +36,14 @@ def _annotated_heatmap_figure(data_2d, fmt, cmap='YlOrRd', vmin=None, vmax=None)
 
 
 class SelfPlayGenerator:
-    def __init__(self, model, args):
+    def __init__(self, model, args, optimality_checker=None):
         self.model = model
         self.args = args
         self.board_size = model.board_size
         self.game_lengths = []
+        self.optimality_checker = optimality_checker
+        self.optimal_count = 0
+        self.evaluated_count = 0
 
     def self_play_game(self):
         """
@@ -56,9 +59,12 @@ class SelfPlayGenerator:
             models=(self.model,),
             temperature_schedule=temperature.from_config(self.args.temperature),
             gamma=self.args.gamma,
+            optimality_checker=self.optimality_checker,
         )
         board_states, moves, targets = multihexgame.play_moves()
         self.game_lengths.extend([len(board.made_moves) for board in boards])
+        self.optimal_count += multihexgame.optimal_count
+        self.evaluated_count += multihexgame.evaluated_count
         output_list = list(zip(board_states, moves, targets))
         np.random.shuffle(output_list)
 
@@ -71,12 +77,13 @@ class SelfPlayGenerator:
                 yield board_tensor, move_tensor, result_tensor
 
 
-def create_self_play_data(args, model, num_samples, verbose=True, step=None):
+def create_self_play_data(args, model, num_samples, verbose=True, step=None,
+                          optimality_checker=None):
     if verbose:
         logger.info("")
         logger.info("=== creating data from self play ===")
 
-    self_play_generator = SelfPlayGenerator(model, args)
+    self_play_generator = SelfPlayGenerator(model, args, optimality_checker=optimality_checker)
     position_generator = self_play_generator.position_generator()
 
     board_size = model.board_size
@@ -139,5 +146,14 @@ def create_self_play_data(args, model, num_samples, verbose=True, step=None):
         writer.add_figure('data/model_first_move_prediction', model_pred_fig, step)
 
         logger.info(f'=== created self-play data ===')
+
+    if optimality_checker is not None and self_play_generator.evaluated_count > 0:
+        rate = self_play_generator.optimal_count / self_play_generator.evaluated_count
+        writer.add_scalar('data/optimality_rate', rate, step)
+        logger.info(
+            f"data/optimality_rate = {rate:.3f} "
+            f"({self_play_generator.optimal_count:,}/{self_play_generator.evaluated_count:,} "
+            "moves from winning positions kept the win)"
+        )
 
     return [all_boards_tensor, all_moves, all_results]

@@ -17,6 +17,9 @@ runs/
 # Local game results
 game_history.pgn
 
+# Solved-position tables (regenerable via hexhex.solver.solve)
+tables/
+
 # Legacy dependency management
 Pipfile
 

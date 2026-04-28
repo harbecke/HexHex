@@ -14,7 +14,7 @@ class MultiHexGame():
     inf → uniform random (model is skipped), 0 → argmax, otherwise softmax(logits / T).
     """
 
-    def __init__(self, boards, models, temperature_schedule, gamma=1):
+    def __init__(self, boards, models, temperature_schedule, gamma=1, optimality_checker=None):
         torch.set_num_threads(4)
         self.boards = boards
         self.board_size = self.boards[0].size
@@ -24,6 +24,9 @@ class MultiHexGame():
         self.output_boards_tensor = torch.Tensor(device='cpu')
         self.positions_tensor = torch.LongTensor(device='cpu')
         self.gamma = gamma
+        self.optimality_checker = optimality_checker
+        self.optimal_count = 0
+        self.evaluated_count = 0
 
     def __repr__(self):
         return ''.join([str(board) for board in self.boards])
@@ -65,7 +68,14 @@ class MultiHexGame():
         self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
 
         for idx in range(len(self.current_boards)):
+            board = self.boards[self.current_boards[idx]]
             correct_position = utils.correct_position1d(positions1d[idx].item(), self.board_size,
-                self.boards[self.current_boards[idx]].player)
-            self.boards[self.current_boards[idx]].set_stone(correct_position)
+                board.player)
+            if self.optimality_checker is not None:
+                verdict = self.optimality_checker.is_optimal(board, correct_position)
+                if verdict is not None:
+                    self.evaluated_count += 1
+                    if verdict:
+                        self.optimal_count += 1
+            board.set_stone(correct_position)
         return outputs_tensor
