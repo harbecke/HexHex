@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - preset: dev
+  - preset: smoke
 
 # Optional human-readable suffix appended to the experiment id (e.g. exp_name=lr_sweep_3e4).
 # The full exp_id is `<date>_<time>_<preset>_<auto_model_name>[_<exp_name>]` and is the
