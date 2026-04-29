@@ -4,7 +4,7 @@ Each training run owns one directory `runs/<exp_id>/` containing everything:
     runs/<exp_id>/
         .hydra/                         resolved config, overrides
         repeated_self_training.log      Hydra-managed log file
-        ratings.txt                     final ELO ranking
+        references.txt                  reference models promoted during this run
         models/<auto_model_name>_NNNN.pt  per-iteration checkpoints
         data.pt                         optional saved replay buffer
         events.out.tfevents.*           TensorBoard events at run root

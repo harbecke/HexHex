@@ -41,18 +41,6 @@ train:
   weight_decay: 0.0 # L2 regularisation coefficient (applied manually as weight_decay * sum(p^2)).
   print_loss_frequency: 1000 # Log puzzle loss and L2 weight norm every N mini-batches.
 
-elo:
-  number_of_games: 16 # Max games per color assignment in ELO tournament matchups.
-  batch_size: 16 # Parallel games per batch during ELO evaluation.
-  num_opened_moves: 1 # Pre-placed opening moves for positional diversity in ELO matches.
-  temperature:
-    type: fixed
-    value: 0.0 # 0 = deterministic/greedy.
-  plot_board: false # Save PNG board images from ELO games.
-  # Each new model only faces the top N opponents from the sorted rating list.
-  # Avoids O(n²) tournament cost as the model pool grows.
-  max_num_opponents: 3
-
 vs_reference:
   batch_size: 32 # Parallel games per batch against reference models.
   # Total games per reference model, split equally between both starting colors.
@@ -62,10 +50,16 @@ vs_reference:
     type: fixed
     value: 0.0 # 0 = greedy.
   plot_board: false # Save PNG board images.
-  # List of reference model names. "random" instantiates RandomModel;
-  # other names are loaded from reference_models/<name>.pt.
+  # Initial reference set. Each iteration logs win_rate/<name> in TensorBoard.
+  # "random" instantiates RandomModel; other names load reference_models/<name>.pt.
+  # The list grows during training: when the trained model beats every current
+  # reference with win rate ≥ promotion_threshold, it is appended (its checkpoint
+  # already lives in runs/<exp_id>/models/) and persisted to references.txt.
   reference_models:
     - random
+  # Win-rate threshold (against every current reference) required to promote the
+  # trained model into the reference set.
+  promotion_threshold: 0.7
 
 puzzle:
   board_size: 3 # Board size for the puzzle file (data/<board_size>_puzzle.pt); must match model.board_size.

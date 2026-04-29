@@ -6,7 +6,7 @@ _LAYOUT = {
         'grad norm': ['Multiline', ['train/grad_norm']],
     },
     'timing': {
-        'rst breakdown': ['Multiline', ['time/data_generation', 'time/training', 'time/evaluation', 'time/elo_tournament']],
+        'rst breakdown': ['Multiline', ['time/data_generation', 'time/training', 'time/evaluation']],
         'rst total': ['Multiline', ['time/rst_iteration']],
     },
 }

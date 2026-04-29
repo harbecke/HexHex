@@ -3,7 +3,6 @@ import math
 import os
 import shutil
 import time
-from collections import defaultdict
 
 import hydra
 import torch
@@ -11,7 +10,6 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
 from hexhex.creation import create_data, create_model
-from hexhex.elo import elo
 from hexhex.evaluation import win_position
 from hexhex.model.hexconvolution import RandomModel
 from hexhex.solver.metrics import OptimalityChecker
@@ -29,7 +27,7 @@ from hexhex.utils.paths import (
     set_run_dir,
 )
 from hexhex.utils.summary import writer
-from hexhex.utils.utils import load_model, merge_dicts_of_dicts
+from hexhex.utils.utils import load_model
 
 
 class RepeatedSelfTrainer:
@@ -41,10 +39,10 @@ class RepeatedSelfTrainer:
         self.model_name = auto_model_name(cfg.model)
         self.model_names = []
         self.start_index = cfg.rst.start_index
-        self.tournament_results = defaultdict(lambda: defaultdict(int))
-        self.reference_models = list(cfg.vs_reference.reference_models)
+        self.references = list(cfg.vs_reference.reference_models)
+        self.promotion_threshold = cfg.vs_reference.promotion_threshold
+        self.references_file = 'references.txt'
         self.total_epochs_trained = 0
-        self.ratings_file = 'ratings.txt'
         self.optimality_checker = self._load_optimality_checker()
 
     def _load_optimality_checker(self) -> OptimalityChecker | None:
@@ -78,10 +76,11 @@ class RepeatedSelfTrainer:
             self._resume_from_prior_run()
 
         self.model_names.append(self.get_model_name(self.start_index))
-        self.sorted_model_names = self.model_names[:]
 
         self.training_data = self.check_enough_data(training_data, self.train_samples)
         self.validation_data = self.check_enough_data(validation_data, self.val_samples)
+
+        self._persist_references()
 
     def rst_loop(self, i):
         t_rst = time.time()
@@ -110,12 +109,10 @@ class RepeatedSelfTrainer:
         self.model_names.append(self.get_model_name(i))
 
         t_eval = time.time()
-        self.measure_win_counts(self.get_model_name(i), self.reference_models, verbose=True, step=i)
+        win_rates = self.evaluate_vs_references(self.get_model_name(i), step=i)
         writer.add_scalar('time/evaluation', time.time() - t_eval, i)
 
-        t_elo = time.time()
-        self.create_all_elo_ratings()
-        writer.add_scalar('time/elo_tournament', time.time() - t_elo, i)
+        self.maybe_promote_reference(self.get_model_name(i), win_rates)
 
         writer.add_scalar('time/rst_iteration', time.time() - t_rst, i)
 
@@ -152,6 +149,21 @@ class RepeatedSelfTrainer:
         dst_path = run_model_path(self.get_model_name(self.start_index))
         shutil.copy2(src_path, dst_path)
         logger.info(f"resumed from {src_path} -> {dst_path}")
+
+        prior_refs = os.path.join(RUNS_DIR, resume_from, "references.txt")
+        if os.path.exists(prior_refs):
+            with open(prior_refs) as f:
+                self.references = [line.strip() for line in f if line.strip()]
+            for name in self.references:
+                if name == "random":
+                    continue
+                try:
+                    reference_model_path(name)
+                except FileNotFoundError:
+                    src = os.path.join(RUNS_DIR, resume_from, "models", f"{name}.pt")
+                    if os.path.exists(src):
+                        shutil.copy2(src, run_model_path(name))
+            logger.info(f"resumed references list ({len(self.references)} models)")
 
     def create_data_samples(self, model_name, num_samples, verbose=True, step=None,
                             measure_optimality=False):
@@ -200,70 +212,38 @@ class RepeatedSelfTrainer:
         )
         self.total_epochs_trained += math.ceil(self.cfg.train.epochs)
 
-    def create_all_elo_ratings(self):
-        """
-        Incrementally updates ELO ratings by playing all games between latest model and all other models.
-        """
-        new_model = self.model_names[-1]
-        opponents = self.sorted_model_names[:self.cfg.elo.max_num_opponents]
-        logger.info("")
-        logger.info("=== updating ELO ratings ===")
-
-        self.tournament_results = elo.add_to_tournament(
-            self.sorted_model_names,
-            new_model,
-            self.cfg.elo,
-            self.tournament_results
+    def evaluate_vs_references(self, model_name, step):
+        opponents = {name: self._load_reference_model(name) for name in self.references}
+        return win_position.win_count(
+            model_name, opponents, self.cfg.vs_reference, verbose=True, step=step
         )
-        ratings = elo.create_ratings(self.tournament_results)
-        writer.add_scalar('elo', ratings[new_model], len(self.model_names) - 1)
 
-        for opponent in opponents:
-            new_wins = self.tournament_results[new_model][opponent]
-            opp_wins = self.tournament_results[opponent][new_model]
-            logger.info(f'  {new_model} vs {opponent}: {new_wins} - {opp_wins}')
+    def _load_reference_model(self, name):
+        if name == "random":
+            return RandomModel(self.cfg.model.board_size)
+        try:
+            return load_model(reference_model_path(name))
+        except FileNotFoundError:
+            return load_model(run_model_path(name))
 
-        self.sorted_model_names.append(self.model_names[-1])
-        self.sorted_model_names.sort(key=lambda name: ratings[name], reverse=True)
+    def maybe_promote_reference(self, model_name, win_rates):
+        if not win_rates:
+            return
+        if any(rate < self.promotion_threshold for rate in win_rates.values()):
+            return
+        if model_name in self.references:
+            return
+        self.references.append(model_name)
+        self._persist_references()
+        logger.info(
+            f"  promoted {model_name} as reference "
+            f"(beat all {len(self.references) - 1} prior refs ≥ {self.promotion_threshold:.0%}; "
+            f"total refs: {len(self.references)})"
+        )
 
-        top5 = self.sorted_model_names[:5]
-        total = len(self.sorted_model_names)
-        for model in top5:
-            logger.info('  {:6} {}'.format(int(ratings[model]), model))
-        if total > 5:
-            logger.info(f'  ... ({total - 5} more not shown)')
-
-        with open(self.ratings_file, 'w') as file:
-            file.write('   ELO Model\n')
-            file.write('\n'.join('{:6} {}'.format(int(ratings[m]), m) for m in self.sorted_model_names))
-
-        table = ['| ELO | Model |', '|--:|---|']
-        for model in self.sorted_model_names:
-            table.append(f'| {int(ratings[model])} | {model} |')
-        writer.add_text('elo_table', '\n'.join(table), len(self.model_names) - 1)
-
-    def get_best_rating(self):
-        for reference_idx in range(1, len(self.reference_models)):
-            self.measure_win_counts(self.reference_models[reference_idx],
-                self.reference_models[:reference_idx], verbose=False)
-        ratings = elo.create_ratings(self.tournament_results)
-        best_trained_model = max(self.model_names[1:], key=lambda name: ratings[name])
-        best_reference_model = max(self.reference_models + self.model_names[0:1],
-            key=lambda name: ratings[name])
-        diff = ratings[best_trained_model] - ratings[best_reference_model]
-        logger.info(f"ELO difference between best trained model and best reference model: {diff:0.2f}")
-        return diff
-
-    def measure_win_counts(self, model_name, reference_model_names, verbose, step=None):
-        reference_models = {}
-        for model in reference_model_names:
-            if model == "random":
-                reference_models["random"] = RandomModel(self.cfg.model.board_size)
-            else:
-                reference_models[model] = load_model(reference_model_path(model))
-        results = win_position.win_count(model_name, reference_models,
-            self.cfg.vs_reference, verbose, step=step)
-        self.tournament_results = merge_dicts_of_dicts(self.tournament_results, results)
+    def _persist_references(self):
+        with open(self.references_file, 'w') as file:
+            file.write('\n'.join(self.references) + '\n')
 
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
@@ -285,7 +265,7 @@ def main(cfg: DictConfig):
     print(f"{g}{r}")
     print(f"{g}  All artifacts under: {run_dir}/{r}")
     print(f"{g}    repeated_self_training.log     — full console output{r}")
-    print(f"{g}    ratings.txt                    — final ELO ranking{r}")
+    print(f"{g}    references.txt                 — reference models promoted during this run{r}")
     print(f"{g}    models/{auto_model_name(cfg.model)}_NNNN.pt          — per-iteration checkpoints{r}")
     print(f"{g}    events.out.tfevents.*          — TensorBoard scalars/text{r}")
     print(f"{g}    .hydra/config.yaml             — fully resolved config{r}")
@@ -296,7 +276,7 @@ def main(cfg: DictConfig):
     print(f"{g}{'='*60}{r}")
 
     trainer = RepeatedSelfTrainer(cfg)
-    trainer.ratings_file = os.path.join(run_dir, "ratings.txt")
+    trainer.references_file = os.path.join(run_dir, "references.txt")
     trainer.repeated_self_training()
 
 

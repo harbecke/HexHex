@@ -49,7 +49,7 @@ Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint co
 ### Data flow
 1. Self-play games → training data (board state → best move)
 2. CNN trained on that data
-3. New model evaluated against prior versions via ELO ranking
+3. Each iteration evaluates the new model against a growing list of fixed reference models; a TensorBoard line `win_rate/<reference>` is logged per reference. When the trained model beats every current reference with win rate ≥ `vs_reference.promotion_threshold`, it joins the reference set (its checkpoint is already on disk) and is persisted to `runs/<exp_id>/references.txt`. References stay frozen for the rest of the run, so the win-rate curves are comparable across iterations.
 4. Best model exported to ONNX → deployed in the React frontend
 
 ### Key components
@@ -72,9 +72,11 @@ Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint co
 - `train.py`: core training loop
 - `repeated_self_training.py`: iterative self-play → train → evaluate loop
 
-**`hexhex/evaluation/` + `hexhex/elo/`** — Model ranking
+**`hexhex/evaluation/`** — Model evaluation
 - `evaluate_two_models.py`: head-to-head match
-- `elo.py`: Bradley-Terry model for multi-agent ranking
+- `win_position.py`: `win_count` plays the trained model against a dict of reference opponents and logs/returns per-reference win rates (used by the RST loop)
+
+**`hexhex/elo/`** — Bradley-Terry tournament ranking. Not used during training (the RST loop now logs win rates against fixed references instead, so curves stay comparable across iterations). Kept for post-training tournaments across many checkpoints.
 
 **`hexhex/export/onnx_export.py`** — Converts trained PyTorch model to ONNX for web deployment
 
