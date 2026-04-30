@@ -1,0 +1,2 @@
+Source: runs/2026-04-30_20-39-53_4x4_4x4_l4_c10/models/4x4_l4_c10_0120.pt
+Final checkpoint of a 4x4 RST run (board_size=4, layers=4, intermediate_channels=10, 120 iterations).

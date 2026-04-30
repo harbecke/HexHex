@@ -13,6 +13,14 @@ hydra:
     # Single per-run dir under runs/. The `${suffix:...}` resolver is registered in
     # hexhex/utils/paths.py and prepends an underscore when exp_name is non-null.
     dir: runs/${now:%Y-%m-%d}_${now:%H-%M-%S}_${hydra:runtime.choices.preset}_${model.board_size}x${model.board_size}_l${model.layers}_c${model.intermediate_channels}${suffix:${oc.select:exp_name,''}}
+  sweep:
+    # Multirun (-m) jobs land in runs/ alongside single runs. The sweep parent shares one
+    # timestamp; each job gets its own subdir distinguished by the swept value(s) via
+    # ${hydra.job.override_dirname}, e.g. "train.learning_rate=0.001".
+    # NOTE: cannot use ${hydra:runtime.choices.preset} here — sweep.dir is resolved by the
+    # launcher before HydraConfig is initialized, so the custom hydra: resolver fails.
+    dir: runs/${now:%Y-%m-%d}_${now:%H-%M-%S}_sweep_${model.board_size}x${model.board_size}_l${model.layers}_c${model.intermediate_channels}${suffix:${oc.select:exp_name,''}}
+    subdir: ${hydra.job.override_dirname}
   job:
     # Keep cwd as the project root; code writes via paths.py helpers (which already
     # resolve relative to runs/<exp_id>/) and reference models load from reference_models/.
