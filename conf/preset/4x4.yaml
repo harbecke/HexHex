@@ -36,7 +36,7 @@ train:
   epochs: 0.1
   batch_size: 32 # Mini-batch size for gradient updates.
   optimizer: sgd # "adam" or "sgd".
-  learning_rate: 1.0e-04
+  learning_rate: 1.0e-03
   momentum: 0.9 # SGD momentum (ignored by Adam).
   weight_decay: 1.0e-06 # L2 regularisation coefficient (applied manually as weight_decay * sum(p^2)).
   print_loss_frequency: 1000 # Log puzzle loss and L2 weight norm every N mini-batches.
@@ -72,7 +72,7 @@ rst:
   # `models/<auto_model_name>_<start_index>.pt` will be copied into this run's
   # models/ dir as the starting point. Ignored when start_index == 0.
   resume_from: null
-  num_iterations: 200 # Total self-play → train → evaluate cycles to run.
+  num_iterations: 100 # Total self-play → train → evaluate cycles to run.
   # Number of recent model generations whose self-play data are pooled in the rolling buffer.
   # Each generation contributes num_train_samples / num_data_models positions.
   num_data_models: 5
