@@ -85,6 +85,36 @@ Reference opponents are configured in `vs_reference.reference_models` in the pre
 uv run tensorboard --logdir runs/
 ```
 
+## Training on a Modal GPU
+
+For boards larger than 4×4 a rented GPU is much faster than a laptop. We use [Modal](https://modal.com): a serverless GPU host where containers spin up on demand and storage lives on a named Volume.
+
+```bash
+# One-time: sign in
+uv run modal setup
+
+# Kick off a training run on an L4 (overrides go through Hydra as usual)
+uv run modal run hexhex/modal/train.py --preset 5x5
+uv run modal run hexhex/modal/train.py --preset 5x5 --overrides "rst.num_iterations=200"
+uv run modal run hexhex/modal/train.py --preset 5x5 --exp-name a10g_run1
+
+# Deploy the TensorBoard endpoint (prints a stable https://...modal.run URL)
+uv run modal deploy hexhex/modal/tb.py
+```
+
+The trainer commits the `runs/` Volume every 20 s and the TB container reloads every 30 s, so training curves appear live. Push a locally-trained run into the same Volume to compare:
+
+```bash
+uv run modal volume put hexhex-runs ./runs/<exp_id> /runs/
+
+# list / download / delete
+uv run modal volume ls  hexhex-runs
+uv run modal volume get hexhex-runs runs/<exp_id> ./runs/
+uv run modal volume rm  hexhex-runs runs/<exp_id> -r
+```
+
+Run-dir timestamps use your laptop's local timezone (auto-detected from `/etc/localtime`); override with `--tz Europe/Berlin` if needed.
+
 ## Ground-truth solver (small boards)
 
 For boards small enough to solve exactly we ship an offline solver that builds a per-position win/loss table, used for ground-truth training metrics (data-quality and model-quality vs. optimal play).

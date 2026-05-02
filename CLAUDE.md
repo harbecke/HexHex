@@ -80,6 +80,12 @@ Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint co
 
 **`hexhex/export/onnx_export.py`** — Converts trained PyTorch model to ONNX for web deployment
 
+**`hexhex/modal/`** — Modal serverless-GPU integration (kept out of training code on purpose)
+- `train.py`: `hexhex-train` app — runs `repeated_self_training` on an L4, commits the shared `hexhex-runs` Volume every 20 s. Invoked via `uv run modal run hexhex/modal/train.py --preset 5x5`.
+- `tb.py`: `hexhex-tb` app — TensorBoard web endpoint mounted on the same Volume, reloads every 30 s so live training curves appear. Deploy with `uv run modal deploy hexhex/modal/tb.py`.
+- Each entrypoint inlines its own `PROJECT_ROOT` / `RUNS_DIR` / `VOLUME_NAME` / `runs_volume` constants because Modal only uploads the entrypoint file (sibling imports like `from common import ...` fail in the container with `ModuleNotFoundError`).
+- `train.py` detects the laptop's IANA timezone from `/etc/localtime` and forwards it as `--tz` so the container's `TZ` matches and run-dir timestamps line up across local and remote runs.
+
 **`hexhex/solver/`** — Exact ground-truth solver for small boards (used to produce reference tables for training metrics)
 - `encoding.py`: base-3 position keys, neighbour bitmasks, win detection
 - `solve.py`: negamax with transposition table (no pie rule, no alpha-beta — explores every legal move from every position so the table covers the full reachable state space). CLI writes a binary table.

@@ -18,6 +18,7 @@ dependencies = [
     "setuptools<70", # Old version for tensorboard to work.
     "onnx>=1.19.0",
     "ml-dtypes>=0.4.1", # This version is needed for onnx to work properly.
+    "modal>=1.4.2", # For execution on rented GPUs
 ]
 
 [build-system]
