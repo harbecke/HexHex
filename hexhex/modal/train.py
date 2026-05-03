@@ -6,13 +6,15 @@ Usage:
     uv run modal run hexhex/modal/train.py --preset 5x5 --overrides "rst.num_iterations=200"
     uv run modal run hexhex/modal/train.py --preset 5x5 --exp-name a10g_run1
 
-    # push a locally-trained run into the same volume so it shows up in TensorBoard
-    uv run modal volume put hexhex-runs ./runs/<exp_id> /runs/
+    # push a locally-trained run into the same volume so it shows up in TensorBoard.
+    # The volume is mounted at /workspace/runs in containers, so its root IS the runs dir —
+    # upload to "/" (not "/runs/") or TensorBoard's --logdir won't see the events file.
+    uv run modal volume put hexhex-runs ./runs/<exp_id> /
 
     # download / list / clean up
     uv run modal volume ls  hexhex-runs
-    uv run modal volume get hexhex-runs runs/<exp_id> ./runs/
-    uv run modal volume rm  hexhex-runs runs/<exp_id> -r
+    uv run modal volume get hexhex-runs <exp_id> ./runs/
+    uv run modal volume rm  hexhex-runs <exp_id> -r
 """
 import modal
 
