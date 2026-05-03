@@ -27,6 +27,7 @@ app = modal.App("hexhex-tb")
     scaledown_window=60 * 30,
     timeout=60 * 60 * 12,
     min_containers=0,
+    max_containers=1,
 )
 @modal.web_server(6006, startup_timeout=60)
 def tensorboard():
@@ -43,6 +44,7 @@ def tensorboard():
             "--host", "0.0.0.0",
             "--port", "6006",
             "--reload_multifile=true",
+            "--reload_interval=5",
         ]
     )
 
@@ -51,7 +53,7 @@ def tensorboard():
     # visible without restarting the TB container.
     def reloader():
         while True:
-            time.sleep(30)
+            time.sleep(5)
             try:
                 runs_volume.reload()
             except Exception as e:
