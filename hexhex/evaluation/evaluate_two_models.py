@@ -9,7 +9,7 @@ from hexhex.logic import hexboard, temperature as temp_module
 from hexhex.logic.hexgame import MultiHexGame
 from hexhex.utils.logger import logger
 from hexhex.utils.paths import reference_model_path
-from hexhex.utils.utils import load_model
+from hexhex.utils.utils import load_model, seed_everything
 from hexhex.visualization.image import draw_board_image
 
 
@@ -87,6 +87,7 @@ def evaluate(cfg):
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: DictConfig):
+    seed_everything(cfg.get("seed"))
     evaluate(cfg)
 
 

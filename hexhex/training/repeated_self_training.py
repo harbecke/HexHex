@@ -27,7 +27,7 @@ from hexhex.utils.paths import (
     set_run_dir,
 )
 from hexhex.utils.summary import writer
-from hexhex.utils.utils import load_model
+from hexhex.utils.utils import load_model, seed_everything
 
 
 class RepeatedSelfTrainer:
@@ -250,6 +250,8 @@ class RepeatedSelfTrainer:
 def main(cfg: DictConfig):
     run_dir = HydraConfig.get().runtime.output_dir  # runs/<exp_id>
     exp_id = os.path.basename(run_dir)
+
+    seed_everything(cfg.get("seed"))
 
     set_run_dir(run_dir)
     writer.init(log_dir=run_dir)

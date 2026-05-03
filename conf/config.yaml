@@ -8,6 +8,15 @@ defaults:
 # log, TensorBoard events, model checkpoints, ratings.txt, optional saved data).
 exp_name: null
 
+# Master seed for all RNGs (Python random, numpy, torch CPU+CUDA). Also forces
+# cuDNN into deterministic mode (benchmark=off, deterministic=on), so two runs
+# with the same seed and config produce bit-identical outputs — useful when
+# comparing training-perf changes whose effect would otherwise be drowned out
+# by self-play / shuffle / cuDNN-autotuner variance.
+# Set to `null` to disable seeding and let cuDNN pick the fastest kernels per
+# input shape (faster on GPU, but no two runs match).
+seed: 0
+
 hydra:
   run:
     # Single per-run dir under runs/. The `${suffix:...}` resolver is registered in

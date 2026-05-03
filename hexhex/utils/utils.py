@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import random as _random
+
+import numpy as np
 import torch
 import torch.optim as optim
 
@@ -6,6 +9,30 @@ from hexhex.creation.create_model import create_model
 from hexhex.utils.logger import logger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def seed_everything(seed):
+    """Seed all RNGs for reproducible runs.
+
+    Covers every randomness source in the training pipeline: Python `random`
+    (opening shuffle in evaluate_two_models), NumPy (data shuffle in
+    create_data), and torch (move sampling in temperature/hexgame, RandomModel
+    init data, model weight init, DataLoader shuffle, random_split). Also
+    forces cuDNN into deterministic mode and disables the kernel autotuner.
+
+    Pass `None` to skip seeding entirely (keeps cuDNN benchmark on, faster
+    on GPU but produces different results across runs).
+    """
+    if seed is None:
+        return
+    seed = int(seed)
+    _random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    logger.info(f"seeded all RNGs with seed={seed} (cuDNN: deterministic=True, benchmark=False)")
 
 
 def _one_pass(iters):
