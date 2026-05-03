@@ -1,0 +1,83 @@
+# @package _global_
+# Dev settings for 11x11 board. For settings used to create reference_models/11_2w4_2000.pt,
+# see prod.yaml
+model:
+  board_size: 11 # NxN board dimensions.
+  layers: 18 # Number of residual skip-connection conv layers in the CNN.
+  intermediate_channels: 64 # Feature-map depth in hidden convolutional layers.
+  # Conv kernel half-size: kernels are (2*reach+1)^2; reach=1 gives 3x3 kernels.
+  reach: 1
+  # If false, wraps the model in NoSwitchWrapperModel to make the swap move always illegal.
+  switch_model: true
+  # If true, wraps model in RotationWrapperModel to average 0° and 180°-rotated predictions.
+  rotation_model: true
+
+data:
+  # Size of the rolling training buffer, spread evenly across num_data_models recent generations.
+  num_train_samples: 100000
+  num_val_samples: 1000 # Held-out positions used only for validation-loss logging.
+  batch_size: 256 # Parallel games per self-play batch.
+  # Move-selection temperature schedule.
+  # First `random_first_moves` moves are uniform random (model is skipped) for opening diversity;
+  # afterwards an exp_decay schedule cools toward greedy play in later game stages.
+  temperature:
+    type: exp_decay
+    base: 4.0
+    decay: 0.8
+    random_first_moves: 1
+  # Temporal discount for training targets. Target for a move k steps before game end:
+  #   0.5 ± 0.5 * (1 - gamma)^(2*(k//2))
+  # 0.0 = every move receives the raw final outcome (won=1, lost=0) with no discounting.
+  gamma: 0.0
+
+train:
+  # Fraction of the rolling training buffer to train on per RST iteration.
+  # Kept well below 1 since each sample is considered num_data_models
+  # iterations, avoiding over-fitting to stale self-play data.
+  epochs: 0.008
+  batch_size: 32 # Mini-batch size for gradient updates.
+  optimizer: sgd # "adam" or "sgd".
+  learning_rate: 1.0e-05
+  momentum: 0.9 # SGD momentum (ignored by Adam).
+  weight_decay: 1.0e-06 # L2 regularisation coefficient (applied manually as weight_decay * sum(p^2)).
+  print_loss_frequency: 100 # Log puzzle loss and L2 weight norm every N mini-batches.
+
+vs_reference:
+  batch_size: 200 # Parallel games per batch against reference models.
+  # Total games per reference model, split equally between both starting colors.
+  num_games: 200
+  num_opened_moves: 1 # Pre-placed opening moves for these evaluation games.
+  temperature:
+    type: fixed
+    value: 0.0  # 0 = greedy.
+  plot_board: false # Save PNG board images.
+  # Initial reference set. Each iteration logs win_rate/<name> in TensorBoard.
+  # "random" instantiates RandomModel; other names load reference_models/<name>.pt.
+  # The list grows during training: when the trained model beats every current
+  # reference with win rate ≥ promotion_threshold, it is appended (its checkpoint
+  # already lives in runs/<exp_id>/models/) and persisted to references.txt.
+  reference_models:
+    - random
+  # Win-rate threshold (against every current reference) required to promote the
+  # trained model into the reference set.
+  promotion_threshold: 0.7
+
+puzzle:
+  board_size: 11 # Board size for the puzzle file (data/<board_size>_puzzle.pt); must match model.board_size.
+  num_samples: 1000 # Random-play games to generate; each contributes 2 positions (the last 2 board states).
+
+rst:
+  start_index: 0 # Resume from this iteration index; 0 = create a fresh checkpoint 0000 first.
+  # Required when start_index > 0: exp_id of a prior run whose checkpoint at
+  # `models/<auto_model_name>_<start_index>.pt` will be copied into this run's
+  # models/ dir as the starting point. Ignored when start_index == 0.
+  resume_from: null
+  num_iterations: 5000 # Total self-play → train → evaluate cycles to run.
+  # Number of recent model generations whose self-play data are pooled in the rolling buffer.
+  # Each generation contributes num_train_samples / num_data_models positions.
+  num_data_models: 50
+  # null = generate fresh data from a random model; otherwise a name (e.g. a previous exp_id)
+  # to load data/<name>.pt as the initial training/validation buffer.
+  load_initial_data: null
+  # If true, save the final training/validation buffers to data/<exp_id>.pt at the end of training.
+  save_data: true
