@@ -3,6 +3,7 @@ import random as _random
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.optim as optim
 
 from hexhex.creation.create_model import create_model
@@ -65,6 +66,12 @@ def load_model(model_file, export_mode=False):
     model = create_model(checkpoint['config'], export_mode)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
+    # Wrap in DataParallel only when multiple GPUs are visible. Single-GPU/CPU
+    # users skip the wrapper (no replicate/gather overhead); multi-GPU users
+    # get one wrap per load instead of per batch.
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
+        model.board_size = model.module.board_size
     model.eval()
     torch.no_grad()
     return model
