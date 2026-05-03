@@ -43,6 +43,7 @@ def play_games(models, num_opened_moves, number_of_games, batch_size, temperatur
                     boards,
                     ordered_models,
                     temperature_schedule=temperature_schedule,
+                    collect_training_data=False,
             )
             multihexgame.play_moves()
             for board in multihexgame.boards:
