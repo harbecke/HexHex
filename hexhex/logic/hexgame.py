@@ -1,7 +1,6 @@
 import math
 
 import torch
-import torch.nn as nn
 
 from hexhex.logic.temperature import select_moves
 from hexhex.utils import utils
@@ -12,15 +11,20 @@ class MultiHexGame():
 
     `temperature_schedule` (callable: move_idx -> float) drives move selection:
     inf → uniform random (model is skipped), 0 → argmax, otherwise softmax(logits / T).
+
+    `collect_training_data=False` disables the per-ply CPU accumulation of board
+    states and chosen positions. The eval path discards them, and skipping the
+    .cpu() copies removes a GPU sync each ply.
     """
 
-    def __init__(self, boards, models, temperature_schedule, gamma=1, optimality_checker=None):
-        torch.set_num_threads(4)
+    def __init__(self, boards, models, temperature_schedule, gamma=1, optimality_checker=None,
+                 collect_training_data=True):
         self.boards = boards
         self.board_size = self.boards[0].size
         self.batch_size = len(boards)
-        self.models = [nn.DataParallel(model).to(utils.device) for model in models]
+        self.models = list(models)
         self.temperature_schedule = temperature_schedule
+        self.collect_training_data = collect_training_data
         self.output_boards_tensor = torch.Tensor(device='cpu')
         self.positions_tensor = torch.LongTensor(device='cpu')
         self.gamma = gamma
@@ -36,22 +40,24 @@ class MultiHexGame():
             for model in self.models:
                 self.batched_single_move(model)
                 if self.current_boards == []:
-                    self.positions_tensor = self.positions_tensor.view(-1, 1)
-                    targets = utils.get_targets(self.boards, self.gamma)
-                    return self.output_boards_tensor, self.positions_tensor, targets
+                    if self.collect_training_data:
+                        self.positions_tensor = self.positions_tensor.view(-1, 1)
+                        targets = utils.get_targets(self.boards, self.gamma)
+                        return self.output_boards_tensor, self.positions_tensor, targets
+                    return None, None, None
 
     def batched_single_move(self, model):
         self.current_boards = []
-        self.current_boards_tensor = torch.Tensor()
+        board_tensors = []
         for board_idx in range(self.batch_size):
             if self.boards[board_idx].winner == False:
                 self.current_boards.append(board_idx)
-                self.current_boards_tensor = torch.cat((self.current_boards_tensor, self.boards[board_idx].board_tensor.unsqueeze(0)))
+                board_tensors.append(self.boards[board_idx].board_tensor.unsqueeze(0))
 
         if self.current_boards == []:
             return
 
-        self.current_boards_tensor = self.current_boards_tensor.to(utils.device)
+        self.current_boards_tensor = torch.cat(board_tensors).to(utils.device)
         moves_count = len(self.boards[self.current_boards[0]].made_moves)
         temperature = self.temperature_schedule(moves_count)
 
@@ -64,12 +70,16 @@ class MultiHexGame():
                 outputs_tensor = model(self.current_boards_tensor)
             positions1d = select_moves(outputs_tensor, temperature)
 
-        self.output_boards_tensor = torch.cat((self.output_boards_tensor, self.current_boards_tensor.detach().cpu()))
-        self.positions_tensor = torch.cat((self.positions_tensor, positions1d.detach().cpu()))
+        if self.collect_training_data:
+            self.output_boards_tensor = torch.cat(
+                (self.output_boards_tensor, self.current_boards_tensor.detach().cpu()))
+            self.positions_tensor = torch.cat(
+                (self.positions_tensor, positions1d.detach().cpu()))
 
+        positions_list = positions1d.tolist()
         for idx in range(len(self.current_boards)):
             board = self.boards[self.current_boards[idx]]
-            correct_position = utils.correct_position1d(positions1d[idx].item(), self.board_size,
+            correct_position = utils.correct_position1d(positions_list[idx], self.board_size,
                 board.player)
             if self.optimality_checker is not None:
                 verdict = self.optimality_checker.is_optimal(board, correct_position)
