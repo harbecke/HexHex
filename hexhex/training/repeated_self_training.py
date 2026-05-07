@@ -26,7 +26,7 @@ from hexhex.utils.paths import (
     saved_data_path,
     set_run_dir,
 )
-from hexhex.utils.summary import writer
+from hexhex.utils.summary import start_gpu_monitor, writer
 from hexhex.utils.utils import load_model, seed_everything
 
 
@@ -257,6 +257,7 @@ def main(cfg: DictConfig):
     writer.init(log_dir=run_dir)
     writer.add_text("config", f"```yaml\n{OmegaConf.to_yaml(cfg, resolve=True)}\n```")
     writer.add_text("exp_id", exp_id)
+    start_gpu_monitor()
 
     g = "\033[32m"
     r = "\033[0m"

@@ -34,6 +34,7 @@ train_image = (
         "matplotlib",
         "scikit-learn",
         "onnx",
+        "nvidia-ml-py",
     )
     .add_local_dir(
         local_path=".",
