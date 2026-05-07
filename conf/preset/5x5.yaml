@@ -60,6 +60,8 @@ vs_reference:
   # already lives in runs/<exp_id>/models/) and persisted to references.txt.
   reference_models:
     - random
+    - 2026-05-05_22-03-52_0124_5x5_l8_c32
+    - 2026-05-05_22-03-52_0213_5x5_l8_c32
   # Win-rate threshold (against every current reference) required to promote the
   # trained model into the reference set.
   promotion_threshold: 0.7
