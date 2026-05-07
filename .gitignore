@@ -10,6 +10,8 @@ __pycache__/
 # Per-run training artifacts (config, log, TensorBoard, checkpoints, ratings.txt)
 runs/
 *.profile
+*.prof
+profile_out/
 
 # Jupyter notebooks
 *.ipynb

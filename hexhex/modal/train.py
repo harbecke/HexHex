@@ -6,6 +6,12 @@ Usage:
     uv run modal run hexhex/modal/train.py --preset 5x5 --overrides "rst.num_iterations=200"
     uv run modal run hexhex/modal/train.py --preset 5x5 --exp-name a10g_run1
 
+    # cProfile the trainer end-to-end. Writes the profile to runs/<exp-name>.prof
+    # in the shared volume; pull it locally to inspect with pstats / snakeviz.
+    uv run modal run hexhex/modal/train.py --preset 5x5 --exp-name prof1 --profile \
+        --overrides "rst.num_iterations=20 data.num_train_samples=5000 data.num_val_samples=200 vs_reference.num_games=32 puzzle.num_samples=200"
+    uv run modal volume get hexhex-runs prof1.prof ./profile_out/
+
     # push a locally-trained run into the same volume so it shows up in TensorBoard.
     # The volume is mounted at /workspace/runs in containers, so its root IS the runs dir —
     # upload to "/" (not "/runs/") or TensorBoard's --logdir won't see the events file.
@@ -62,7 +68,7 @@ app = modal.App("hexhex-train")
     volumes={RUNS_DIR: runs_volume},
     timeout=60 * 60 * 6,
 )
-def train(preset: str, overrides: str, exp_name: str | None, tz: str):
+def train(preset: str, overrides: str, exp_name: str | None, tz: str, profile: bool):
     import os
     import subprocess
     import sys
@@ -76,12 +82,24 @@ def train(preset: str, overrides: str, exp_name: str | None, tz: str):
         os.environ["TZ"] = tz
         time.tzset()
 
-    args = [
-        sys.executable,
-        "-m",
-        "hexhex.training.repeated_self_training",
-        f"preset={preset}",
-    ]
+    if profile:
+        if not exp_name:
+            raise ValueError("--profile requires --exp-name so the .prof file can be named")
+        prof_path = f"{RUNS_DIR}/{exp_name}.prof"
+        args = [
+            sys.executable,
+            "-m", "cProfile",
+            "-o", prof_path,
+            "-m", "hexhex.training.repeated_self_training",
+            f"preset={preset}",
+        ]
+        print(f"profile output will be written to {prof_path}")
+    else:
+        args = [
+            sys.executable,
+            "-m", "hexhex.training.repeated_self_training",
+            f"preset={preset}",
+        ]
     if exp_name:
         args.append(f"exp_name={exp_name}")
     if overrides:
@@ -124,10 +142,12 @@ def _detect_local_tz() -> str:
 
 
 @app.local_entrypoint()
-def main(preset: str = "5x5", overrides: str = "", exp_name: str = "", tz: str = ""):
+def main(preset: str = "5x5", overrides: str = "", exp_name: str = "", tz: str = "",
+         profile: bool = False):
     train.remote(
         preset=preset,
         overrides=overrides,
         exp_name=exp_name or None,
         tz=tz or _detect_local_tz(),
+        profile=profile,
     )
