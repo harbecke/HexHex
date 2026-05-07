@@ -63,7 +63,7 @@ vs_reference:
   promotion_threshold: 0.7
 
 puzzle:
-  board_size: 3 # Board size for the puzzle file (data/<board_size>_puzzle.pt); must match model.board_size.
+  board_size: 4 # Board size for the puzzle file (data/<board_size>_puzzle.pt); must match model.board_size.
   num_samples: 1000 # Random-play games to generate; each contributes 2 positions (the last 2 board states).
 
 rst:

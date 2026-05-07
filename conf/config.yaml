@@ -15,7 +15,7 @@ exp_name: null
 # by self-play / shuffle / cuDNN-autotuner variance.
 # Set to `null` to disable seeding and let cuDNN pick the fastest kernels per
 # input shape (faster on GPU, but no two runs match).
-seed: 0
+seed: null
 
 hydra:
   run:
