@@ -83,7 +83,19 @@ class Board:
     def __init__(self, size, switch_allowed=True):
         self.size = size
         self.logical_board_tensor = torch.zeros([2, self.size, self.size])
-        self.board_tensor = self.set_border(self.logical_board_tensor)
+        # Two bordered (n+2, n+2) views kept in sync with the logical state:
+        # `_canonical` is the player-0 perspective; `_swapped` is the player-1
+        # perspective (channel-rolled and spatially transposed). Goal-edge
+        # borders are constant for the lifetime of the board, so we set them
+        # once here and only mutate inner cells in set_stone — replacing the
+        # old per-move set_border allocation that dominated the self-play loop.
+        self._canonical = torch.zeros([2, self.size + 2, self.size + 2])
+        self._swapped = torch.zeros([2, self.size + 2, self.size + 2])
+        for view in (self._canonical, self._swapped):
+            view[0, 0, 1:-1] = 1
+            view[0, -1, 1:-1] = 1
+            view[1, 1:-1, 0] = 1
+            view[1, 1:-1, -1] = 1
         self.made_moves = set()
         self.legal_moves = set([(idx1, idx2) for idx1 in range(self.size) for idx2 in range(self.size)])
         self.connected_sets = [[], []]
@@ -93,17 +105,33 @@ class Board:
         self.switch_allowed = switch_allowed
         self.move_history = []
 
+    @property
+    def board_tensor(self):
+        return self._swapped if self.player == 1 else self._canonical
+
+    def _write_cell(self, layer, position, value):
+        """Mirror a single inner-cell write into both perspective views.
+
+        `_swapped[c, i, j] == _canonical[1-c, j, i]` by construction (channel
+        roll + spatial transpose), so a write to `_canonical[layer, x+1, y+1]`
+        maps to `_swapped[1-layer, y+1, x+1]`.
+        """
+        x, y = position
+        self._canonical[layer, x + 1, y + 1] = value
+        self._swapped[1 - layer, y + 1, x + 1] = value
+
     def override(self, other):
         self.size = other.size
-        self.board_tensor = other.board_tensor
-        self.logical_board_tensor = other.logical_board_tensor
-        self.made_moves = other.made_moves
-        self.legal_moves = other.legal_moves
-        self.connected_sets = other.connected_sets
+        self._canonical = other._canonical.clone()
+        self._swapped = other._swapped.clone()
+        self.logical_board_tensor = other.logical_board_tensor.clone()
+        self.made_moves = set(other.made_moves)
+        self.legal_moves = set(other.legal_moves)
+        self.connected_sets = [list(cs) for cs in other.connected_sets]
         self.player = other.player
         self.switch = other.switch
         self.winner = other.winner
-        self.move_history = other.move_history
+        self.move_history = list(other.move_history)
 
     def __repr__(self):
         return ('Board\n'+str((self.board_tensor[0]-self.board_tensor[1]).numpy())
@@ -111,15 +139,6 @@ class Board:
             +'\nLegal moves\n'+str(self.legal_moves)
             +'\nWinner\n'+str(self.winner)
             +'\nConnected sets\n'+str(self.connected_sets))+'\n'
-
-    def set_border(self, board_tensor):
-        border = torch.zeros([2, self.size+2, self.size+2])
-        border[0, 0, 1:-1] = 1
-        border[0, -1, 1:-1] = 1
-        border[1, 1:-1, 0] = 1
-        border[1, 1:-1, -1] = 1
-        border[:, 1:-1, 1:-1] = board_tensor
-        return border
 
     def set_stone_immutable(self, position):
         """
@@ -144,8 +163,7 @@ class Board:
                     self.switch = True
                     self.legal_moves.remove(position)
                     self.logical_board_tensor[1][position] = 0.001
-                    self.board_tensor = torch.transpose(torch.roll(self.set_border(
-                        self.logical_board_tensor), 1, 0), 1, 2)
+                    self._write_cell(1, position, 0.001)
                     self.move_history.append((self.player, position))
                     return
 
@@ -156,9 +174,11 @@ class Board:
             elif len(self.made_moves) == 0 and not self.switch_allowed:
                 self.legal_moves.remove(position)
                 self.logical_board_tensor[1][position] = 0.001
+                self._write_cell(1, position, 0.001)
 
             self.made_moves.update([position])
             self.logical_board_tensor[self.player][position] = 1
+            self._write_cell(self.player, position, 1)
             self.connected_sets[self.player], self.winner = update_connected_sets_check_win( \
                 self.connected_sets[self.player], self.player, position, self.size)
             self.move_history.append((self.player, position))
@@ -168,12 +188,7 @@ class Board:
                     self.winner = [[1], [0]][self.winner[0]]
                 self.legal_moves = set()
 
-            self.player = 1-self.player
-            if self.player:
-                self.board_tensor = torch.transpose(torch.roll(self.set_border(
-                    self.logical_board_tensor), 1, 0), 1, 2)
-            else:
-                self.board_tensor = self.set_border(self.logical_board_tensor)
+            self.player = 1 - self.player
 
         else:
             logger.error(f'Illegal Move! {position} of type {type(position)}')
