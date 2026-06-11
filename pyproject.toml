@@ -3,10 +3,10 @@ name = "hexhex"
 version = "0.1.0"
 description = "Reinforcement learning agent for the board game Hex"
 readme = "readme.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 dependencies = [
-    "torch>=1.13.0,<2.3.0", # specific range for macos x86_64 support.
-    "numpy<2", # Also macos x86_64 issue, maybe can be worked around.
+    "torch",
+    "numpy",
     "pygame",
     "tensorboard",
     "hydra-core>=1.3.0",
