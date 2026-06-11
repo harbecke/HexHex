@@ -1,9 +1,44 @@
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
 
 def swish(x):
     return x * torch.sigmoid(x)
+
+
+class MaskedCornerConv2d(nn.Conv2d):
+    """
+    convolutional layer with a fixed mask that only allows the hex-adjacent positions to influence the output
+    """
+    def __init__(self, in_channels, out_channels, **kwargs):
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            **kwargs
+        )
+
+        mask = torch.tensor([
+            [0, 1, 1],
+            [1, 1, 1],
+            [1, 1, 0]
+        ], dtype=torch.float32)
+
+        self.register_buffer(
+            "mask",
+            mask.view(1, 1, 3, 3)
+        )
+
+    def forward(self, x):
+        return F.conv2d(
+            x,
+            self.weight * self.mask,
+            self.bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+        )
 
 
 class SkipLayerBias(nn.Module):
