@@ -1,5 +1,6 @@
 import { useState, useRef, CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import BenchmarkOverlay from "./BenchmarkOverlay";
 
 interface PlayerSetupProps {
   defaultRedIsHuman: boolean;
@@ -30,6 +31,7 @@ export default function PlayerSetup({
   const [blueIsHuman, setBlueIsHuman] = useState(defaultBlueIsHuman);
   const [redTemp, setRedTemp] = useState(defaultRedTemperature);
   const [blueTemp, setBlueTemp] = useState(defaultBlueTemperature);
+  const [showBenchmark, setShowBenchmark] = useState(false);
 
   return (
     <div
@@ -202,6 +204,44 @@ export default function PlayerSetup({
           </a>
         </div>
       </div>
+
+      <button
+        title="AI Battle — run AI vs AI statistics"
+        onClick={() => setShowBenchmark(true)}
+        style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          width: 38,
+          height: 38,
+          borderRadius: 10,
+          border: "1px solid var(--border)",
+          background: "var(--card)",
+          color: "var(--muted)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "color 0.15s, border-color 0.15s",
+          padding: 0,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = "var(--text)";
+          e.currentTarget.style.borderColor = "var(--border2)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = "var(--muted)";
+          e.currentTarget.style.borderColor = "var(--border)";
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+          <rect x="1" y="9" width="3" height="6" rx="1" />
+          <rect x="6" y="5" width="3" height="10" rx="1" />
+          <rect x="11" y="1" width="3" height="14" rx="1" />
+        </svg>
+      </button>
+
+      {showBenchmark && <BenchmarkOverlay onClose={() => setShowBenchmark(false)} />}
     </div>
   );
 }
