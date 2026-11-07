@@ -34,11 +34,13 @@ def play_games(models, num_opened_moves, number_of_games, batch_size, temperatur
 
         while game_number < number_of_games:
             ordered_models = models[::-1] if starting_model^(num_opened_moves%2) else models
+            # Cap the batch so exactly `number_of_games` are played per color.
+            current_batch_size = min(batch_size, number_of_games - game_number)
             if num_opened_moves > 0:
-                batch_of_openings = openings[game_number:game_number + batch_size]
+                batch_of_openings = openings[game_number:game_number + current_batch_size]
                 boards = [hexboard.get_opened_board(board_size, opening) for opening in batch_of_openings]
             else:
-                boards = [hexboard.Board(size=board_size) for idx in range(batch_size)]
+                boards = [hexboard.Board(size=board_size) for idx in range(current_batch_size)]
             multihexgame = MultiHexGame(
                     boards,
                     ordered_models,

@@ -19,8 +19,15 @@ profile_out/
 # Local game results
 game_history.pgn
 
+# Logs, and Hydra's default run dir for entrypoints that don't set hydra.run.dir
+*.log
+outputs/
+
 # Solved-position tables (regenerable via hexhex.solver.solve)
 tables/
+
+# Referee service state: uploaded candidates, job records, logs
+referee_data/
 
 # Legacy dependency management
 Pipfile

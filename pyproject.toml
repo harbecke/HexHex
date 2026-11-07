@@ -5,7 +5,7 @@ description = "Reinforcement learning agent for the board game Hex"
 readme = "readme.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "torch",
+    "torch>=2.9", # New ONNX exporter (dynamo) is the default from 2.9.
     "numpy",
     "pygame",
     "tensorboard",
@@ -17,6 +17,8 @@ dependencies = [
     "scikit-learn",
     "setuptools<70", # Old version for tensorboard to work.
     "onnx>=1.19.0",
+    "onnxscript", # Required by torch's ONNX exporter.
+    "onnxruntime", # Runs uploaded candidates in the referee service (hexhex/referee).
     "ml-dtypes>=0.4.1", # This version is needed for onnx to work properly.
     "modal>=1.4.2", # For execution on rented GPUs
 ]
@@ -35,11 +37,7 @@ line-length = 120
 testpaths = ["tests"]
 pythonpath = ["."]
 
-[tool.uv]
-required-environments = "sys_platform == 'darwin' and platform_machine == 'x86_64'"
-
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
-    "onnxruntime",
 ]

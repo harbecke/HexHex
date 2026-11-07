@@ -92,6 +92,14 @@ Ruff is configured in `pyproject.toml` with line-length 120. No explicit lint co
 - `table.py`: `SolutionTable` loader; `winning(key) -> bool` returns "side-to-move wins" for any key in the table.
 - Tables are stored as `tables/NxN.bin` (gitignored, regenerable). 3×3 solves in ~30 ms (44 KB), 4×4 in ~3 min (72 MB). 5×5 is not feasible in pure Python (~50–150 GB and tens of hours).
 
+**`hexhex/referee/`** — Local HTTP referee for an external agent's 11×11 ONNX model (`conf/referee.yaml`)
+- The agent uploads an ONNX model; the referee plays it against opaque opponents (`random`, `hexhex_v1`) with the `vs_reference` protocol and returns only aggregate results — never moves, game records, scores or opponent metadata. The API on `127.0.0.1` is the only protection.
+- `candidate.py`: upload validation (standard ops only, no external data, `[B, 2, 11, 11]` → `[B, 121]`) and `CandidatePlayer`, which strips HexHex's border and 0.001 swap markers and masks illegal cells exactly (an illegal move makes `Board.set_stone` raise `SystemExit`).
+- `match.py`: wraps `play_games`; `server.py`: `ThreadingHTTPServer`, one worker thread, job records in `referee_data/` (gitignored).
+- `export_candidate.py` wraps a HexHex `.pt` in the contract for tests — don't give it to the agent. `README.md` is the agent-facing doc.
+- Run with `uv run python -m hexhex.referee.server`. `hexhex_v1` is `reference_models/11_2w4_2000.pt`, which is public (GitHub, live demo); that is acceptable only because the agent runs without internet access and without access to this repo.
+- Each evaluation plays all 121 one-stone openings from both sides (242 games), so results against `hexhex_v1` are deterministic.
+
 **`app/src/`** — React frontend (Vite + React 19 + TypeScript)
 - `game/`: pure game logic (coords, rules, encoding) — fully unit-tested with Vitest
 - `ai/modelWorker.ts`: Web Worker that loads the ONNX model via `onnxruntime-web` and runs inference
