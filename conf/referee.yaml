@@ -1,0 +1,34 @@
+# Referee service (hexhex/referee/server.py). Standalone config, not a training preset.
+#   uv run python -m hexhex.referee.server
+host: 127.0.0.1 # Must be a loopback address; the API is the only protection.
+port: 8765
+data_dir: referee_data # Uploaded candidates, job records and server logs (gitignored).
+max_model_mb: 100 # Upload size limit in MiB.
+board_size: 11
+# Opponent id → "random" (RandomModel) or a path to a .pt checkpoint. Ids use underscores because they
+# double as Hydra override keys.
+opponents:
+  random: random # RandomModel; lets the agent check its API usage.
+  # Public (GitHub, live demo). Acceptable only because the agent runs without internet access and without
+  # access to this repo.
+  hexhex_v1: reference_models/11_2w4_2000.pt
+match: # Same values as vs_reference in conf/preset/11x11.yaml, except num_games.
+  num_games: 242 # All 121 openings, each played once from each side.
+  num_opened_moves: 1 # Pre-placed stones; the swap decision follows.
+  batch_size: 121 # Parallel games per batch; each color is a separate pass of 121 games, so this is one batch each.
+  temperature:
+    type: fixed
+    value: 0.0 # 0 = greedy.
+# Reseeds before every evaluation when set. With every opening played, it only changes the game order and
+# the `random` opponent's moves; with fewer games, it also fixes which openings are sampled.
+seed: null
+
+hydra:
+  run:
+    dir: ${data_dir}/logs/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    chdir: false
+  job_logging:
+    formatters:
+      simple:
+        format: "[%(asctime)s][%(levelname).1s] %(message)s"
