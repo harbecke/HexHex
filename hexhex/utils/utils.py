@@ -61,11 +61,16 @@ def correct_position1d(position1d, board_size, player):
         return position1d
 
 
-def load_model(model_file, export_mode=False):
-    checkpoint = torch.load(model_file, map_location=device)
+def load_cpu_model(model_file, export_mode=False):
+    """Load a checkpoint on the CPU in eval mode, never wrapped in DataParallel. ONNX export needs both."""
+    checkpoint = torch.load(model_file, map_location='cpu')
     model = create_model(checkpoint['config'], export_mode)
     model.load_state_dict(checkpoint['model_state_dict'])
-    model.to(device)
+    return model.eval()
+
+
+def load_model(model_file, export_mode=False):
+    model = load_cpu_model(model_file, export_mode).to(device)
     # Wrap in DataParallel only when multiple GPUs are visible. Single-GPU/CPU
     # users skip the wrapper (no replicate/gather overhead); multi-GPU users
     # get one wrap per load instead of per batch.
