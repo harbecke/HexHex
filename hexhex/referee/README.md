@@ -49,6 +49,24 @@ print(record)
 - The referee runs your model with ONNX Runtime on the CPU. Before accepting it, it runs the model on empty
   boards with B = 1 and B = 3 and checks the output shape and that it has no NaN.
 
+### Which cells touch
+
+Every cell touches six others. Cell `(i, j)` touches `(i-1, j)`, `(i+1, j)`, `(i, j-1)`, `(i, j+1)` and, of
+the two diagonals, only `(i-1, j+1)` and `(i+1, j-1)`. The cells `(i-1, j-1)` and `(i+1, j+1)` don't touch
+`(i, j)`. In the grid below, X marks the cells that touch O:
+
+```
+        j-1   j   j+1
+  i-1    .    X    X
+  i      X    O    X
+  i+1    X    X    .
+```
+
+This is a hex board drawn as a rhombus, with each row shifted half a cell to the right of the row above. The
+rule holds in the orientation you're given, whichever way you actually connect. For example, your stones on
+`(0, 10), (1, 9), …, (10, 0)` connect index 0 to index 10 and win; stones on `(0, 0), (1, 1), …, (10, 10)` don't
+form a chain.
+
 ## Match rules
 
 - 11×11 Hex with the swap rule.
